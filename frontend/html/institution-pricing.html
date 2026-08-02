@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Prep — Institution Plans</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    /* ── Page base ── */
+    body { min-height:100vh; }
+
+    /* ── Hero ── */
+    .ph { text-align:center;padding:52px 20px 32px; }
+    .ph h1 { font-size:2.4rem;font-weight:900;margin:0 0 10px;line-height:1.15; }
+    .ph p  { color:var(--muted);font-size:1rem;margin:0; }
+    .ph .grad { background:linear-gradient(90deg,#a78bfa,#60a5fa);-webkit-background-clip:text;-webkit-text-fill-color:transparent; }
+
+    /* ── Grid ── */
+    .pg { display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;max-width:1200px;margin:0 auto 60px;padding:0 24px; }
+    @media(max-width:640px){ .pg { grid-template-columns:1fr; } }
+    @media(min-width:1000px){ .pg { grid-template-columns:repeat(4,1fr); } }
+
+    /* ── Card ── */
+    .pc { background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:32px 24px;display:flex;flex-direction:column;gap:0;position:relative;transition:transform .15s,box-shadow .15s,border-color .18s; }
+    .pc:hover { transform:translateY(-4px);box-shadow:0 16px 40px rgba(0,0,0,.32); }
+    .pc.featured { border-color:var(--purple-l,#a78bfa);box-shadow:0 0 0 1px var(--purple-l,#a78bfa),0 8px 28px rgba(124,58,237,.18); }
+
+    .pc-badge { position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#a78bfa,#60a5fa);color:#fff;font-size:.72rem;font-weight:800;padding:4px 16px;border-radius:20px;white-space:nowrap;letter-spacing:.02em; }
+    .pc-premium-badge { background:linear-gradient(90deg,#fbbf24,#f59e0b); }
+
+    .pc-name { font-size:1.15rem;font-weight:800;margin-bottom:4px;color:var(--text); }
+    .pc-tagline { font-size:.8rem;color:var(--muted);margin-bottom:20px;min-height:32px;line-height:1.4; }
+
+    .pc-price { margin-bottom:6px;display:flex;align-items:baseline;gap:2px; }
+    .pc-price .amt  { font-size:2.8rem;font-weight:900;line-height:1;color:var(--text); }
+    .pc-price .sym  { font-size:1.4rem;font-weight:700;vertical-align:super;color:var(--text); }
+    .pc-price .per  { font-size:.82rem;color:var(--muted);margin-left:4px; }
+    .pc-price .contact { font-size:1.2rem;color:var(--muted);font-weight:600; }
+    
+    .pc-save { font-size:.75rem;font-weight:700;color:var(--green-l);background:rgba(5,150,105,.15);padding:2px 10px;border-radius:12px;display:inline-block;margin-bottom:18px; }
+    .pc-nosave { height:22px;margin-bottom:18px; }
+
+    .pc-feats { list-style:none;margin:0 0 24px;padding:0;flex:1;display:flex;flex-direction:column;gap:12px; }
+    .pc-feats li { display:flex;align-items:flex-start;gap:10px;font-size:.88rem;line-height:1.4;color:var(--text); }
+    .pc-feats li .ic { flex-shrink:0;margin-top:2px;font-size:.9rem;color:var(--purple-l); }
+
+    .pc-cta { width:100%;padding:13px;border-radius:10px;font-size:.92rem;font-weight:700;cursor:pointer;border:none;transition:opacity .15s,transform .12s,background .15s;margin-top:auto; }
+    .pc-cta:hover:not(:disabled) { opacity:.88;transform:translateY(-1px); }
+    .pc-cta.primary { background:linear-gradient(135deg,#a78bfa,#6366f1);color:#fff;box-shadow:0 4px 16px rgba(124,58,237,.3); }
+    .pc-cta.secondary { background:transparent;border:1px solid var(--border);color:var(--text);transition:all .15s; }
+    .pc-cta.secondary:hover { background:var(--s2);border-color:var(--purple-l); }
+    .pc-cta.contact { background:transparent;border:2px solid var(--purple-l);color:var(--purple-l);font-weight:700; }
+    .pc-cta.contact:hover { background:rgba(167,139,250,.1); }
+    .pc-cta.current { background:rgba(5,150,105,.15);border:1px solid rgba(5,150,105,.35);color:var(--green-l);cursor:default; }
+    .pc-cta:disabled { cursor:not-allowed;opacity:.6; }
+
+    /* ── Pay modal ── */
+    .pmo { display:none;position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:1000;align-items:center;justify-content:center; }
+    .pmd { background:var(--card-bg);border:1px solid var(--border);border-radius:16px;padding:36px;max-width:460px;width:90%;position:relative; }
+    .pmd h3 { font-size:1.25rem;font-weight:800;margin:0 0 4px; }
+    .pmd .pmo-sub { color:var(--muted);font-size:.85rem;margin-bottom:16px; }
+    .pmo-amt { font-size:2.6rem;font-weight:900;color:var(--purple-l,#a78bfa);margin-bottom:20px; }
+    .pmo-methods { display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px; }
+    .pm-badge { padding:5px 13px;border-radius:20px;font-size:.75rem;font-weight:600;background:var(--s2);border:1px solid var(--border);color:var(--muted2); }
+    .pmo-status { display:none;padding:12px 16px;border-radius:10px;font-size:.87rem;margin-bottom:14px; }
+    .pmo-actions { display:flex;gap:10px; }
+    .pmo-close { position:absolute;top:18px;right:18px;background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.3rem;line-height:1; }
+
+    /* ── Test panel ── */
+    #testPanel { background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.3);border-radius:12px;padding:14px 18px; }
+    #testPanel h4 { color:#d97706;font-size:.9rem;font-weight:700;margin:0 0 8px; }
+    #testPanel .tp-row { display:grid;grid-template-columns:1fr 1fr;gap:16px;font-size:.8rem;margin-bottom:8px; }
+    #testPanel .tp-row:last-child { margin-bottom:0; }
+    #testPanel code { background:rgba(0,0,0,.2);padding:2px 6px;border-radius:4px;font-family:monospace;color:var(--green-l);font-weight:600; }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-pill">Dashboard</a>
+      <a href="/subscription" class="nav-pill">Subscription</a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Hero -->
+    <div class="ph">
+      <h1>Empower Your <span class="grad">Institution</span></h1>
+      <p>Simple, transparent pricing. Everything your institution needs to excel at KCET.</p>
+    </div>
+
+    <!-- Demo test panel — only shown in Razorpay test mode -->
+    <div id="testPanel" style="display:none;max-width:1060px;margin:0 auto 24px;padding:0 24px;">
+      <h4>🧪 TEST MODE — DEMO PAYMENT CREDENTIALS</h4>
+      <div class="tp-row">
+        <div>
+          <strong>Test Card (Domestic)</strong><br/>
+          Number: <code>4111 1111 8199 5449</code><br/>
+          Expiry: any future date (e.g. 12/25)<br/>
+          CVV: any 3 digits (e.g. 123)<br/>
+          Name: anything (e.g. Test User)
+        </div>
+        <div>
+          <strong>Test UPI</strong><br/>
+          Success: <code>success@razorpay</code><br/>
+          Failure: <code>failure@razorpay</code>
+        </div>
+      </div>
+      <div class="tp-row">
+        <div style="grid-column:1/-1;">
+          <strong style="color:#d97706;">⚠️ Important</strong><br/>
+          Do NOT use real cards — use test credentials above
+        </div>
+      </div>
+    </div>
+
+    <!-- Plans Grid -->
+    <div class="pg" id="plansGrid">
+      <!-- Plans loaded dynamically by JavaScript -->
+      <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--muted);">Loading pricing plans...</div>
+    </div>
+
+    <!-- Footer note -->
+    <div style="text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:40px;padding:0 24px;">
+      All plans include 24/7 platform access · Monthly billing · Cancel anytime
+    </div>
+  </main>
+
+  <!-- Payment Modal -->
+  <div id="payModal" class="pmo">
+    <div class="pmd">
+      <button class="pmo-close" onclick="closePayModal()">✕</button>
+      <h3 id="payModalTitle">Institution Starter</h3>
+      <p class="pmo-sub" id="payModalSub">Institution Starter · monthly billing</p>
+      <div class="pmo-amt" id="payModalAmt">₹1,499/month</div>
+      <div class="pmo-methods">
+        <div class="pm-badge">💳 Razorpay Secure</div>
+      </div>
+      <div class="pmo-status" id="payStatus"></div>
+      <div class="pmo-actions">
+        <button class="pc-cta secondary" onclick="closePayModal()" style="flex:1;">Cancel</button>
+        <button class="pc-cta primary" id="payNowBtn" onclick="startPayment()" style="flex:2;">Pay Now →</button>
+      </div>
+      <p style="font-size:.72rem;color:var(--muted);text-align:center;margin-top:14px;">🔒 Secured by Razorpay · Payment data is never stored here</p>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    // ── Auth guard ──────────────────────────────────────────────────────────
+    Auth.currentRole().then(function(user) {
+      if (!user || user.role !== 'institution_admin') {
+        window.location.href = '/login';
+      }
+    });
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      fetch('/api/auth/logout', { method:'POST', credentials:'include' })
+        .finally(function() { window.location.href = '/login'; });
+    });
+
+    // ── State ───────────────────────────────────────────────────────────────
+    var plans       = [];
+    var selectedPlan = null;
+    var keyId       = '';
+    var currentSub  = null;
+
+    // ── Institution Plan Metadata ────────────────────────────────────────────
+    var INSTITUTION_PLANS = {
+      'Starter': {
+        price: 1499,
+        period: '/month',
+        tagline: 'Perfect for small institutions',
+        features: [
+          { yes:true,  text:'Up to 50 students' },
+          { yes:true,  text:'Institution uploads' },
+          { yes:true,  text:'Chapter-wise tests' },
+          { yes:true,  text:'Basic analytics' },
+          { yes:false, text:'Admin KCET question bank' },
+        ],
+        cta: 'Choose Starter', ctaType: 'secondary', featured: false,
+      },
+      'Basic': {
+        price: 2999,
+        period: '/month',
+        tagline: 'Great for growing institutions',
+        features: [
+          { yes:true,  text:'Up to 100 students' },
+          { yes:true,  text:'Institution question bank' },
+          { yes:true,  text:'Chapter-wise exams' },
+          { yes:true,  text:'Analytics' },
+          { yes:true,  text:'Limited admin KCET bank access' },
+        ],
+        cta: 'Choose Basic', ctaType: 'secondary', featured: false,
+      },
+      'Premium': {
+        price: 7999,
+        period: '/month',
+        tagline: 'Best for large institutions',
+        features: [
+          { yes:true,  text:'Unlimited students' },
+          { yes:true,  text:'Full Admin KCET question bank' },
+          { yes:true,  text:'AI analytics' },
+          { yes:true,  text:'Advanced reports' },
+          { yes:true,  text:'Institution branding' },
+          { yes:true,  text:'Priority support' },
+        ],
+        cta: 'Choose Premium', ctaType: 'primary', featured: true, badge: '⭐ Most Popular',
+      },
+      'Enterprise': {
+        price: null,
+        period: 'Contact for pricing',
+        tagline: 'For multi-campus institutions',
+        features: [
+          { yes:true,  text:'Multi-campus support' },
+          { yes:true,  text:'Custom pricing & features' },
+          { yes:true,  text:'Dedicated account manager' },
+          { yes:true,  text:'Custom integrations' },
+          { yes:true,  text:'SLA support' },
+        ],
+        cta: 'Contact Sales', ctaType: 'contact', featured: false,
+      },
+    };
+
+    // ── Load data ───────────────────────────────────────────────────────────
+    function loadData() {
+      Promise.all([
+        fetch('/api/payments/plans/institution').then(function(r) { return r.json(); }).catch(function() { return {plans:[],key_id:''}; }),
+        // For institution admins, load institution subscription; for students, load personal subscription
+        fetch('/api/institution/subscription', { credentials:'include' })
+          .then(function(r) {
+            // If 404 or error, this user is not an institution admin
+            if (!r.ok) return null;
+            return r.json().then(function(data) {
+              // Convert institution subscription format to match expected fields
+              return {
+                plan_name: data.plan_name,
+                status: data.status,
+                is_active: data.subscription_status === 'active' || data.subscription_status === 'trial' || data.subscription_status === 'grace_period',
+              };
+            });
+          })
+          .catch(function() { return null; }),
+      ]).then(function(results) {
+        plans     = (results[0].plans || []).filter(function(p) { return p.plan_type === 'institution'; });
+        keyId     = results[0].key_id || '';
+        currentSub = results[1];  // This will be institution sub data or null
+        renderPlans();
+        // Show test panel only for test keys
+        if (keyId && keyId.startsWith('rzp_test_')) {
+          document.getElementById('testPanel').style.display = 'block';
+        }
+      }).catch(function(e) {
+        console.error('Failed to load plans:', e);
+        document.getElementById('plansGrid').innerHTML =
+          '<div style="grid-column:1/-1;text-align:center;color:var(--red-l);padding:40px;">Failed to load plans. Please refresh.</div>';
+      });
+    }
+
+    // ── Render ──────────────────────────────────────────────────────────────
+    function renderPlans() {
+      var grid = document.getElementById('plansGrid');
+      var order = ['Starter', 'Basic', 'Premium', 'Enterprise'];
+      var sorted = [];
+      
+      // Use predefined metadata for consistent ordering and features
+      order.forEach(function(name) {
+        sorted.push({ name: name, metadata: INSTITUTION_PLANS[name] });
+      });
+
+      grid.innerHTML = sorted.map(function(item) {
+        var m = item.metadata;
+        var name = item.name;
+        
+        // Find matching plan from API for ID
+        var apiPlan = plans.find(function(p) { return p.name === name; });
+        var planId = apiPlan ? apiPlan.id : '';
+
+        // Check if this is the current plan
+        var subIsActive = currentSub && (currentSub.is_active || currentSub.status === 'active' || currentSub.status === 'grace_period');
+        var isCurrent = subIsActive && currentSub.plan_name === name;
+
+        var featHtml = (m.features || []).map(function(f) {
+          return '<li><span class="ic">' + (f.yes ? '✅' : '○') + '</span><span>' + esc(f.text) + '</span></li>';
+        }).join('');
+
+        var priceHtml = '';
+        if (m.price === null) {
+          priceHtml = '<div class="pc-price"><span class="contact">Contact for pricing</span></div>';
+        } else {
+          priceHtml = '<div class="pc-price"><span class="sym">₹</span><span class="amt">' + (m.price || 0).toLocaleString('en-IN') + '</span><span class="per">' + m.period + '</span></div>';
+        }
+
+        var badgeHtml = m.badge
+          ? '<div class="pc-badge ' + (m.badgeClass || 'pc-premium-badge') + '">' + m.badge + '</div>'
+          : '';
+
+        var ctaHtml = isCurrent
+          ? '<button class="pc-cta current" disabled>✓ Current Plan</button>'
+          : m.price === null
+          ? '<button class="pc-cta ' + m.ctaType + '" onclick="contactSales()">📧 ' + m.cta + '</button>'
+          : '<button class="pc-cta ' + m.ctaType + '" onclick="openPayModal(\'' + planId + '\', \'' + esc(name) + '\')">' + m.cta + '</button>';
+
+        return '<div class="pc' + (m.featured ? ' featured' : '') + '">' +
+          badgeHtml +
+          '<div class="pc-name">' + name + '</div>' +
+          '<div class="pc-tagline">' + m.tagline + '</div>' +
+          priceHtml +
+          '<div class="pc-nosave"></div>' +
+          '<ul class="pc-feats">' + featHtml + '</ul>' +
+          ctaHtml +
+          '</div>';
+      }).join('');
+    }
+
+    // ── Pay modal ────────────────────────────────────────────────────────────
+    window.openPayModal = function(planId, planName) {
+      if (!planId) {
+        alert('Plan not available. Please refresh and try again.');
+        return;
+      }
+      selectedPlan = plans.find(function(p) { return p.id === planId; });
+      if (!selectedPlan) {
+        alert('Plan not found. Please refresh and try again.');
+        return;
+      }
+      var period = selectedPlan.billing_period === 'yearly' ? '/year' :
+                   selectedPlan.billing_period === 'weekly' ? '/week' : '/month';
+      document.getElementById('payModalTitle').textContent = planName;
+      document.getElementById('payModalSub').textContent   = planName + ' · ' + selectedPlan.billing_period + ' billing';
+      document.getElementById('payModalAmt').textContent   = '₹' + (selectedPlan.price || 0).toLocaleString('en-IN') + period;
+      document.getElementById('payStatus').style.display   = 'none';
+      document.getElementById('payNowBtn').disabled        = false;
+      document.getElementById('payNowBtn').textContent     = 'Pay Now →';
+      document.getElementById('payModal').style.display    = 'flex';
+    };
+
+    window.closePayModal = function() {
+      document.getElementById('payModal').style.display = 'none';
+      selectedPlan = null;
+    };
+
+    window.contactSales = function() {
+      window.location.href = 'mailto:sales@smartkcet.com?subject=Enterprise%20Plan%20Inquiry';
+    };
+
+    function showStatus(msg, ok) {
+      var el = document.getElementById('payStatus');
+      el.textContent   = msg;
+      el.style.display = 'block';
+      el.style.background = ok ? 'rgba(5,150,105,.15)' : 'rgba(220,38,38,.15)';
+      el.style.color   = ok ? 'var(--green-l)' : 'var(--red-l)';
+      el.style.border  = '1px solid ' + (ok ? 'rgba(5,150,105,.3)' : 'rgba(220,38,38,.3)');
+    }
+
+    window.startPayment = async function() {
+      if (!selectedPlan) return;
+      var btn = document.getElementById('payNowBtn');
+      btn.disabled = true; btn.textContent = 'Creating order…';
+      try {
+        var r = await fetch('/api/payments/create-order', {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          credentials:'include',
+          body: JSON.stringify({ plan_id: selectedPlan.id }),
+        });
+        var d = await r.json();
+        if (!r.ok) { showStatus(d.message || 'Failed to create order.', false); btn.disabled=false; btn.textContent='Pay Now →'; return; }
+
+        if (d._mock) {
+          showStatus('⚙️ Dev mode — simulating payment success…', true);
+          await fetch('/api/payments/verify', {
+            method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+            body: JSON.stringify({ razorpay_order_id:d.order_id, razorpay_payment_id:'pay_mock_'+Date.now(), razorpay_signature:'mock_sig', plan_id:selectedPlan.id }),
+          });
+          // Redirect to subscription page with success flag
+          setTimeout(function() { 
+            closePayModal(); 
+            window.location.href='/institution/subscription?payment=success&plan=' + encodeURIComponent(selectedPlan.name); 
+          }, 1500);
+          return;
+        }
+
+        var opts = {
+          key: d.key_id || keyId, amount: d.amount, currency: d.currency || 'INR',
+          order_id: d.order_id, name: 'SmartKCET Prep', description: d.description || selectedPlan.name,
+          prefill: d.prefill || {}, theme: { color: '#a78bfa' },
+          handler: async function(res) {
+            btn.textContent = 'Verifying…';
+            var vr = await fetch('/api/payments/verify', {
+              method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
+              body: JSON.stringify({ razorpay_order_id:res.razorpay_order_id, razorpay_payment_id:res.razorpay_payment_id, razorpay_signature:res.razorpay_signature, plan_id:selectedPlan.id }),
+            });
+            var vd = await vr.json();
+            if (vr.ok && vd.verified) {
+              showStatus('✅ Payment successful! Activating your plan…', true);
+              // Redirect to subscription page with success flag and force refresh
+              setTimeout(function() { 
+                closePayModal(); 
+                // Add timestamp to prevent caching and force dashboard refresh
+                window.location.href='/institution/subscription?payment=success&plan=' + encodeURIComponent(selectedPlan.name) + '&ts=' + Date.now(); 
+              }, 2000);
+            } else {
+              showStatus('⚠️ Verification failed. Contact support. Order: '+res.razorpay_order_id, false);
+              btn.disabled=false; btn.textContent='Pay Now →';
+            }
+          },
+          modal: { ondismiss: function() { btn.disabled=false; btn.textContent='Pay Now →'; } },
+        };
+
+        if (typeof window.Razorpay === 'undefined') {
+          var s = document.createElement('script');
+          s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+          s.onload = function() { new window.Razorpay(opts).open(); };
+          s.onerror = function() { showStatus('Failed to load payment gateway.', false); btn.disabled=false; btn.textContent='Pay Now →'; };
+          document.head.appendChild(s);
+        } else { new window.Razorpay(opts).open(); }
+
+      } catch(e) {
+        console.error(e);
+        showStatus('Network error. Please try again.', false);
+        btn.disabled=false; btn.textContent='Pay Now →';
+      }
+    };
+
+    function esc(str) { var d=document.createElement('div'); d.appendChild(document.createTextNode(str||'')); return d.innerHTML; }
+
+    loadData();
+  })();
+  </script>
+</body>
+</html>

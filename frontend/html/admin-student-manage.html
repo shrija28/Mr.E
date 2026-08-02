@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Admin — Student Management</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .form-section {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    
+    .form-section h3 {
+      margin: 0 0 16px;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    
+    .form-row.full {
+      grid-template-columns: 1fr;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .form-group label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    
+    .form-group input,
+    .form-group select {
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--rs);
+      background: var(--s2);
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+    
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: var(--purple-l, #a78bfa);
+      background: var(--s3);
+    }
+    
+    .form-group small {
+      font-size: 0.75rem;
+      color: var(--muted2);
+      margin-top: 4px;
+    }
+    
+    .section-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    
+    @media (max-width: 900px) {
+      .section-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .info-tile {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+      padding: 16px;
+    }
+    
+    .info-tile-label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    
+    .info-tile-value {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      justify-content: flex-end;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--muted);
+    }
+    
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      opacity: 0.5;
+    }
+    
+    .empty-state-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    
+    .empty-state-sub {
+      font-size: 0.85rem;
+      color: var(--muted2);
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    
+    .status-badge.active {
+      background: rgba(5, 150, 105, 0.15);
+      color: var(--green-l);
+    }
+    
+    .status-badge.trial {
+      background: rgba(5, 150, 105, 0.1);
+      color: var(--green-l);
+    }
+    
+    .status-badge.no_subscription {
+      background: rgba(107, 114, 128, 0.1);
+      color: var(--muted2);
+    }
+    
+    .status-badge.overdue {
+      background: rgba(217, 119, 6, 0.15);
+      color: var(--yellow-l);
+    }
+    
+    .status-badge.expired {
+      background: rgba(220, 38, 38, 0.12);
+      color: var(--red-l);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Admin</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/admin/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
+      </a>
+      <a href="/admin/students" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Students
+      </a>
+      <a href="/admin/subscriptions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Subscriptions
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="/admin/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back
+      </a>
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout
+      </a>
+    </div>
+  </nav>
+
+  <div class="main-wrap" style="max-width:100%;padding:24px 28px 80px;">
+
+    <!-- Page header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 3px;" id="pageTitle">Manage Student</h1>
+        <p style="color:var(--muted);margin:0;font-size:0.82rem;" id="pageSubtitle">View and manage student details and subscription</p>
+      </div>
+    </div>
+
+    <!-- Content area -->
+    <div id="loadingState" style="text-align:center;padding:60px 20px;color:var(--muted);">
+      <div style="font-size:3rem;margin-bottom:12px;opacity:0.5;">⏳</div>
+      <div style="font-size:1.1rem;font-weight:600;margin-bottom:6px;">Loading…</div>
+    </div>
+
+    <div id="contentArea" style="display:none;">
+
+      <!-- Student Information Section -->
+      <div class="section-grid">
+        <div class="form-section">
+          <h3>Student Information</h3>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Name *</label>
+              <input type="text" id="fieldName" placeholder="Student name" required/>
+            </div>
+            <div class="form-group">
+              <label>Email *</label>
+              <input type="email" id="fieldEmail" placeholder="student@example.com" required/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>KCET Student ID</label>
+              <input type="text" id="fieldKcetId" placeholder="Optional KCET ID"/>
+            </div>
+            <div class="form-group">
+              <label>User ID</label>
+              <input type="text" id="fieldUserId" placeholder="User ID" readonly style="background:var(--s1);color:var(--muted);"/>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Password & Security</h3>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.2);border-radius:var(--rs);padding:14px;">
+              <div style="font-weight:600;color:var(--blue-l,#60a5fa);margin-bottom:8px;">🔐 Password Management</div>
+              <p style="font-size:0.85rem;color:var(--muted);margin:0;line-height:1.5;">
+                Passwords are securely hashed in the database and cannot be viewed. 
+                Use the "Reset Password" button below to set a new password for this student if they forgot theirs.
+              </p>
+            </div>
+            
+            <div id="resetPasswordSection" style="display:none;border:1px solid rgba(220,38,38,0.2);border-radius:var(--rs);padding:14px;background:rgba(220,38,38,0.05);">
+              <div style="font-weight:600;color:var(--red-l);margin-bottom:12px;">⚠️ Set New Password</div>
+              <div class="form-group" style="margin-bottom:12px;">
+                <label for="newPassword">New Password *</label>
+                <input type="password" id="newPassword" placeholder="Enter new password" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--rs);background:var(--s2);color:var(--text);"/>
+                <small style="color:var(--muted2);">Minimum 8 characters. Student will use this to login.</small>
+              </div>
+              <div class="form-group" style="margin-bottom:12px;">
+                <label for="confirmPassword">Confirm Password *</label>
+                <input type="password" id="confirmPassword" placeholder="Confirm new password" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--rs);background:var(--s2);color:var(--text);"/>
+              </div>
+              <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button type="button" class="btn-outline small" id="btnCancelReset" onclick="toggleResetPasswordForm()">Cancel</button>
+                <button type="button" class="btn-primary small" id="btnSavePassword" style="color:var(--red-l);border-color:var(--red-l);">Confirm Reset</button>
+              </div>
+            </div>
+
+            <button class="btn-outline small" id="btnResetPassword" style="width:100%;text-align:center;color:var(--red-l);border-color:var(--red-l);">Reset Student Password</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subscription Management Section -->
+      <div class="form-section">
+        <h3>Subscription Status</h3>
+        <div id="subscriptionInfo" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:16px;">
+          <div class="info-tile">
+            <div class="info-tile-label">Current Status</div>
+            <div class="info-tile-value">
+              <span class="status-badge no_subscription" id="subStatus">No Subscription</span>
+            </div>
+          </div>
+          <div class="info-tile">
+            <div class="info-tile-label">Plan</div>
+            <div class="info-tile-value" id="subPlan">—</div>
+          </div>
+          <div class="info-tile">
+            <div class="info-tile-label">Renewal Date</div>
+            <div class="info-tile-value" id="subRenewal">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Manage Subscription Section -->
+      <div class="form-section">
+        <h3>Manage Subscription</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="selectPlan">Change Plan</label>
+            <select id="selectPlan">
+              <option value="">Select a plan...</option>
+            </select>
+            <small>Choose a plan to update student subscription</small>
+          </div>
+          <div class="form-group">
+            <label for="selectDuration">Duration</label>
+            <select id="selectDuration">
+              <option value="1">1 Month</option>
+              <option value="3">3 Months</option>
+              <option value="6">6 Months</option>
+              <option value="12">1 Year</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label for="selectRenewFrom">Renewal From</label>
+            <input type="date" id="selectRenewFrom"/>
+            <small>Leave empty to renew from today</small>
+          </div>
+        </div>
+        <div style="margin-top: 12px; display: flex; justify-content: flex-end;">
+          <button type="button" class="btn-outline small" id="btnRemoveSub" style="color:var(--red-l); border-color:var(--red-l);">🚫 Remove Subscription (Set INACTIVE)</button>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="action-buttons">
+        <button class="btn-outline" onclick="window.history.back()">Back</button>
+        <button class="btn-primary" id="btnSave">Save Changes</button>
+      </div>
+
+    </div>
+
+    <!-- Create New Student Form -->
+    <div id="createForm" style="display:none;">
+      <div class="form-section">
+        <h3>Create New Direct Subscriber Student</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Name *</label>
+            <input type="text" id="createFieldName" placeholder="Student name" required/>
+          </div>
+          <div class="form-group">
+            <label>Email *</label>
+            <input type="email" id="createFieldEmail" placeholder="student@example.com" required/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>KCET Student ID</label>
+            <input type="text" id="createFieldKcetId" placeholder="Optional KCET ID"/>
+          </div>
+          <div class="form-group">
+            <label>Initial Plan</label>
+            <select id="createFieldPlan">
+              <option value="">No subscription (free)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-buttons">
+        <button class="btn-outline" onclick="window.location.href='/admin/students'">Cancel</button>
+        <button class="btn-primary" id="btnCreate">Create Student</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    Auth.currentRole().then(function(user) {
+      if (!user || (user.role !== 'admin' && user.role !== 'platform_admin')) {
+        window.location.href = '/login';
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(function() { window.location.href = '/login'; });
+    });
+
+    // Get URL parameters
+    var urlParams = new URLSearchParams(window.location.search);
+    var userId = urlParams.get('user_id');
+    var action = urlParams.get('action');
+
+    var availablePlans = [];
+    var currentStudent = null;
+
+    function escapeHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(str || ''));
+      return d.innerHTML;
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }); } 
+      catch(e) { return '—'; }
+    }
+
+    function fmtPrice(p) {
+      if (p === null || p === undefined) return '—';
+      return '₹' + Number(p).toLocaleString('en-IN');
+    }
+
+    function getStatusBadgeClass(status) {
+      if (status === 'no_subscription') return 'no_subscription';
+      return status || 'no_subscription';
+    }
+
+    // Password reset functionality
+    var passwordShown = false;
+    
+    window.toggleResetPasswordForm = function() {
+      var section = document.getElementById('resetPasswordSection');
+      if (section.style.display === 'none') {
+        section.style.display = 'block';
+        document.getElementById('newPassword').focus();
+      } else {
+        section.style.display = 'none';
+      }
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmPassword').value = '';
+    };
+
+    document.getElementById('btnResetPassword').addEventListener('click', function() {
+      toggleResetPasswordForm();
+    });
+
+    document.getElementById('btnSavePassword').addEventListener('click', function() {
+      var newPassword = document.getElementById('newPassword').value.trim();
+      var confirmPassword = document.getElementById('confirmPassword').value.trim();
+
+      if (!newPassword || !confirmPassword) {
+        alert('Please fill in both password fields');
+        return;
+      }
+
+      if (newPassword.length < 8) {
+        alert('Password must be at least 8 characters long');
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        alert('Passwords do not match');
+        return;
+      }
+
+      if (!currentStudent) {
+        alert('No student selected');
+        return;
+      }
+
+      // Send password reset request to backend
+      fetch('/api/admin/platform/students/' + currentStudent.id + '/reset-password', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: newPassword })
+      })
+      .then(function(r) {
+        if (r.ok) {
+          return r.json();
+        }
+        throw new Error('Failed to reset password');
+      })
+      .then(function(data) {
+        alert('✓ Password reset successfully!\n\nStudent can now login with the new password.');
+        // Update displayed password
+        document.getElementById('fieldPassword').value = newPassword;
+        // Clear form and hide reset section
+        document.getElementById('newPassword').value = '';
+        document.getElementById('confirmPassword').value = '';
+        document.getElementById('resetPasswordSection').style.display = 'none';
+      })
+      .catch(function(err) {
+        alert('✗ Error: Failed to reset password. ' + (err.message || 'Please try again.'));
+        console.error('Password reset error:', err);
+      });
+    });
+
+    function loadPlans() {
+      fetch('/api/admin/platform/subscription-plans?plan_type=individual', { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(plans) {
+          availablePlans = plans;
+          
+          var planSelect = document.getElementById('selectPlan');
+          var createPlanSelect = document.getElementById('createFieldPlan');
+          
+          planSelect.innerHTML = '<option value="">Select a plan...</option>' +
+            plans.map(function(p) {
+              return '<option value="' + p.id + '">' + escapeHtml(p.name) + ' - ' + fmtPrice(p.price) + '</option>';
+            }).join('');
+          
+          createPlanSelect.innerHTML = '<option value="">No subscription (free)</option>' +
+            plans.map(function(p) {
+              return '<option value="' + p.id + '">' + escapeHtml(p.name) + ' - ' + fmtPrice(p.price) + '</option>';
+            }).join('');
+        })
+        .catch(function(err) {
+          console.error('Error loading plans:', err);
+        });
+    }
+
+    function loadStudent(id) {
+      fetch('/api/admin/platform/students?student_type=direct', { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.students) {
+            // Find the student with matching ID
+            var student = data.students.find(function(s) { return s.id === id; });
+            if (student) {
+              currentStudent = student;
+              // Enrich with subscription data
+              fetch('/api/admin/platform/direct-subscriptions', { credentials: 'include' })
+                .then(function(r) { return r.json(); })
+                .then(function(subData) {
+                  var subscription = (subData.subscriptions || []).find(function(s) { return s.user_id === id; });
+                  if (subscription) {
+                    currentStudent.subscription_status = subscription.status;
+                    currentStudent.plan_name = subscription.plan_name;
+                    currentStudent.next_renewal_date = subscription.next_renewal_date;
+                    currentStudent.price = subscription.price;
+                  }
+                  renderStudentForm();
+                })
+                .catch(function(err) {
+                  console.error('Error loading subscriptions:', err);
+                  renderStudentForm();
+                });
+            } else {
+              showError('Student not found');
+            }
+          } else {
+            showError('No students found');
+          }
+        })
+        .catch(function(err) {
+          console.error('Error loading student:', err);
+          showError('Failed to load student');
+        });
+    }
+
+    function renderStudentForm() {
+      if (!currentStudent) return;
+
+      document.getElementById('fieldName').value = currentStudent.name || '';
+      document.getElementById('fieldEmail').value = currentStudent.email || '';
+      document.getElementById('fieldKcetId').value = currentStudent.kcet_student_id || '';
+      document.getElementById('fieldUserId').value = currentStudent.id || '';
+      
+      var subStatus = currentStudent.subscription_status || 'no_subscription';
+      document.getElementById('subStatus').textContent = subStatus === 'no_subscription' ? 'No Subscription' : subStatus.charAt(0).toUpperCase() + subStatus.slice(1);
+      document.getElementById('subStatus').className = 'status-badge ' + getStatusBadgeClass(subStatus);
+      document.getElementById('subPlan').textContent = currentStudent.plan_name || '—';
+      document.getElementById('subRenewal').textContent = fmtDate(currentStudent.next_renewal_date);
+
+      // Reset password form
+      document.getElementById('resetPasswordSection').style.display = 'none';
+      document.getElementById('newPassword').value = '';
+      document.getElementById('confirmPassword').value = '';
+
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('contentArea').style.display = 'block';
+    }
+
+    function showError(msg) {
+      document.getElementById('loadingState').innerHTML = 
+        '<div class="empty-state"><div class="empty-state-icon">❌</div><div class="empty-state-title">Error</div><div class="empty-state-sub">' + escapeHtml(msg) + '</div></div>';
+    }
+
+    function showCreateForm() {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('contentArea').style.display = 'none';
+      document.getElementById('createForm').style.display = 'block';
+      document.getElementById('pageTitle').textContent = 'Create New Student';
+      document.getElementById('pageSubtitle').textContent = 'Add a new direct subscriber student';
+    }
+
+    function manageSubscription(payload, successMsg) {
+      if (!currentStudent || !currentStudent.id) {
+        alert('No student loaded');
+        return;
+      }
+      fetch('/api/admin/platform/students/' + currentStudent.id + '/subscription/manage', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function(r) {
+        if (r.ok) return r.json();
+        return r.json().then(function(d) { throw new Error(d.detail || d.message || 'Failed to update subscription'); });
+      })
+      .then(function(data) {
+        alert('✓ ' + (data.message || successMsg || 'Subscription updated successfully!'));
+        loadStudent(currentStudent.id);
+      })
+      .catch(function(err) {
+        alert('✗ Error: ' + err.message);
+      });
+    }
+
+    document.getElementById('btnSave').addEventListener('click', function() {
+      var name = document.getElementById('fieldName').value.trim();
+      var email = document.getElementById('fieldEmail').value.trim();
+      var planId = document.getElementById('selectPlan').value;
+      var duration = parseInt(document.getElementById('selectDuration').value, 10) || 1;
+      var renewFrom = document.getElementById('selectRenewFrom').value;
+      
+      if (!name || !email) {
+        alert('Please fill in Name and Email');
+        return;
+      }
+
+      if (!planId) {
+        if (confirm('No plan selected. Do you want to remove the student\'s active subscription and set their status to INACTIVE?')) {
+          manageSubscription({ action: 'remove' }, 'Subscription removed. Account set to INACTIVE.');
+        }
+        return;
+      }
+
+      manageSubscription({
+        action: 'update',
+        plan_id: planId,
+        duration_months: duration,
+        renew_from: renewFrom || null
+      }, 'Subscription updated successfully!');
+    });
+
+    var removeBtn = document.getElementById('btnRemoveSub');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', function() {
+        if (confirm('Are you sure you want to remove this student\'s subscription? Account status will be set to INACTIVE in the database, and the student will be prompted to select a plan on next login.')) {
+          manageSubscription({ action: 'remove' }, 'Subscription removed. Account set to INACTIVE.');
+        }
+      });
+    }
+
+    document.getElementById('btnCreate').addEventListener('click', function() {
+      var name = document.getElementById('createFieldName').value.trim();
+      var email = document.getElementById('createFieldEmail').value.trim();
+      
+      if (!name || !email) {
+        alert('Please fill in Name and Email');
+        return;
+      }
+
+      // TODO: Send create request to backend
+      alert('Create functionality to be implemented');
+    });
+
+    // Initialize
+    loadPlans();
+
+    if (action === 'create') {
+      showCreateForm();
+    } else if (userId) {
+      loadStudent(userId);
+    } else {
+      showError('No student selected');
+    }
+  })();
+  </script>
+</body>
+</html>

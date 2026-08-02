@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Admin — Subscriptions</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .main-wrap { max-width: 100%; }
+    .sub-table td { white-space:normal;word-break:break-word;vertical-align:top; }
+    .sub-table { table-layout:fixed; }
+    .sub-table col.col-inst   { width:20%; }
+    .sub-table col.col-plan   { width:12%; }
+    .sub-table col.col-type   { width:8%; }
+    .sub-table col.col-status { width:10%; }
+    .sub-table col.col-start  { width:11%; }
+    .sub-table col.col-renew  { width:11%; }
+    .sub-table col.col-price  { width:10%; }
+    .sub-table col.col-acts   { width:18%; }
+    
+    /* Plan tables - ensure features column wraps properly */
+    table.results-table td { white-space: normal; word-break: break-word; vertical-align: top; overflow-wrap: break-word; }
+    table.results-table td:last-child { white-space: nowrap; text-align: center; }
+    
+    /* Plans table feature column - allow full content display */
+    table.plans-table { table-layout: fixed; }
+    table.plans-table td { word-wrap: break-word; overflow-wrap: break-word; hyphens: auto; }
+    table.plans-table tbody td { font-size: 0.75rem; line-height: 1.4; }
+    table.plans-table tbody td:nth-child(6) { max-width: none; word-break: break-word; }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Admin</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/admin/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
+      </a>
+      <a href="/admin/institutions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Institutions
+      </a>
+      <a href="/admin/upload" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload
+      </a>
+      <a href="/admin/questions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Questions
+      </a>
+      <a href="/admin/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Exams
+      </a>
+      <a href="/admin/syllabus" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Syllabus
+      </a>
+      <a href="/admin/subscriptions" class="nav-pill active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Subscriptions
+      </a>
+      <a href="/admin/analytics" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Analytics
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="/admin/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout
+      </a>
+    </div>
+  </nav>
+
+
+  <div class="main-wrap" style="max-width:100%;padding:24px 28px 80px;">
+
+    <!-- Page header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 3px;">Subscriptions Management</h1>
+        <p style="color:var(--muted);margin:0;font-size:0.82rem;">Monitor all active and inactive subscriptions for institutions and direct subscribers</p>
+      </div>
+      <button class="btn-outline" style="display:flex;align-items:center;gap:6px;" onclick="location.reload()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
+    </div>
+
+    <!-- Summary tiles -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px;" id="subTiles">
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r);padding:16px;text-align:center;">
+        <div style="font-size:1.6rem;font-weight:800;color:var(--green-l);" id="tilActive">—</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Active</div>
+      </div>
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r);padding:16px;text-align:center;">
+        <div style="font-size:1.6rem;font-weight:800;color:var(--yellow-l);" id="tilOverdue">—</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Overdue</div>
+      </div>
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r);padding:16px;text-align:center;">
+        <div style="font-size:1.6rem;font-weight:800;color:var(--red-l);" id="tilExpired">—</div>
+        <div style="font-size:0.75rem;color:var(--muted);">Expired</div>
+      </div>
+      <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r);padding:16px;text-align:center;">
+        <div style="font-size:1.6rem;font-weight:800;color:var(--muted);" id="tilNone">—</div>
+        <div style="font-size:0.75rem;color:var(--muted);">No Sub</div>
+      </div>
+    </div>
+
+    <!-- Institution subscriptions table -->
+    <div class="section-card">
+      <div class="section-card-header" style="flex-direction:column;align-items:flex-start;">
+        <div style="display:flex;align-items:center;gap:12px;width:100%;">
+          <div class="section-icon" style="background:linear-gradient(135deg,rgba(5,150,105,0.2),rgba(8,145,178,0.2));">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          </div>
+          <div>
+            <h2 style="margin:0;">Institution Subscriptions</h2>
+            <p class="section-sub" style="margin:2px 0 0;">All institution subscription records — plan, status, and renewal</p>
+          </div>
+        </div>
+        <div style="align-self:flex-end;margin-top:0;">
+          <select id="filterSubStatus" class="text-input" style="min-width:140px;">
+            <option value="">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="trial">Trial</option>
+            <option value="overdue">Overdue</option>
+            <option value="grace_period">Grace Period</option>
+            <option value="expired">Expired</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-body" style="padding:0;">
+        <div class="table-scroll">
+          <table class="results-table sub-table">
+            <colgroup>
+              <col class="col-inst"/><col class="col-plan"/><col class="col-type"/>
+              <col class="col-status"/><col class="col-start"/><col class="col-renew"/>
+              <col class="col-price"/><col class="col-acts"/>
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Institution</th><th>Plan</th><th>Type</th>
+                <th>Status</th><th>Start Date</th><th>Renewal</th>
+                <th>Price</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="subTableBody">
+              <tr><td colspan="8" style="text-align:center;color:var(--muted);padding:40px;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="padding:12px 20px;border-top:1px solid var(--border);">
+          <span id="tableFooter" style="font-size:0.82rem;color:var(--muted);">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Direct Subscriber Subscriptions -->
+    <div class="section-card" style="margin-top:20px;">
+      <div class="section-card-header" style="flex-direction:column;align-items:flex-start;">
+        <div style="display:flex;align-items:center;gap:12px;width:100%;">
+          <div class="section-icon" style="background:linear-gradient(135deg,rgba(37,99,235,0.2),rgba(124,58,237,0.2));">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div>
+            <h2 style="margin:0;">Direct Subscriber Subscriptions</h2>
+            <p class="section-sub" style="margin:2px 0 0;">Individual student subscriptions (non-institution-linked) — manage and monitor</p>
+          </div>
+        </div>
+        <div style="align-self:flex-end;margin-top:0;">
+          <select id="filterDirectStatus" class="text-input" style="min-width:140px;">
+            <option value="">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="trial">Trial</option>
+            <option value="overdue">Overdue</option>
+            <option value="grace_period">Grace Period</option>
+            <option value="expired">Expired</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section-body" style="padding:0;">
+        <div class="table-scroll">
+          <table class="results-table" style="table-layout:fixed;">
+            <colgroup>
+              <col style="width:14%;"/><col style="width:12%;"/><col style="width:14%;"/>
+              <col style="width:10%;"/><col style="width:10%;"/><col style="width:10%;"/>
+              <col style="width:10%;"/><col style="width:10%;"/><col style="width:10%;"/>
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Student Name</th><th>KCET ID</th><th>Email</th>
+                <th>Plan</th><th>Status</th><th>Start Date</th>
+                <th>Renewal</th><th>Price</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="directSubTableBody">
+              <tr><td colspan="9" style="text-align:center;color:var(--muted);padding:40px;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="padding:12px 20px;border-top:1px solid var(--border);">
+          <span id="directTableFooter" style="font-size:0.82rem;color:var(--muted);">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Subscription Plans -->
+    <div class="section-card" style="margin-top:20px;">
+      <div class="section-card-header" style="flex-direction:column;align-items:flex-start;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div class="section-icon" style="background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(37,99,235,0.2));">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <div>
+            <h2 style="margin:0;">Subscription Plans</h2>
+            <p class="section-sub" style="margin:2px 0 0;">Available plans in the system</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Direct Subscriber Plans -->
+      <div style="margin-bottom:20px;">
+        <h3 style="margin:16px 20px 0;font-size:0.95rem;color:var(--text);">Individual/Direct Subscriber Plans</h3>
+        <div class="section-body" style="padding:0;">
+          <div class="table-scroll">
+            <table class="results-table plans-table" style="table-layout:fixed;">
+              <colgroup>
+                <col style="width:14%;"/><col style="width:10%;"/><col style="width:10%;"/>
+                <col style="width:10%;"/><col style="width:10%;"/><col style="width:26%;"/>
+                <col style="width:10%;"/>
+              </colgroup>
+              <thead>
+                <tr><th>Plan Name</th><th>Billing</th><th>Price</th><th>Max Tests</th><th>Max Exams</th><th>Features</th><th>Active</th></tr>
+              </thead>
+              <tbody id="directPlansTableBody">
+                <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Institution Plans -->
+      <div>
+        <h3 style="margin:16px 20px 0;font-size:0.95rem;color:var(--text);">Institution Plans</h3>
+        <div class="section-body" style="padding:0;">
+          <div class="table-scroll">
+            <table class="results-table plans-table" style="table-layout:fixed;">
+              <colgroup>
+                <col style="width:14%;"/><col style="width:10%;"/><col style="width:10%;"/>
+                <col style="width:10%;"/><col style="width:10%;"/><col style="width:26%;"/>
+                <col style="width:10%;"/>
+              </colgroup>
+              <thead>
+                <tr><th>Plan Name</th><th>Billing</th><th>Price</th><th>Max Seats</th><th>Max Tests</th><th>Features</th><th>Active</th></tr>
+              </thead>
+              <tbody id="institutionPlansTableBody">
+                <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    Auth.currentRole().then(function(user) {
+      if (!user || (user.role !== 'admin' && user.role !== 'platform_admin')) {
+        window.location.href = '/login';
+      }
+    }).catch(function(err) {
+      console.log('[admin-subscriptions] Auth check failed:', err);
+      window.location.href = '/login';
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(function() { window.location.href = '/login'; });
+    });
+
+    function statusBadge(s) {
+      var styles = {
+        active:'rgba(5,150,105,0.15);color:var(--green-l)',
+        trial:'rgba(5,150,105,0.1);color:var(--green-l)',
+        inactive:'rgba(107,114,128,0.15);color:var(--muted)',
+        overdue:'rgba(217,119,6,0.15);color:var(--yellow-l)',
+        grace_period:'rgba(217,119,6,0.12);color:var(--yellow-l)',
+        expired:'rgba(220,38,38,0.12);color:var(--red-l)',
+        cancelled:'rgba(220,38,38,0.1);color:var(--red-l)',
+        none:'rgba(107,114,128,0.1);color:var(--muted2)',
+      };
+      var s2 = styles[s] || styles.none;
+      return '<span style="background:' + s2 + ';padding:2px 8px;border-radius:8px;font-size:0.72rem;font-weight:700;">' + (s || 'none') + '</span>';
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' }); } catch(e) { return '—'; }
+    }
+
+    function fmtPrice(p) {
+      if (p === null || p === undefined) return '—';
+      return '₹' + Number(p).toLocaleString('en-IN');
+    }
+
+    function escapeHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(str || ''));
+      return d.innerHTML;
+    }
+
+    var allSubData = [];
+    var allDirectSubData = [];
+
+    function loadData() {
+      // Load summary data
+      fetch('/api/admin/dashboard', { credentials: 'include' })
+        .then(function(r) { 
+          if (!r.ok) throw new Error('Dashboard API error: ' + r.status);
+          return r.json(); 
+        })
+        .then(function(data) {
+          var ov = data.overview || {};
+          document.getElementById('tilActive').textContent = ov.active_subscriptions || 0;
+          document.getElementById('tilOverdue').textContent = ov.overdue_subscriptions || 0;
+          document.getElementById('tilExpired').textContent = ov.expired_subscriptions || 0;
+          var noSubs = (ov.total_institutions || 0) - (ov.active_institutions || 0);
+          document.getElementById('tilNone').textContent = noSubs;
+        })
+        .catch(function(err) {
+          console.error('Error loading dashboard:', err);
+        });
+
+      // Load institution subscriptions with pricing
+      fetch('/api/admin/platform/institutions', { credentials: 'include' })
+        .then(function(r) { 
+          if (!r.ok) {
+            console.error('Institutions API error:', r.status, r.statusText);
+            var errMsg = 'API error: ' + r.status;
+            if (r.status === 403) errMsg += ' (Forbidden)';
+            if (r.status === 401) errMsg += ' (Unauthorized)';
+            throw new Error(errMsg);
+          }
+          return r.json(); 
+        })
+        .then(function(data) {
+          console.log('Institutions loaded:', data);
+          var institutions = data.institutions || [];
+          
+          // Transform institutions data to subscription format with proper pricing
+          var subData = institutions.map(function(inst) {
+            var planName = inst.plan_name || 'Starter';
+            // Pricing map - map plan names to their prices
+            var planPrices = {
+              'Free': 0,
+              '7-Day Premium Trial': 99,
+              'Pro Monthly': 349,
+              'Pro Yearly': 2999,
+              'Starter': 1499,
+              'Basic': 2999,
+              'Premium': 7999,
+              'Enterprise': 0,  // Contact for pricing
+            };
+            var price = planPrices[planName] !== undefined ? planPrices[planName] : 1499; // Default to Starter price
+            
+            return {
+              institution_name: inst.name,
+              plan_name: planName,
+              subscription_status: inst.subscription_status,
+              start_date: inst.registered_at,
+              next_renewal_date: inst.next_renewal_date,
+              price: price,
+              institution_id: inst.id,
+            };
+          });
+          allSubData = subData;
+          renderSubTable(allSubData);
+        })
+        .catch(function(err) {
+          console.error('Error loading institutions:', err);
+          document.getElementById('subTableBody').innerHTML =
+            '<tr><td colspan="8" style="text-align:center;color:var(--red-l);padding:32px;">⚠️ Failed: ' + escapeHtml(err.message || 'Unknown error') + '</td></tr>';
+        });
+
+      // Load direct subscriber subscriptions
+      fetch('/api/admin/platform/direct-subscriptions', { credentials: 'include' })
+        .then(function(r) { 
+          if (!r.ok) {
+            console.error('Direct subscriptions API error:', r.status, r.statusText);
+            var errMsg = 'API error: ' + r.status;
+            if (r.status === 403) errMsg += ' (Forbidden)';
+            if (r.status === 401) errMsg += ' (Unauthorized)';
+            throw new Error(errMsg);
+          }
+          return r.json(); 
+        })
+        .then(function(data) {
+          console.log('Direct subscriptions loaded:', data);
+          allDirectSubData = data.subscriptions || [];
+          renderDirectSubTable(allDirectSubData);
+        })
+        .catch(function(err) {
+          console.error('Error loading direct subscriptions:', err);
+          document.getElementById('directSubTableBody').innerHTML =
+            '<tr><td colspan="9" style="text-align:center;color:var(--red-l);padding:32px;">⚠️ Failed: ' + escapeHtml(err.message || 'Unknown error') + '</td></tr>';
+        });
+
+      // Load subscription plans
+      fetch('/api/admin/platform/subscription-plans', { credentials: 'include' })
+        .then(function(r) { 
+          if (!r.ok) {
+            console.error('Plans API error:', r.status, r.statusText);
+            var errMsg = 'API error: ' + r.status;
+            if (r.status === 403) errMsg += ' (Forbidden - check if logged in as platform_admin)';
+            if (r.status === 401) errMsg += ' (Unauthorized - session expired)';
+            throw new Error(errMsg);
+          }
+          return r.json(); 
+        })
+        .then(function(plans) {
+          console.log('Plans loaded:', plans);
+          var directPlans = plans.filter(function(p) { return p.plan_type === 'individual'; });
+          var instPlans = plans.filter(function(p) { return p.plan_type === 'institution'; });
+          
+          renderPlansTable('directPlansTableBody', directPlans, 'direct');
+          renderPlansTable('institutionPlansTableBody', instPlans, 'institution');
+        })
+        .catch(function(err) {
+          console.error('Error loading plans:', err);
+          var errHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red-l);padding:24px;">⚠️ Failed to load: ' + escapeHtml(err.message || 'Unknown error') + '</td></tr>';
+          document.getElementById('directPlansTableBody').innerHTML = errHTML;
+          document.getElementById('institutionPlansTableBody').innerHTML = errHTML;
+        });
+    }
+
+    function renderPlansTable(tableId, plans, type) {
+      var tbody = document.getElementById(tableId);
+      
+      if (!plans || plans.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--red-l);padding:24px;"><div style="margin-bottom:8px;">⚠️ No plans available</div><p style="font-size:0.8rem;color:var(--muted2);margin:0;">If this persists, plans may not have been seeded on startup.</p></td></tr>';
+        return;
+      }
+      
+      var getFeatures = function(flags) {
+        if (!flags || Object.keys(flags).length === 0) return '—';
+        var features = [];
+        
+        // Map feature flags to readable feature names
+        var featureName = {
+          // Individual plan features
+          'mock_tests_5': '3–5 mock tests',
+          'mock_tests_unlimited': 'Unlimited mock tests',
+          'practice_exams_3': 'Limited practice exams',
+          'practice_exams_unlimited': 'Unlimited practice exams',
+          'ai_analytics': 'AI analytics',
+          'kcet_question_bank': 'KCET question bank',
+          'leaderboard': 'Leaderboard ranking',
+          'performance_reports': 'Performance reports',
+          'ai_recommendations': 'AI recommendations',
+          'priority_access': 'Priority access',
+          // Institution plan features
+          'institution_uploads': 'Institution uploads',
+          'institution_question_bank': 'Institution Q bank',
+          'chapter_tests': 'Chapter-wise tests',
+          'chapter_wise_tests': 'Chapter-wise tests',
+          'chapter_wise_exams': 'Chapter-wise exams',
+          'analytics': 'Analytics',
+          'basic_analytics': 'Basic analytics',
+          'advanced_analytics': 'Advanced analytics',
+          'branding': 'Institution branding',
+          'priority_support': 'Priority support',
+        };
+        
+        Object.keys(flags).forEach(function(key) {
+          var val = flags[key];
+          var name = featureName[key];
+          
+          if (!name) return;
+          
+          // Handle different value types
+          if (val === true) {
+            features.push('✅ ' + name);
+          } else if (val === false) {
+            // Skip false values in feature list
+          } else if (typeof val === 'string' && val.length > 0) {
+            // For string values like 'Basic', 'Advanced', 'Full', 'Custom', 'Dedicated Support'
+            features.push('✅ ' + name + ': ' + val);
+          }
+        });
+        
+        return features.length > 0 ? features.join(' | ') : '—';
+      };
+      
+      if (type === 'direct') {
+        tbody.innerHTML = plans.map(function(p) {
+          var maxTests = p.max_test_attempts_per_period === null ? '∞' : p.max_test_attempts_per_period;
+          var maxExams = p.max_test_attempts_per_period === null ? '∞' : p.max_test_attempts_per_period;
+          
+          return '<tr>' +
+            '<td style="font-weight:600;font-size:0.87rem;">' + escapeHtml(p.name) + '</td>' +
+            '<td style="color:var(--muted);">' + escapeHtml(p.billing_period || '—') + '</td>' +
+            '<td style="font-weight:600;">' + fmtPrice(p.price) + '</td>' +
+            '<td style="text-align:center;font-size:0.85rem;">' + maxTests + '</td>' +
+            '<td style="text-align:center;font-size:0.85rem;">' + maxExams + '</td>' +
+            '<td style="font-size:0.75rem;color:var(--muted2);word-wrap:break-word;word-break:break-word;">' + getFeatures(p.feature_flags) + '</td>' +
+            '<td style="text-align:center;">' + (p.is_active ? '✅' : '❌') + '</td>' +
+          '</tr>';
+        }).join('');
+      } else if (type === 'institution') {
+        tbody.innerHTML = plans.map(function(p) {
+          return '<tr>' +
+            '<td style="font-weight:600;font-size:0.87rem;">' + escapeHtml(p.name) + '</td>' +
+            '<td style="color:var(--muted);">' + escapeHtml(p.billing_period || '—') + '</td>' +
+            '<td style="font-weight:600;">' + fmtPrice(p.price) + '</td>' +
+            '<td style="text-align:center;font-size:0.85rem;">' + (p.max_student_seats || '∞') + '</td>' +
+            '<td style="text-align:center;font-size:0.85rem;">' + (p.max_test_attempts_per_period || '∞') + '</td>' +
+            '<td style="font-size:0.75rem;color:var(--muted2);word-wrap:break-word;word-break:break-word;">' + getFeatures(p.feature_flags) + '</td>' +
+            '<td style="text-align:center;">' + (p.is_active ? '✅' : '❌') + '</td>' +
+          '</tr>';
+        }).join('');
+      }
+    }
+
+    function renderSubTable(rows) {
+      var filterStatus = document.getElementById('filterSubStatus').value;
+      var filtered = filterStatus ? rows.filter(function(r) { return r.subscription_status === filterStatus; }) : rows;
+
+      document.getElementById('tableFooter').textContent = filtered.length + ' records';
+      var tbody = document.getElementById('subTableBody');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:32px;">No matching records.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(function(row) {
+        return '<tr>' +
+          '<td style="font-weight:600;font-size:0.87rem;">' + escapeHtml(row.institution_name) + '</td>' +
+          '<td style="font-size:0.82rem;color:var(--muted2);">' + escapeHtml(row.plan_name || '—') + '</td>' +
+          '<td style="font-size:0.8rem;color:var(--muted);">Institution</td>' +
+          '<td>' + statusBadge(row.subscription_status) + '</td>' +
+          '<td style="font-size:0.8rem;color:var(--muted);">' + fmtDate(row.start_date) + '</td>' +
+          '<td style="font-size:0.8rem;">' + fmtDate(row.next_renewal_date) + '</td>' +
+          '<td style="font-size:0.85rem;font-weight:600;">' + fmtPrice(row.price) + '</td>' +
+          '<td>' +
+            '<a href="/admin/institutions" class="btn-outline small" style="text-decoration:none;">Manage</a>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    function renderDirectSubTable(rows) {
+      var filterStatus = document.getElementById('filterDirectStatus').value;
+      var filtered = filterStatus ? rows.filter(function(r) { return r.status === filterStatus; }) : rows;
+
+      document.getElementById('directTableFooter').textContent = filtered.length + ' records';
+      var tbody = document.getElementById('directSubTableBody');
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:32px;">No matching records.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(function(row) {
+        return '<tr>' +
+          '<td style="font-weight:600;font-size:0.87rem;">' + escapeHtml(row.student_name) + '</td>' +
+          '<td style="font-size:0.82rem;color:var(--muted);">' + escapeHtml(row.kcet_student_id || '—') + '</td>' +
+          '<td style="font-size:0.82rem;color:var(--muted2);">' + escapeHtml(row.email) + '</td>' +
+          '<td style="font-size:0.8rem;color:var(--muted2);">' + escapeHtml(row.plan_name || '—') + '</td>' +
+          '<td>' + statusBadge(row.status) + '</td>' +
+          '<td style="font-size:0.8rem;color:var(--muted);">' + fmtDate(row.start_date) + '</td>' +
+          '<td style="font-size:0.8rem;">' + fmtDate(row.next_renewal_date) + '</td>' +
+          '<td style="font-size:0.85rem;font-weight:600;">' + fmtPrice(row.price) + '</td>' +
+          '<td>' +
+            '<button class="btn-outline small" onclick="window.location.href=\'/admin/student-manage?user_id=' + row.user_id + '\'">Manage</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    document.getElementById('filterSubStatus').addEventListener('change', function() {
+      renderSubTable(allSubData);
+    });
+
+    document.getElementById('filterDirectStatus').addEventListener('change', function() {
+      renderDirectSubTable(allDirectSubData);
+    });
+
+    loadData();
+  })();
+  </script>
+</body>
+</html>

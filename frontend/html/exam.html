@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Exam — SmartKCET Prep</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/subscription.css"/>
+  <link rel="stylesheet" href="../css/subscription-modal-premium.css"/>
+  <!-- Preload Razorpay checkout script so it's ready when user selects a paid plan -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body class="exam-body">
+  <div class="bg-mesh"></div>
+
+  <!-- Exam Navbar -->
+  <nav class="navbar" aria-label="Main navigation">
+    <div class="nav-brand">
+      <div class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/exam" class="nav-pill active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Exam
+      </a>
+      <a href="/subscription" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Subscription
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <!-- Subscription Banner Placeholder -->
+  <div id="subscription-banner-mount" role="region" aria-label="Subscription status"></div>
+
+  <!-- Exam Topbar -->
+  <div class="exam-topbar" id="examTopbar">
+    <div class="exam-topbar-left">
+      <div class="brand-icon small">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="exam-title-text">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="exam-topbar-center">
+      <span class="exam-badge set-badge" id="topbarSet">Set A</span>
+      <span class="exam-badge diff-badge" id="topbarDiff">Medium</span>
+      <span class="exam-badge subject-badge" id="topbarSubject">Subject</span>
+    </div>
+    <div class="exam-topbar-right">
+      <div class="timer-block">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <span id="timerDisplay" class="timer-text">00:00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Student Entry Modal -->
+  <div class="overlay" id="entryOverlay">
+    <div class="entry-modal">
+      <div class="entry-modal-top">
+        <div class="entry-icon">🎓</div>
+        <h2>Ready to Begin?</h2>
+        <p>Enter your details to start the exam</p>
+      </div>
+      <div class="entry-form">
+        <div class="form-row">
+          <label class="input-label">Full Name</label>
+          <input type="text" id="studentName" class="text-input" placeholder="Enter your full name"/>
+        </div>
+        <div class="form-row">
+          <label class="input-label">Roll Number / Student ID</label>
+          <input type="text" id="studentRoll" class="text-input" placeholder="e.g. CS2024001"/>
+        </div>
+        <div class="form-row">
+          <label class="input-label">Select Paper Set</label>
+          <div class="set-selector">
+            <button class="set-sel-btn active" data-set="0" onclick="pickSet(0)">Set A</button>
+            <button class="set-sel-btn" data-set="1" onclick="pickSet(1)">Set B</button>
+            <button class="set-sel-btn" data-set="2" onclick="pickSet(2)">Set C</button>
+            <button class="set-sel-btn" data-set="3" onclick="pickSet(3)">Set D</button>
+          </div>
+        </div>
+        <div class="exam-info-box" id="examInfoBox">
+          <div class="info-row"><span>📚 Subject:</span><span id="infoSubject">—</span></div>
+          <div class="info-row"><span>🎯 Difficulty:</span><span id="infoDiff">—</span></div>
+          <div class="info-row"><span>❓ Questions:</span><span id="infoQCount">—</span></div>
+          <div class="info-row"><span>⏱ Time Limit:</span><span>60 minutes</span></div>
+        </div>
+        <!-- Remaining attempts indicator (REQ-5.7, 5.8, 5.9) — populated by exam.js -->
+        <div class="remaining-attempts" id="remainingAttempts" style="display:none;text-align:center;font-size:0.85rem;color:var(--muted);margin:8px 0 16px;padding:8px 12px;background:var(--s2);border:1px solid var(--border);border-radius:8px;"></div>
+        <button class="btn-generate" onclick="beginExam()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+          Begin Exam
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Exam Layout -->
+  <div class="exam-layout" id="examLayout" style="display:none">
+
+    <!-- Left: Question Navigator -->
+    <aside class="exam-sidebar">
+      <div class="sidebar-student-info" id="sidebarStudentInfo"></div>
+      <div class="sidebar-section-title">Question Navigator</div>
+      <div class="q-grid" id="qGrid"></div>
+      <div class="q-legend">
+        <div class="legend-row"><span class="legend-box answered"></span>Answered</div>
+        <div class="legend-row"><span class="legend-box skipped"></span>Skipped</div>
+        <div class="legend-row"><span class="legend-box current"></span>Current</div>
+        <div class="legend-row"><span class="legend-box unanswered"></span>Not visited</div>
+      </div>
+      <div class="sidebar-progress">
+        <div class="sidebar-prog-label">
+          <span id="answeredCount">0</span> / <span id="totalCount">0</span> answered
+        </div>
+        <div class="sidebar-prog-bar"><div class="sidebar-prog-fill" id="sidebarProgFill"></div></div>
+      </div>
+      <button class="btn-submit-exam" onclick="confirmSubmit()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Submit Paper
+      </button>
+    </aside>
+
+    <!-- Right: Question Area -->
+    <div class="exam-content">
+      <div class="exam-top-bar">
+        <div class="exam-top-prog">
+          <div class="exam-top-prog-fill" id="examTopProgFill"></div>
+        </div>
+      </div>
+
+      <div class="question-panel" id="questionPanel">
+        <div class="q-meta-row">
+          <span class="q-num-badge" id="qNumBadge">Q 1</span>
+          <span class="q-type-chip" id="qTypeChip">MCQ</span>
+          <span class="q-topic-chip" id="qTopicChip">Topic</span>
+          <span class="q-marks-chip" id="qMarksChip">1 mark</span>
+        </div>
+        <div class="q-body" id="qBody"></div>
+        <div class="q-answer-area" id="qAnswerArea"></div>
+      </div>
+
+      <div class="exam-nav-row">
+        <button class="btn-outline exam-nav-btn" id="prevBtn" onclick="navigate(-1)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Previous
+        </button>
+        <div class="exam-nav-center">
+          <button class="btn-skip" onclick="skipQuestion()">Skip</button>
+          <span class="q-position" id="qPosition">1 of 15</span>
+        </div>
+        <button class="btn-primary exam-nav-btn" id="nextBtn" onclick="navigate(1)">
+          Next
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Submit Confirm Modal -->
+  <div class="overlay" id="submitOverlay" style="display:none">
+    <div class="entry-modal">
+      <div class="entry-icon">📤</div>
+      <h2>Submit Paper?</h2>
+      <div class="submit-summary" id="submitSummary"></div>
+      <div class="submit-modal-btns">
+        <button class="btn-outline" onclick="closeSubmitModal()">Review Answers</button>
+        <button class="btn-generate" onclick="submitPaper()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>
+          Confirm Submit
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analyzing Modal -->
+  <div class="overlay" id="analyzingOverlay" style="display:none">
+    <div class="entry-modal">
+      <div class="analyzing-animation">
+        <div class="analyze-ring"></div>
+        <div class="analyze-icon">🤖</div>
+      </div>
+      <h2>AI Analyzing Your Answers</h2>
+      <p style="color:var(--muted);font-size:0.88rem;margin-bottom:20px">RAG model is evaluating your responses...</p>
+      <div class="gen-bar-wrap" style="margin-bottom:8px"><div class="gen-bar-fill" id="analyzeBarFill" style="width:0%"></div></div>
+      <p class="gen-bar-label" id="analyzeLabel">Processing answers...</p>
+    </div>
+  </div>
+
+  <!-- Submission Queue Status Indicator (REQ-14.6) -->
+  <div id="submission-queue-status" class="submission-queue-status" style="display:none">
+    <div class="queue-status-inner">
+      <span class="queue-status-icon">⏳</span>
+      <span id="queue-pending-count">0 pending</span>
+      <span class="queue-status-sep">·</span>
+      <span id="queue-last-retry">Last retry: —</span>
+    </div>
+  </div>
+
+  <!-- Manual Retry Prompt (REQ-14.7) -->
+  <div id="manual-retry-prompt" class="overlay" style="display:none">
+    <div class="entry-modal">
+      <div class="entry-icon">⚠️</div>
+      <h2>Submission Pending</h2>
+      <p style="color:var(--muted);margin-bottom:1.5rem;">Your exam submission could not be saved after multiple attempts. Your answers are safely stored locally.</p>
+      <div id="manual-retry-details" style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.5rem;text-align:left;"></div>
+      <div style="display:flex;gap:12px;justify-content:center;">
+        <button class="btn-generate" onclick="SubmissionQueue.manualRetry()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Retry Now
+        </button>
+        <button class="btn-outline" onclick="SubmissionQueue.dismissPrompt()">
+          Dismiss
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subscription Selection Modal (REQ-5.6, 1.3) -->
+  <!-- Sourced from frontend/html/subscription_modal.html — kept in sync with that partial. -->
+  <div id="subscriptionModal" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="modalTitle" aria-describedby="modalSubtitle" aria-modal="true" aria-hidden="true">
+    <div class="modal-dialog subscription-modal">
+      <div class="modal-header">
+        <div class="modal-header-content">
+          <h2 id="modalTitle" class="modal-title">Choose Your Plan</h2>
+          <p id="modalSubtitle" class="modal-subtitle">Select the plan that best fits your exam preparation needs</p>
+        </div>
+        <button class="modal-close" aria-label="Close plan selection dialog" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="plan-cards">
+          <!-- Free Trial Plan Card -->
+          <section class="plan-card" data-plan="trial" aria-labelledby="trialPlanName">
+            <div class="plan-badge">7 Days Free</div>
+            <div class="plan-header">
+              <div class="plan-icon trial-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+              </div>
+              <h3 id="trialPlanName" class="plan-name">Free Trial</h3>
+              <p class="plan-duration">7 days access</p>
+            </div>
+            <ul class="plan-features" role="list">
+              <li class="feature-item feature-included"><svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>5 exam attempts total</span></li>
+              <li class="feature-item feature-included"><svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Basic score display</span></li>
+              <li class="feature-item feature-included"><svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Performance analytics</span></li>
+              <li class="feature-item feature-excluded"><svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>No leaderboard access</span></li>
+              <li class="feature-item feature-excluded"><svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg><span>No AI recommendations</span></li>
+            </ul>
+            <button class="btn-plan btn-trial" type="button" data-action="select-trial" aria-label="Start Free Trial — 5 exam attempts over 7 days">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+              Start Free Trial
+            </button>
+          </section>
+
+          <!-- Pro Subscription Plan Card -->
+          <section class="plan-card plan-card-pro" data-plan="pro" aria-labelledby="proPlanName">
+            <div class="plan-badge plan-badge-pro">Most Popular</div>
+            <div class="plan-header">
+              <div class="plan-icon pro-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </div>
+              <h3 id="proPlanName" class="plan-name">Pro Subscription</h3>
+              <p class="plan-duration">Unlimited access</p>
+            </div>
+            <ul class="plan-features" role="list">
+              <li class="feature-item feature-included"><svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Unlimited exam attempts</span></li>
+              <li class="feature-item feature-included"><svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Full analytics dashboard</span></li>
+              <li class="feature-item feature-included"><svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>AI-powered recommendations</span></li>
+              <li class="feature-item feature-included"><svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Leaderboard access &amp; rankings</span></li>
+              <li class="feature-item feature-included"><svg class="feature-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg><span>Priority support</span></li>
+            </ul>
+            <div class="billing-period-select">
+              <label for="billingPeriod" class="billing-label">Billing Period:</label>
+              <select id="billingPeriod" class="billing-select" aria-describedby="billingPeriodHelp modalError">
+                <option value="weekly">Weekly - ₹99/week</option>
+                <option value="monthly" selected>Monthly - ₹349/month</option>
+              </select>
+              <small id="billingPeriodHelp" class="visually-hidden">Choose how often your Pro subscription will be billed.</small>
+            </div>
+            <button class="btn-plan btn-pro" type="button" data-action="select-pro" aria-label="Subscribe to Pro — unlimited exam attempts">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Subscribe to Pro
+            </button>
+          </section>
+        </div>
+
+        <!-- Error Message Area -->
+        <div class="modal-error" id="modalError" role="alert" aria-live="polite" style="display: none;">
+          <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div class="error-content">
+            <p class="error-message" id="errorMessage"></p>
+            <button class="btn-retry" type="button" style="display: none;" aria-label="Retry the previous action">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              Retry
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div class="modal-loading" id="modalLoading" style="display: none;" role="status" aria-live="polite">
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Processing your selection...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Exam Access Denied Modal (REQ-5.3, 5.4, 5.5) -->
+  <!-- Generic container reused for quota_exhausted / subscription_expired / institution_quota_exhausted. -->
+  <div class="overlay" id="examAccessDeniedOverlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="accessDeniedTitle" aria-describedby="accessDeniedMessage" aria-hidden="true">
+    <div class="entry-modal">
+      <div class="entry-icon" id="accessDeniedIcon" aria-hidden="true">⚠️</div>
+      <h2 id="accessDeniedTitle">Access Denied</h2>
+      <p id="accessDeniedMessage" style="color:var(--muted);margin-bottom:1.5rem;text-align:center;">You cannot start this exam right now.</p>
+      <div id="accessDeniedDetails" style="display:none;flex-direction:column;gap:8px;margin-bottom:1.5rem;text-align:left;"></div>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+        <button class="btn-generate" id="accessDeniedPrimaryBtn" type="button"></button>
+        <button class="btn-outline" id="accessDeniedSecondaryBtn" type="button">Back to Dashboard</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/router.js"></script>
+  <script src="../js/error-handler.js"></script>
+  <script src="../js/focus-trap.js"></script>
+  <script src="../js/subscription.js"></script>
+  <script src="../js/subscription-banner.js"></script>
+  <script src="../js/subscription-modal.js"></script>
+  <script src="../js/plan-comparison.js"></script>
+  <script src="../js/upgrade-prompt.js"></script>
+  <script src="../js/app.js"></script>
+  <script src="../js/exam.js"></script>
+  <script>
+  // Activate the client-side router so in-app <a href> clicks honour
+  // role-based access control and unauthenticated users are bounced to
+  // /login (REQ-15.1, 15.5–15.8, 15.11).
+  if (typeof Router !== 'undefined' && Router.init) { Router.init(); }
+
+  document.getElementById('logoutBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+      .finally(function() { window.location.href = '/login'; });
+  });
+  </script>
+</body>
+</html>

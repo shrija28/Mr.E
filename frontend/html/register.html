@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Prep — Register</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/login" class="nav-pill">Login</a>
+      <a href="/register" class="nav-pill active">Register</a>
+    </div>
+  </nav>
+
+  <!-- Register Form -->
+  <main style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);padding:20px;">
+    <div class="section-card" style="max-width:420px;width:100%;padding:32px;">
+      <h2 style="margin-bottom:8px;">Create Account</h2>
+      <p class="input-label" style="margin-bottom:24px;text-transform:none;font-size:0.9rem;">Register for SmartKCET Prep</p>
+
+      <div id="registerError" style="display:none;background:rgba(220,38,38,0.1);border:1px solid var(--red);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:0.85rem;color:var(--red-l);"></div>
+      <div id="registerSuccess" style="display:none;background:rgba(5,150,105,0.1);border:1px solid var(--green);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:0.85rem;color:var(--green-l);"></div>
+
+      <form id="registerForm" autocomplete="on">
+        <div class="input-group" style="margin-bottom:16px;">
+          <label class="input-label" for="displayName">Display Name</label>
+          <input class="text-input" type="text" id="displayName" name="displayName" placeholder="Your name" required minlength="1" maxlength="50" autocomplete="name"/>
+        </div>
+        <div class="input-group" style="margin-bottom:16px;">
+          <label class="input-label" for="email">Email</label>
+          <input class="text-input" type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email"/>
+        </div>
+        <div class="input-group" style="margin-bottom:16px;">
+          <label class="input-label" for="password">Password</label>
+          <input class="text-input" type="password" id="password" name="password" placeholder="Min 8 chars, at least 1 digit" required minlength="8" autocomplete="new-password"/>
+        </div>
+        <div class="input-group" style="margin-bottom:24px;">
+          <label class="input-label" for="confirmPassword">Confirm Password</label>
+          <input class="text-input" type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter password" required autocomplete="new-password"/>
+        </div>
+
+        <!-- Join type selection -->
+        <div style="margin-bottom:16px;">
+          <label class="input-label" style="margin-bottom:8px;display:block;">How are you joining?</label>
+          <div style="display:flex;gap:8px;">
+            <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--rs);cursor:pointer;font-size:0.85rem;transition:border-color 0.15s;" id="joinPersonalLabel">
+              <input type="radio" name="joinType" value="personal" checked style="margin:0;" onchange="toggleInviteField()"/>
+              <span>🎓 Personal Student</span>
+            </label>
+            <label style="flex:1;display:flex;align-items:center;gap:8px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--rs);cursor:pointer;font-size:0.85rem;transition:border-color 0.15s;" id="joinInstitutionLabel">
+              <input type="radio" name="joinType" value="institution" style="margin:0;" onchange="toggleInviteField()"/>
+              <span>🏫 Through Institution</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Invite code field (shown only when "Through Institution" selected) -->
+        <div class="input-group" id="inviteCodeGroup" style="margin-bottom:24px;display:none;">
+          <label class="input-label" for="inviteCode">Institution Invite Code</label>
+          <input class="text-input" type="text" id="inviteCode" name="inviteCode" placeholder="Paste the invite code from your institution" style="font-family:monospace;"/>
+          <small style="color:var(--muted);font-size:0.75rem;margin-top:4px;display:block;">Get this code from your college/coaching center admin</small>
+        </div>
+
+        <button type="submit" class="btn-primary" style="width:100%;justify-content:center;" id="registerBtn">
+          Create Account
+        </button>
+      </form>
+
+      <div style="margin-top:20px;text-align:center;">
+        <p style="font-size:0.85rem;color:var(--muted);">
+          Already have an account? <a href="/login" style="color:var(--purple-l);">Sign in</a>
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <script src="../js/auth.js"></script>
+  <script>
+  // Toggle invite code field visibility
+  function toggleInviteField() {
+    var sel = document.querySelector('input[name="joinType"]:checked');
+    var group = document.getElementById('inviteCodeGroup');
+    if (group) group.style.display = (sel && sel.value === 'institution') ? 'block' : 'none';
+    // Visual highlight
+    document.getElementById('joinPersonalLabel').style.borderColor = (sel && sel.value === 'personal') ? 'var(--purple-l,#a78bfa)' : 'var(--border)';
+    document.getElementById('joinInstitutionLabel').style.borderColor = (sel && sel.value === 'institution') ? 'var(--purple-l,#a78bfa)' : 'var(--border)';
+  }
+
+  // Auto-fill invite code from URL if present (e.g. /register?code=xxxx)
+  (function() {
+    var params = new URLSearchParams(window.location.search);
+    var code = params.get('code') || params.get('invite');
+    if (code) {
+      var radio = document.querySelector('input[name="joinType"][value="institution"]');
+      if (radio) radio.checked = true;
+      toggleInviteField();
+      var input = document.getElementById('inviteCode');
+      if (input) input.value = code;
+    }
+  })();
+
+  (function () {
+    var form = document.getElementById('registerForm');
+    var errorEl = document.getElementById('registerError');
+    var successEl = document.getElementById('registerSuccess');
+    var registerBtn = document.getElementById('registerBtn');
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+      successEl.style.display = 'none';
+    }
+
+    function showSuccess(msg) {
+      successEl.innerHTML = msg;
+      successEl.style.display = 'block';
+      errorEl.style.display = 'none';
+    }
+
+    function hideMessages() {
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+    }
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      hideMessages();
+
+      var displayName = document.getElementById('displayName').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var password = document.getElementById('password').value;
+      var confirmPassword = document.getElementById('confirmPassword').value;
+      var joinType = document.querySelector('input[name="joinType"]:checked');
+      var inviteCode = document.getElementById('inviteCode').value.trim();
+
+      if (!displayName || !email || !password) {
+        showError('Please fill in all fields.');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showError('Passwords do not match.');
+        return;
+      }
+
+      if (password.length < 8) {
+        showError('Password must be at least 8 characters.');
+        return;
+      }
+
+      if (!/\d/.test(password)) {
+        showError('Password must contain at least one digit.');
+        return;
+      }
+
+      if (joinType && joinType.value === 'institution' && !inviteCode) {
+        showError('Please enter the invite code from your institution.');
+        return;
+      }
+
+      registerBtn.disabled = true;
+      registerBtn.textContent = 'Creating account…';
+
+      try {
+        var body = {
+          email: email,
+          password: password,
+          display_name: displayName,
+        };
+        if (joinType && joinType.value === 'institution' && inviteCode) {
+          body.invite_code = inviteCode;
+        }
+
+        var res = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(body),
+        });
+        var data = await res.json();
+
+        if (res.ok) {
+          var kcetId = data.kcet_student_id || '';
+
+          // Institution signup: auto-login cookie was issued → show welcome + redirect
+          if (data.institution_linked && data.auto_login) {
+            var instName = data.institution_name || 'your institution';
+            showSuccess(
+              '🎉 Welcome to <strong>' + instName + '</strong>!' +
+              '<br>Your account has been linked successfully.' +
+              '<br><small style="color:var(--muted)">Your Student ID: ' + kcetId + '</small>' +
+              '<br><span style="color:var(--muted);font-size:0.8rem;">Redirecting to your dashboard…</span>'
+            );
+            form.reset();
+            toggleInviteField();
+            // Auto-redirect to institution student dashboard after 2 seconds
+            setTimeout(function() { window.location.href = '/student/institution/dashboard'; }, 2000);
+            return;
+          }
+
+          var linkedMsg = data.institution_linked
+            ? '<br>✅ Linked to <strong>' + (data.institution_name || 'institution') + '</strong>'
+            : '';
+          showSuccess(
+            'Account created! Your Student ID: <strong>' + kcetId + '</strong>' + linkedMsg + '<br>' +
+            '<a href="/login" style="color:var(--purple-l);margin-top:8px;display:inline-block;">Sign in now →</a>'
+          );
+          form.reset();
+          toggleInviteField();
+        } else if (res.status === 409) {
+          showError('This email is already registered.');
+        } else if (res.status === 400 && data) {
+          showError(data.message || 'Validation error.');
+        } else {
+          showError('Registration failed. Please try again.');
+        }
+      } catch (err) {
+        showError('Network error. Please try again.');
+      } finally {
+        registerBtn.disabled = false;
+        registerBtn.textContent = 'Create Account';
+      }
+    });
+
+    // Redirect if already authenticated
+    Auth.redirectIfAuthenticated();
+  })();
+  </script>
+</body>
+</html>

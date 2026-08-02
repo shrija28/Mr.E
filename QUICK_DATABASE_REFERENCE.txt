@@ -1,0 +1,187 @@
+================================================================================
+                    SMARTKCET DATABASE - QUICK REFERENCE
+================================================================================
+
+DATABASE LOCATION: backend/smartkcet.db (SQLite)
+EXPORT DATE: June 19, 2026
+
+================================================================================
+KEY NUMBERS AT A GLANCE
+================================================================================
+
+Users:           21 total
+  - Admin:       1
+  - Direct:      5 (trial)
+  - Institutional: 15
+
+Institutions:    3 total (all active)
+Subscriptions:   8 total (8 active - 5 trial + 3 institutional)
+
+================================================================================
+INSTITUTIONS
+================================================================================
+
+1. KCET Academy
+   ID: d5ad8e81a3ee4c43b3a38da1fef050ee
+   Code: KCET_AC_001
+   Phone: +91-90000-00000
+   Students: 5
+   Registered: 2026-06-18 17:13:53
+   Status: ACTIVE
+
+2. Engineering Coaching Centre
+   ID: 46e520573e484d2cb288f34b2ff9004a
+   Code: ENG_CC_001
+   Phone: +91-90000-00001
+   Students: 5
+   Registered: 2026-06-18 17:13:53
+   Status: ACTIVE
+
+3. NEET Plus Institute
+   ID: c208c126a189476eacb0dc57148c1494
+   Code: NEET_INST_001
+   Phone: +91-90000-00002
+   Students: 5
+   Registered: 2026-06-18 17:13:53
+   Status: ACTIVE
+
+================================================================================
+DIRECT SUBSCRIBER STUDENTS (5)
+================================================================================
+
+KCET001 | student1@smartkcet.test   | Direct Student 1
+KCET002 | student2@smartkcet.test   | Direct Student 2
+KCET003 | student3@smartkcet.test   | Direct Student 3
+KCET004 | student4@smartkcet.test   | Direct Student 4
+KCET005 | student5@smartkcet.test   | Direct Student 5
+
+All on TRIAL plan (7 days) - Ends: 2026-06-25
+
+================================================================================
+KCET ACADEMY STUDENTS (5)
+================================================================================
+
+KCET006 | inst1_student1@smartkcet.test | KCET Academy - Student 1
+KCET007 | inst1_student2@smartkcet.test | KCET Academy - Student 2
+KCET008 | inst1_student3@smartkcet.test | KCET Academy - Student 3
+KCET009 | inst1_student4@smartkcet.test | KCET Academy - Student 4
+KCET010 | inst1_student5@smartkcet.test | KCET Academy - Student 5
+
+================================================================================
+ENGINEERING COACHING CENTRE STUDENTS (5)
+================================================================================
+
+KCET011 | inst2_student1@smartkcet.test | ECC - Student 1
+KCET012 | inst2_student2@smartkcet.test | ECC - Student 2
+KCET013 | inst2_student3@smartkcet.test | ECC - Student 3
+KCET014 | inst2_student4@smartkcet.test | ECC - Student 4
+KCET015 | inst2_student5@smartkcet.test | ECC - Student 5
+
+================================================================================
+NEET PLUS INSTITUTE STUDENTS (5)
+================================================================================
+
+KCET016 | inst3_student1@smartkcet.test | NEET Plus - Student 1
+KCET017 | inst3_student2@smartkcet.test | NEET Plus - Student 2
+KCET018 | inst3_student3@smartkcet.test | NEET Plus - Student 3
+KCET019 | inst3_student4@smartkcet.test | NEET Plus - Student 4
+KCET020 | inst3_student5@smartkcet.test | NEET Plus - Student 5
+
+================================================================================
+ADMIN USER
+================================================================================
+
+Email: admin@smartkcet.com
+Name: Administrator
+ID: d9681588d1ad4886b1bbe0bb0dd7cbdb
+Role: platform_admin
+
+================================================================================
+SUBSCRIPTIONS STATUS
+================================================================================
+
+Individual Subscriptions: 5 (TRIAL - expires 2026-06-25)
+  Plan ID: 0ca9951550014b2fbb50faf127fcaab7
+  Status: TRIAL
+
+Institutional Subscriptions: 3 (ACTIVE - renews 2026-07-18)
+  Plan ID: ca29d3ba44584703998d27adf13ec829
+  Status: ACTIVE
+
+================================================================================
+DATABASE TABLES
+================================================================================
+
+Core Tables:
+  - users (21 records)
+  - institutions (3 records)
+  - subscriptions (8 records)
+  - subscription_plans
+  - users subscriptions
+  - invitations (0 records)
+  - billing_records
+  - payment_logs
+
+Learning Content:
+  - questions
+  - exams
+  - exam_sets
+  - exam_set_questions
+  - submissions
+  - syllabus_topics
+
+Tracking:
+  - leaderboard_scores
+  - usage_records
+  - subscription_events
+  - revoked_tokens
+  - indexed_files
+
+================================================================================
+QUICK STATS
+================================================================================
+
+User Distribution:
+  Admin: 1 (4.8%)
+  Direct Students: 5 (23.8%)
+  Institutional Students: 15 (71.4%)
+
+Institution Coverage:
+  Students per Institution: 5 (uniform distribution)
+  Subscription Status: 100% active
+  Total Institutional Capacity: 15 seats used
+
+Account Status:
+  Active: 21/21 (100%)
+  Trial Expiry: 2026-06-25 (6 days)
+  Renewal Due: 2026-07-18
+
+================================================================================
+AVAILABLE REPORTS
+================================================================================
+
+1. DB_STUDENT_INSTITUTION_REPORT.md
+   - Detailed markdown report with all student/institution info
+   
+2. DATABASE_ANALYSIS_SUMMARY.md
+   - Visual summary with tables and statistics
+   
+3. database_export.json
+   - Complete JSON export of all data
+   
+4. QUICK_DATABASE_REFERENCE.txt
+   - This file (quick lookup)
+
+================================================================================
+QUERIES
+================================================================================
+
+Scripts for data analysis:
+  - query_db.py (basic queries)
+  - export_detailed_data.py (comprehensive export)
+
+Run with: python <script_name>.py
+
+================================================================================
+END OF REFERENCE
+================================================================================

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leaderboard — SmartKCET Prep</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+  <nav class="navbar" aria-label="Main navigation">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/student/institution/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/student/institution/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>
+        My Exams
+      </a>
+      <a href="/student/institution/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Practice
+      </a>
+      <a href="/student/institution/leaderboard" class="nav-pill active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15l-3 3h6l-3-3z"/><path d="M5 9l7-7 7 7"/><path d="M4 19h16"/></svg>
+        Leaderboard
+      </a>
+      <a href="/student/institution/performance" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Performance
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <main class="dash-main">
+    <div class="dash-hero">
+      <div>
+        <h1 class="dash-title">Institution <span class="hero-gradient">Leaderboard</span></h1>
+        <p class="dash-sub" id="lbSub">Top performers in your institution</p>
+      </div>
+      <div class="dash-hero-right">
+        <div id="myRankBadge" style="background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);border-radius:20px;padding:6px 16px;font-size:0.82rem;color:var(--purple-l)">Your rank: —</div>
+      </div>
+    </div>
+
+    <div class="section-card results-card">
+      <div class="results-header"><h3>🏆 Institution Rankings</h3></div>
+      <div class="table-scroll">
+        <table class="results-table">
+          <thead><tr>
+            <th style="width:56px">Rank</th>
+            <th>Student</th>
+            <th>KCET ID</th>
+            <th>Avg Score</th>
+            <th>Exams</th>
+          </tr></thead>
+          <tbody id="lbBody">
+            <tr><td colspan="5" style="text-align:center;padding:32px;color:var(--muted)">Loading leaderboard…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script>
+  Auth.currentRole().then(function(u) {
+    if (!u || u.role !== 'student' || u.student_subtype !== 'institution_linked') {
+      window.location.href = u && u.role === 'student' ? '/dashboard' : '/login';
+    }
+  });
+  document.getElementById('logoutBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+      .finally(function() { window.location.href = '/login'; });
+  });
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  fetch('/api/institution/student/leaderboard', { credentials: 'include' })
+    .then(function(r) { return r.ok ? r.json() : { leaderboard: [], my_rank: null, total: 0 }; })
+    .then(function(data) {
+      var entries = data.leaderboard || [];
+      if (data.my_rank) {
+        document.getElementById('myRankBadge').textContent = 'Your rank: #' + data.my_rank + ' of ' + data.total;
+      }
+      document.getElementById('lbSub').textContent =
+        'Top ' + entries.length + ' of ' + (data.total || 0) + ' students in your institution';
+
+      var tbody = document.getElementById('lbBody');
+      if (!entries.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:32px;color:var(--muted)">No ranking data yet. Take an exam to appear here.</td></tr>';
+        return;
+      }
+      var medals = ['🥇','🥈','🥉'];
+      tbody.innerHTML = entries.map(function(e) {
+        var score = e.avg_score || 0;
+        var cls = score >= 70 ? 'score-high' : score >= 40 ? 'score-mid' : 'score-low';
+        var medal = medals[e.rank - 1] || ('#' + e.rank);
+        var mine = (e.rank === data.my_rank);
+        return '<tr' + (mine ? ' style="background:rgba(124,58,237,0.07)"' : '') + '>' +
+          '<td style="font-size:1rem;text-align:center">' + medal + '</td>' +
+          '<td><strong>' + esc(e.display_name) +
+            (mine ? ' <span style="font-size:0.72rem;color:var(--purple-l)">(You)</span>' : '') +
+          '</strong></td>' +
+          '<td style="color:var(--muted);font-family:monospace;font-size:0.78rem">' + esc(e.kcet_student_id || '—') + '</td>' +
+          '<td><span class="score-badge ' + cls + '">' + score + '%</span></td>' +
+          '<td style="color:var(--muted)">' + e.attempts + '</td>' +
+          '</tr>';
+      }).join('');
+    });
+  </script>
+</body>
+</html>

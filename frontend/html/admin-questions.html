@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Question Bank — SmartKCET Admin</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Admin Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Admin</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/admin/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
+      </a>
+      <a href="/admin/institutions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Institutions
+      </a>
+      <a href="/admin/upload" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload
+      </a>
+      <a href="/admin/questions" class="nav-pill active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Questions
+      </a>
+      <a href="/admin/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Exams
+      </a>
+      <a href="/admin/syllabus" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Syllabus
+      </a>
+      <a href="/admin/subscriptions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Subscriptions
+      </a>
+      <a href="/admin/analytics" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Analytics
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="/admin/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-wrap">
+    <!-- Page Header -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        </div>
+        <div>
+          <h2>Question Bank</h2>
+          <p class="section-sub">Manage generated questions across all subjects</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <!-- Subject Filter -->
+        <div class="filter-row">
+          <div class="filter-group">
+            <label class="input-label" for="subjectFilter">Subject</label>
+            <select class="select-input" id="subjectFilter">
+              <option value="">All Subjects</option>
+              <option value="Biology">Biology</option>
+              <option value="Physics">Physics</option>
+              <option value="Chemistry">Chemistry</option>
+              <option value="Mathematics">Mathematics</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Per-Subject Counts -->
+        <div id="subjectCounts" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;"></div>
+
+        <!-- Insufficient Questions Warning -->
+        <div id="insufficientWarning" style="display:none;margin-top:16px;padding:12px 16px;border-radius:var(--rs);background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.3);color:var(--yellow-l);font-size:0.85rem;">
+          ⚠️ <span id="warningText"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Questions Table -->
+    <div class="section-card results-card">
+      <div class="results-header">
+        <h3 id="tableTitle">Questions</h3>
+        <span id="pageInfo" style="font-size:0.82rem;color:var(--muted);"></span>
+      </div>
+      <div class="table-scroll">
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Subject</th>
+              <th>Question</th>
+              <th>Topic</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="questionsBody">
+          </tbody>
+        </table>
+      </div>
+      <div class="table-footer" style="display:flex;align-items:center;justify-content:space-between;">
+        <span id="totalInfo" style="font-size:0.78rem;color:var(--muted);"></span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-outline small" id="prevBtn" disabled>Previous</button>
+          <button class="btn-outline small" id="nextBtn" disabled>Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Dialog -->
+    <div id="deleteDialog" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);z-index:200;align-items:center;justify-content:center;padding:20px;">
+      <div style="background:var(--s1);border:1px solid var(--border2);border-radius:var(--r);padding:32px;max-width:400px;width:100%;">
+        <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:12px;">Delete Question</h3>
+        <p style="color:var(--muted2);font-size:0.88rem;margin-bottom:24px;">Are you sure you want to delete this question? This action cannot be undone.</p>
+        <div style="display:flex;gap:10px;">
+          <button class="btn-outline" id="cancelDeleteBtn" style="flex:1;justify-content:center;">Cancel</button>
+          <button class="btn-primary" id="confirmDeleteBtn" style="flex:1;justify-content:center;background:linear-gradient(135deg,var(--red),var(--orange));">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error Toast -->
+    <div id="errorToast" class="toast error" style="display:none;"></div>
+  </div>
+
+  <script>
+  (function() {
+    const API_BASE = '/api/admin/questions';
+    let currentPage = 1;
+    let totalPages = 1;
+    let currentSubject = '';
+    let pendingDeleteId = null;
+    let subjectCounts = {};
+
+    const subjectFilter = document.getElementById('subjectFilter');
+    const questionsBody = document.getElementById('questionsBody');
+    const pageInfo = document.getElementById('pageInfo');
+    const totalInfo = document.getElementById('totalInfo');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const deleteDialog = document.getElementById('deleteDialog');
+    const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const errorToast = document.getElementById('errorToast');
+    const insufficientWarning = document.getElementById('insufficientWarning');
+    const warningText = document.getElementById('warningText');
+    const subjectCountsEl = document.getElementById('subjectCounts');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    // Fetch per-subject counts
+    async function fetchCounts() {
+      try {
+        const res = await fetch('/api/admin/questions/counts', { credentials: 'include' });
+        if (!res.ok) return;
+        const data = await res.json();
+        subjectCounts = data.counts || data;
+        renderCounts();
+        checkInsufficientWarning();
+      } catch (e) {
+        // silently fail
+      }
+    }
+
+    function renderCounts() {
+      const subjects = ['Biology', 'Physics', 'Chemistry', 'Mathematics'];
+      subjectCountsEl.innerHTML = subjects.map(function(s) {
+        const count = subjectCounts[s] || 0;
+        return '<div style="padding:8px 14px;background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);font-size:0.82rem;">' +
+          '<span style="color:var(--muted);">' + s + ':</span> ' +
+          '<span style="font-weight:700;">' + count + '</span>' +
+          '</div>';
+      }).join('');
+    }
+
+    function checkInsufficientWarning() {
+      var warnings = [];
+      var subjects = ['Biology', 'Physics', 'Chemistry', 'Mathematics'];
+      var filterSubject = currentSubject;
+
+      if (filterSubject) {
+        // Check only the filtered subject
+        var count = subjectCounts[filterSubject] || 0;
+        if (count < 20) {
+          warnings.push(filterSubject + ' has only ' + count + ' questions (minimum 20 needed for a full exam set)');
+        }
+      } else {
+        // Check all subjects
+        subjects.forEach(function(s) {
+          var count = subjectCounts[s] || 0;
+          if (count < 20) {
+            warnings.push(s + ' (' + count + ')');
+          }
+        });
+        if (warnings.length > 0) {
+          warnings = ['Insufficient questions for: ' + warnings.join(', ') + '. Minimum 20 needed per subject.'];
+        }
+      }
+
+      if (warnings.length > 0) {
+        warningText.textContent = warnings[0];
+        insufficientWarning.style.display = 'block';
+      } else {
+        insufficientWarning.style.display = 'none';
+      }
+    }
+
+    // Fetch questions list
+    async function fetchQuestions() {
+      try {
+        var url = API_BASE + '?page=' + currentPage;
+        if (currentSubject) {
+          url += '&subject=' + encodeURIComponent(currentSubject);
+        }
+        var res = await fetch(url, { credentials: 'include' });
+        if (!res.ok) {
+          showError('Failed to load questions');
+          return;
+        }
+        var data = await res.json();
+        renderTable(data);
+      } catch (e) {
+        showError('Network error loading questions');
+      }
+    }
+
+    function renderTable(data) {
+      var questions = data.questions || [];
+      var total = data.total || 0;
+      totalPages = Math.max(1, Math.ceil(total / 50));
+
+      pageInfo.textContent = 'Page ' + currentPage + ' of ' + totalPages;
+      totalInfo.textContent = total + ' question' + (total !== 1 ? 's' : '') + ' total';
+
+      if (questions.length === 0) {
+        questionsBody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:var(--muted);">No questions found</td></tr>';
+      } else {
+        questionsBody.innerHTML = questions.map(function(q, i) {
+          var num = (currentPage - 1) * 50 + i + 1;
+          var truncated = (q.question || '').length > 80
+            ? (q.question || '').substring(0, 80) + '…'
+            : (q.question || '');
+          return '<tr data-id="' + q.id + '">' +
+            '<td>' + num + '</td>' +
+            '<td>' + escapeHtml(q.subject || '') + '</td>' +
+            '<td style="white-space:normal;max-width:300px;">' + escapeHtml(truncated) + '</td>' +
+            '<td>' + escapeHtml(q.topic || '') + '</td>' +
+            '<td><button class="btn-outline small delete-btn" data-id="' + q.id + '">Delete</button></td>' +
+            '</tr>';
+        }).join('');
+      }
+
+      prevBtn.disabled = currentPage <= 1;
+      nextBtn.disabled = currentPage >= totalPages;
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // Delete flow
+    function showDeleteDialog(id) {
+      pendingDeleteId = id;
+      deleteDialog.style.display = 'flex';
+    }
+
+    function hideDeleteDialog() {
+      pendingDeleteId = null;
+      deleteDialog.style.display = 'none';
+    }
+
+    async function confirmDelete() {
+      if (!pendingDeleteId) return;
+      var id = pendingDeleteId;
+      hideDeleteDialog();
+
+      try {
+        var res = await fetch(API_BASE + '/' + id, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
+        var data = await res.json();
+
+        if (res.ok && data.deleted === true) {
+          // Remove the row within 2 seconds
+          var row = document.querySelector('tr[data-id="' + id + '"]');
+          if (row) {
+            row.remove();
+          }
+          // Refresh counts
+          fetchCounts();
+        } else {
+          // Keep row visible, show error
+          var errMsg = data.error || 'Failed to delete question';
+          showError(errMsg);
+        }
+      } catch (e) {
+        showError('Network error while deleting question');
+      }
+    }
+
+    function showError(msg) {
+      errorToast.textContent = msg;
+      errorToast.style.display = 'block';
+      setTimeout(function() {
+        errorToast.style.display = 'none';
+      }, 4000);
+    }
+
+    // Event listeners
+    subjectFilter.addEventListener('change', function() {
+      currentSubject = this.value;
+      currentPage = 1;
+      fetchQuestions();
+      checkInsufficientWarning();
+    });
+
+    prevBtn.addEventListener('click', function() {
+      if (currentPage > 1) {
+        currentPage--;
+        fetchQuestions();
+      }
+    });
+
+    nextBtn.addEventListener('click', function() {
+      if (currentPage < totalPages) {
+        currentPage++;
+        fetchQuestions();
+      }
+    });
+
+    questionsBody.addEventListener('click', function(e) {
+      var btn = e.target.closest('.delete-btn');
+      if (btn) {
+        showDeleteDialog(btn.getAttribute('data-id'));
+      }
+    });
+
+    cancelDeleteBtn.addEventListener('click', hideDeleteDialog);
+    confirmDeleteBtn.addEventListener('click', confirmDelete);
+
+    // Close dialog on overlay click
+    deleteDialog.addEventListener('click', function(e) {
+      if (e.target === deleteDialog) {
+        hideDeleteDialog();
+      }
+    });
+
+    // Logout
+    logoutBtn.addEventListener('click', async function() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      } catch (e) {}
+      window.location.href = '/login';
+    });
+
+    // Initial load
+    fetchCounts();
+    fetchQuestions();
+  })();
+  </script>
+</body>
+</html>

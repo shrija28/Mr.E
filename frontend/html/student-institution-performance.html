@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Performance — SmartKCET Prep</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+  <nav class="navbar" aria-label="Main navigation">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/student/institution/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/student/institution/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>
+        My Exams
+      </a>
+      <a href="/student/institution/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Practice
+      </a>
+      <a href="/student/institution/leaderboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15l-3 3h6l-3-3z"/><path d="M5 9l7-7 7 7"/></svg>
+        Leaderboard
+      </a>
+      <a href="/student/institution/performance" class="nav-pill active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Performance
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <main class="dash-main">
+    <div class="dash-hero">
+      <div>
+        <h1 class="dash-title">My <span class="hero-gradient">Performance</span></h1>
+        <p class="dash-sub">Detailed analytics for all your exam submissions</p>
+      </div>
+    </div>
+
+    <!-- KPI Row -->
+    <div class="kpi-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:24px">
+      <div class="kpi-tile">
+        <div class="kpi-tile-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg></div>
+        <div class="kpi-tile-body"><div class="kpi-tile-val" id="kpiTotal">0</div><div class="kpi-tile-label">Total Exams</div></div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/></svg></div>
+        <div class="kpi-tile-body"><div class="kpi-tile-val" id="kpiAvg">0%</div><div class="kpi-tile-label">Avg Score</div></div>
+      </div>
+      <div class="kpi-tile">
+        <div class="kpi-tile-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <div class="kpi-tile-body"><div class="kpi-tile-val" id="kpiPass">0%</div><div class="kpi-tile-label">Pass Rate</div></div>
+      </div>
+    </div>
+
+    <!-- Score trend chart -->
+    <div class="section-card" style="margin-bottom:20px">
+      <div class="section-card-header">
+        <div class="section-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+        <div><h2 style="margin-bottom:2px">Score Trend</h2><p class="section-sub">Your recent exam scores</p></div>
+      </div>
+      <div class="chart-wrap" style="height:200px;padding:16px 20px"><canvas id="trendChart"></canvas></div>
+    </div>
+
+    <!-- Subject-wise performance chart -->
+    <div class="section-card" id="subjectChartCard" style="margin-bottom:20px;display:none;">
+      <div class="section-card-header">
+        <div class="section-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg></div>
+        <div><h2 style="margin-bottom:2px">Subject Performance</h2><p class="section-sub">Average score per subject</p></div>
+      </div>
+      <div class="chart-wrap" style="height:200px;padding:16px 20px"><canvas id="subjectChart"></canvas></div>
+    </div>
+
+    <!-- AI Guidance -->
+    <div class="section-card" id="aiGuidanceCard" style="margin-bottom:20px;display:none;">
+      <div class="section-card-header">
+        <div class="section-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+        <div><h2 style="margin-bottom:2px">AI Performance Analysis</h2><p class="section-sub">Smart insights based on your exam results</p></div>
+      </div>
+      <div class="section-body" style="padding:16px 20px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;">
+          <div style="background:rgba(5,150,105,0.08);border:1px solid rgba(5,150,105,0.2);border-radius:var(--rs);padding:12px;">
+            <div style="font-size:0.7rem;font-weight:700;color:var(--green-l);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">✅ Strong</div>
+            <ul id="perfStrongList" style="margin:0;padding:0;list-style:none;font-size:0.82rem;"></ul>
+          </div>
+          <div style="background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.2);border-radius:var(--rs);padding:12px;">
+            <div style="font-size:0.7rem;font-weight:700;color:var(--yellow-l,#fbbf24);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">📈 Can Improve</div>
+            <ul id="perfImproveList" style="margin:0;padding:0;list-style:none;font-size:0.82rem;"></ul>
+          </div>
+          <div style="background:rgba(220,38,38,0.08);border:1px solid rgba(220,38,38,0.2);border-radius:var(--rs);padding:12px;">
+            <div style="font-size:0.7rem;font-weight:700;color:var(--red-l,#f87171);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">⚠️ Needs Focus</div>
+            <ul id="perfWeakList" style="margin:0;padding:0;list-style:none;font-size:0.82rem;"></ul>
+          </div>
+        </div>
+        <div id="perfAIRec" style="font-size:0.84rem;color:var(--muted2);background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:12px;line-height:1.6;"></div>
+      </div>
+    </div>
+
+    <!-- Rank Booster & Suggestions -->
+    <div class="section-card" id="rankBoosterCard" style="margin-bottom:20px;display:none;">
+      <div class="section-card-header">
+        <div class="section-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15l-3 3h6l-3-3z"/><path d="M5 9l7-7 7 7"/><path d="M4 19h16"/></svg></div>
+        <div><h2 style="margin-bottom:2px">Rank Predictor & Study Plan</h2><p class="section-sub">Your projected KCET rank and personalized action plan</p></div>
+      </div>
+      <div class="section-body" style="padding:16px 20px;">
+        <div id="boosterContent" style="font-size:0.84rem;color:var(--muted2);margin-bottom:16px;"></div>
+        <div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:14px;">
+          <div style="font-size:0.82rem;font-weight:700;color:var(--muted2);margin-bottom:10px;">🎯 Get Suggestions for a Specific Rank</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <input type="number" id="perfDesiredRank" class="text-input" placeholder="Enter desired rank e.g. 5000" min="1" style="flex:1;min-width:180px;max-width:260px;padding:8px 12px;font-size:0.85rem;"/>
+            <button class="btn-primary small" id="perfGetSuggestionsBtn">Get Suggestions</button>
+          </div>
+          <div id="perfSuggestionsResult" style="margin-top:12px;display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- College Recommendations -->
+    <div class="section-card" id="perfCollegeRecSection" style="margin-bottom:20px;display:none;">
+      <div class="section-card-header">
+        <div class="section-icon" style="background:rgba(37,99,235,0.15);font-size:1.2rem;">🎓</div>
+        <div>
+          <h2 style="margin-bottom:2px">College Match Predictor</h2>
+          <p class="section-sub" id="perfRecSubtitle">Based on your average performance</p>
+        </div>
+        <span class="inst-exam-tag platform" id="perfRankBadge" style="margin-left:auto;font-weight:700;font-size:0.8rem;padding:4px 12px;border-radius:20px;">Calculating…</span>
+      </div>
+      <div class="section-body" style="padding:16px 20px;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+          <button class="nav-pill active" id="perfTabTarget" onclick="switchPerfTab('target')">🎯 Target (<span id="perfTargetCount">0</span>)</button>
+          <button class="nav-pill" id="perfTabReach" onclick="switchPerfTab('reach')">🚀 Reach (<span id="perfReachCount">0</span>)</button>
+          <button class="nav-pill" id="perfTabSafe" onclick="switchPerfTab('safe')">🛡️ Safe (<span id="perfSafeCount">0</span>)</button>
+        </div>
+        <div id="perfCollegesGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;"></div>
+      </div>
+    </div>
+
+    <!-- History table -->
+    <div class="section-card results-card">
+      <div class="results-header"><h3>Exam History</h3></div>
+      <div class="table-scroll">
+        <table class="results-table">
+          <thead><tr>
+            <th>Subject</th><th>Set</th><th>Score</th><th>Time</th><th>Status</th><th>Date</th>
+          </tr></thead>
+          <tbody id="histBody">
+            <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+  Auth.currentRole().then(function(u) {
+    if (!u || u.role !== 'student' || u.student_subtype !== 'institution_linked') {
+      window.location.href = u && u.role === 'student' ? '/dashboard' : '/login';
+    }
+  });
+  document.getElementById('logoutBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+      .finally(function() { window.location.href = '/login'; });
+  });
+
+  function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  Chart.defaults.color = '#6868a0';
+  Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+  var subjectChart = null, trendChart = null, perfCollegeData = null, perfCurrentTab = 'target';
+
+  fetch('/api/institution/student/performance', { credentials: 'include' })
+    .then(function(r) { return r.ok ? r.json() : { submissions: [], summary: {} }; })
+    .then(function(data) {
+      var subs = data.submissions || [];
+      var sm = data.summary || {};
+      document.getElementById('kpiTotal').textContent = sm.total_exams || 0;
+      document.getElementById('kpiAvg').textContent   = (sm.avg_score || 0) + '%';
+      document.getElementById('kpiPass').textContent  = (sm.pass_rate || 0) + '%';
+
+      // Score trend
+      var recent = subs.slice(0, 15).reverse();
+      if (recent.length) {
+        trendChart = new Chart(document.getElementById('trendChart'), {
+          type: 'line',
+          data: { labels: recent.map(function(s,i){return 'E'+(i+1);}),
+            datasets: [{ label: 'Score %', data: recent.map(function(s){return Math.round(s.score_pct);}),
+              borderColor: '#a855f7', backgroundColor: 'rgba(168,85,247,0.08)',
+              tension: 0.35, fill: true, pointBackgroundColor: '#a855f7', borderWidth: 2 }] },
+          options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+            scales:{ y:{beginAtZero:true,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#6868a0'}},
+                     x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#6868a0'}} } }
+        });
+      }
+
+      if (subs.length) {
+        // Subject chart
+        var subjMap = {};
+        subs.forEach(function(s){
+          var subj = s.subject||'General';
+          if(!subjMap[subj]) subjMap[subj]={total:0,n:0};
+          subjMap[subj].total += s.score_pct; subjMap[subj].n++;
+        });
+        var subjLabels = Object.keys(subjMap);
+        var subjVals = subjLabels.map(function(k){return Math.round(subjMap[k].total/subjMap[k].n);});
+        var colors = ['rgba(124,58,237,0.75)','rgba(37,99,235,0.75)','rgba(8,145,178,0.75)','rgba(5,150,105,0.75)','rgba(217,119,6,0.75)'];
+        document.getElementById('subjectChartCard').style.display = 'block';
+        subjectChart = new Chart(document.getElementById('subjectChart'), {
+          type: 'bar',
+          data: { labels: subjLabels, datasets: [{label:'Avg Score %', data:subjVals,
+            backgroundColor: subjLabels.map(function(_,i){return colors[i%colors.length];}),
+            borderRadius:6, borderSkipped:false }] },
+          options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+            scales:{ x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#6868a0'}},
+                     y:{beginAtZero:true,max:100,grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#6868a0'}} } }
+        });
+
+        // AI analysis
+        var strong=[],improve=[],weak=[];
+        Object.entries(subjMap).forEach(function(entry){
+          var subj=entry[0], d=entry[1], avg=Math.round(d.total/d.n);
+          var item='<li style="display:flex;justify-content:space-between;gap:6px;padding:2px 0;"><span>'+esc(subj)+'</span><b>'+avg+'%</b></li>';
+          if(avg>=70) strong.push(item); else if(avg>=40) improve.push(item); else weak.push(item);
+        });
+        var ph='<li style="color:var(--muted);font-size:0.78rem;">None</li>';
+        document.getElementById('perfStrongList').innerHTML  = strong.length  ? strong.join('')  : ph;
+        document.getElementById('perfImproveList').innerHTML = improve.length ? improve.join('') : ph;
+        document.getElementById('perfWeakList').innerHTML    = weak.length    ? weak.join('')    : ph;
+        var avg=Math.round(subs.reduce(function(a,s){return a+s.score_pct;},0)/subs.length);
+        var pass=Math.round(subs.filter(function(s){return s.pass_flag;}).length/subs.length*100);
+        var rec = avg>=75?'🎉 Outstanding! Avg: '+avg+'%, Pass: '+pass+'%. ':avg>=60?'👍 Good. Avg: '+avg+'%. ':avg>=40?'📚 Moderate. Avg: '+avg+'%. More practice needed. ':'⚠️ Needs improvement. Avg: '+avg+'%. ';
+        if(weak.length) rec+='Focus on: '+Object.entries(subjMap).filter(function(e){return Math.round(e[1].total/e[1].n)<40;}).map(function(e){return e[0];}).join(', ')+'. ';
+        if(improve.length) rec+='Growth areas: '+Object.entries(subjMap).filter(function(e){var a=Math.round(e[1].total/e[1].n);return a>=40&&a<70;}).map(function(e){return e[0];}).join(', ')+'.';
+        document.getElementById('perfAIRec').textContent = rec;
+        document.getElementById('aiGuidanceCard').style.display = 'block';
+      }
+
+      // History table
+      var tbody = document.getElementById('histBody');
+      if (!subs.length) { tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">No exam history yet</td></tr>'; return; }
+      tbody.innerHTML = subs.map(function(s) {
+        var p=Math.round(s.score_pct), cls=p>=70?'score-high':p>=40?'score-mid':'score-low';
+        var m=Math.floor(s.time_taken_sec/60), sec=s.time_taken_sec%60;
+        var date=s.submitted_at?new Date(s.submitted_at).toLocaleDateString():'—';
+        return '<tr><td style="font-weight:600;color:var(--purple-l)">'+esc(s.subject||'—')+'</td><td>'+esc(s.set_label||'—')+'</td><td><span class="score-badge '+cls+'">'+p+'%</span></td><td style="color:var(--muted)">'+m+'m '+sec+'s</td><td class="'+(s.pass_flag?'status-pass':'status-fail')+'">'+(s.pass_flag?'✅ Pass':'❌ Fail')+'</td><td style="color:var(--muted2)">'+date+'</td></tr>';
+      }).join('');
+    });
+
+  // Rank Booster
+  fetch('/api/student/rank-booster-suggestions?target_rank=5000', { credentials:'include' })
+    .then(function(r){return r.ok?r.json():null;}).then(function(data){
+      if(!data||data.no_data) return;
+      document.getElementById('rankBoosterCard').style.display='block';
+      var html='<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:12px;">' +
+        '<div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 16px;text-align:center;"><div style="font-size:1.3rem;font-weight:700;color:var(--purple-l)">'+data.current_average_score+'%</div><div style="font-size:0.72rem;color:var(--muted)">Current Avg</div></div>' +
+        '<div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 16px;text-align:center;"><div style="font-size:1.3rem;font-weight:700;color:var(--cyan-l,#22d3ee)">'+data.required_average_score+'%</div><div style="font-size:0.72rem;color:var(--muted)">Need for '+esc(data.target_label)+'</div></div>' +
+        '<div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 16px;text-align:center;"><div style="font-size:1.3rem;font-weight:700;color:'+(data.score_gap>0?'var(--yellow-l,#fbbf24)':'var(--green-l)')+'">'+( data.score_gap>0?'+'+data.score_gap+'%':'✓ On track')+'</div><div style="font-size:0.72rem;color:var(--muted)">Gap</div></div>' +
+        '</div>';
+      if(data.action_items&&data.action_items.length) html+='<ul style="margin:0;padding:0 0 0 18px;font-size:0.84rem;color:var(--text);line-height:1.9;">'+data.action_items.map(function(item){return '<li>'+esc(item).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')+'</li>';}).join('')+'</ul>';
+      document.getElementById('boosterContent').innerHTML=html;
+    }).catch(function(){});
+
+  // College Recommendations
+  fetch('/api/student/college-recommendations', { credentials:'include' })
+    .then(function(r){return r.ok?r.json():null;}).then(function(data){
+      if(!data||data.no_data) return;
+      perfCollegeData=data;
+      document.getElementById('perfCollegeRecSection').style.display='block';
+      document.getElementById('perfRankBadge').textContent='Projected Rank: '+data.projected_rank_range;
+      document.getElementById('perfRecSubtitle').textContent='Avg: '+data.average_score+'% ('+data.student_tier+')';
+      var c=data.counts||{};
+      document.getElementById('perfTargetCount').textContent=c.target||0;
+      document.getElementById('perfReachCount').textContent=c.reach||0;
+      document.getElementById('perfSafeCount').textContent=c.safe||0;
+      renderPerfColleges();
+    }).catch(function(){});
+
+  window.switchPerfTab=function(tab){
+    perfCurrentTab=tab;
+    ['target','reach','safe'].forEach(function(t){
+      var btn=document.getElementById('perfTab'+t.charAt(0).toUpperCase()+t.slice(1));
+      if(btn) btn.classList.toggle('active',t===tab);
+    });
+    renderPerfColleges();
+  };
+
+  function renderPerfColleges(){
+    var grid=document.getElementById('perfCollegesGrid');
+    if(!grid||!perfCollegeData) return;
+    var colleges=(perfCollegeData.matches||{})[perfCurrentTab]||[];
+    if(!colleges.length){grid.innerHTML='<div style="color:var(--muted);font-size:0.83rem;padding:12px;">No colleges in this category.</div>';return;}
+    grid.innerHTML=colleges.map(function(col){
+      return '<div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:14px;display:flex;flex-direction:column;gap:6px;">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;"><span class="inst-exam-tag '+(col.tier<=2?'platform':'institution')+'" style="font-size:0.7rem;padding:2px 8px;">Tier '+col.tier+'</span><span style="font-size:0.72rem;color:var(--muted);">Cutoff: ~'+col.cutoff_rank+'</span></div>' +
+        '<div style="font-weight:700;font-size:0.93rem;color:var(--text);">'+esc(col.name)+'</div>' +
+        '<div style="font-size:0.78rem;color:var(--purple-l);">📍 '+esc(col.location)+'</div>' +
+        '<div style="font-size:0.78rem;color:var(--muted);line-height:1.4;">'+esc(col.description)+'</div></div>';
+    }).join('');
+  }
+
+  // Rank Suggestions
+  document.getElementById('perfGetSuggestionsBtn').addEventListener('click', function(){
+    var rank=parseInt(document.getElementById('perfDesiredRank').value);
+    if(!rank||rank<1){alert('Please enter a valid rank.');return;}
+    var btn=this; btn.disabled=true; btn.textContent='Loading…';
+    fetch('/api/student/rank-suggestions?desired_rank='+rank,{credentials:'include'})
+      .then(function(r){return r.json();}).then(function(data){
+        var result=document.getElementById('perfSuggestionsResult');
+        result.style.display='block';
+        result.innerHTML='<div style="font-size:0.8rem;color:var(--muted);margin-bottom:6px;">Current rank: <b>'+esc(String(data.current_rank))+'</b> → Target: <b>#'+data.desired_rank+'</b></div>' +
+          '<ul style="margin:0;padding:0 0 0 18px;font-size:0.84rem;color:var(--text);line-height:1.9;">' +
+          (data.suggestions||[]).map(function(s){return '<li>'+esc(s).replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')+'</li>';}).join('')+'</ul>';
+        btn.disabled=false; btn.textContent='Get Suggestions';
+      }).catch(function(){btn.disabled=false;btn.textContent='Get Suggestions';});
+  });
+  </script>
+</body>
+</html>

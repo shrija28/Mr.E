@@ -1,0 +1,31 @@
+{
+  "projectName": "ExamForge AI",
+  "version": "1.0.0",
+  "description": "RAG-Powered Question Paper Generator",
+  "author": "Your Name",
+  "license": "MIT",
+  "directories": {
+    "backend": "Python FastAPI backend",
+    "frontend": "Web interface",
+    "docs": "Documentation"
+  },
+  "backend": {
+    "language": "Python 3.8+",
+    "framework": "FastAPI",
+    "port": 8000,
+    "entry": "backend/app.py"
+  },
+  "frontend": {
+    "language": "HTML5/CSS3/JavaScript",
+    "pages": {
+      "index": "Main question generation interface",
+      "exam": "Exam taking interface",
+      "dashboard": "Performance analytics dashboard"
+    }
+  },
+  "scripts": {
+    "backend:install": "pip install -r backend/requirements.txt",
+    "backend:run": "python backend/app.py",
+    "frontend:serve": "python -m http.server 3000 -d frontend"
+  }
+}

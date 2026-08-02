@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Admin — Bulk Textbook Upload</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .subject-tabs { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px; }
+    .subject-tab { padding:8px 18px;border-radius:var(--rs);cursor:pointer;font-size:0.85rem;font-weight:600;border:1px solid var(--border);color:var(--muted2);background:var(--s2);transition:all 0.15s; }
+    .subject-tab.active { background:var(--purple-l,#a78bfa);color:#fff;border-color:var(--purple-l,#a78bfa); }
+    .puc-section { margin-bottom:28px; }
+    .puc-label { font-size:0.75rem;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);font-weight:700;margin-bottom:10px;padding:6px 10px;background:var(--s2);border-radius:var(--rs);display:inline-block; }
+    .chapter-row { display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--rs);margin-bottom:6px;background:var(--card-bg);transition:border-color 0.15s; }
+    .chapter-row.has-file { border-color:var(--purple-l,#a78bfa);background:rgba(124,58,237,0.05); }
+    .chapter-row.uploaded { border-color:var(--green-l,#34d399);background:rgba(5,150,105,0.06); }
+    .chapter-row.error { border-color:var(--red-l,#f87171);background:rgba(220,38,38,0.05); }
+    .ch-num-badge { width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0;background:rgba(124,58,237,0.15);color:var(--purple-l,#a78bfa); }
+    .ch-info { min-width:0; }
+    .ch-name { font-size:0.87rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .ch-meta { font-size:0.75rem;color:var(--muted);margin-top:2px; }
+    .ch-status { font-size:0.75rem;margin-top:3px; }
+    .ch-status.ok { color:var(--green-l,#34d399); }
+    .ch-status.err { color:var(--red-l,#f87171); }
+    .file-drop-area { position:relative;display:flex;align-items:center;gap:8px;flex-shrink:0; }
+    .file-pick-btn { padding:5px 12px;font-size:0.78rem;border-radius:var(--rs);border:1px dashed var(--border);color:var(--muted2);background:var(--s2);cursor:pointer;white-space:nowrap;transition:all 0.15s; }
+    .file-pick-btn:hover { border-color:var(--purple-l,#a78bfa);color:var(--purple-l,#a78bfa); }
+    .file-name-label { font-size:0.75rem;color:var(--muted);max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .clear-btn { width:20px;height:20px;border-radius:50%;border:none;background:rgba(220,38,38,0.15);color:var(--red-l,#f87171);cursor:pointer;font-size:0.85rem;display:flex;align-items:center;justify-content:center;flex-shrink:0;padding:0; }
+    .sticky-footer { position:sticky;bottom:0;background:var(--card-bg);border-top:1px solid var(--border);padding:14px 24px;display:flex;align-items:center;gap:16px;z-index:10; }
+    .progress-bar-wrap { flex:1;height:6px;background:var(--s2);border-radius:3px;overflow:hidden; }
+    .progress-bar-fill { height:100%;background:var(--purple-l,#a78bfa);border-radius:3px;transition:width 0.3s; }
+    .upload-stats { font-size:0.82rem;color:var(--muted);white-space:nowrap; }
+    .existing-badge { display:inline-flex;align-items:center;gap:4px;font-size:0.72rem;color:var(--green-l,#34d399);background:rgba(5,150,105,0.12);border:1px solid rgba(5,150,105,0.2);border-radius:10px;padding:2px 8px;margin-left:6px; }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Admin</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/admin/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
+      </a>
+      <a href="/admin/institutions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Institutions
+      </a>
+      <a href="/admin/upload" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload
+      </a>
+      <a href="/admin/questions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Questions
+      </a>
+      <a href="/admin/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Exams
+      </a>
+      <a href="/admin/syllabus" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Syllabus
+      </a>
+      <a href="/admin/subscriptions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Subscriptions
+      </a>
+      <a href="/admin/analytics" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Analytics
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="/admin/syllabus" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>Back to Syllabus
+      </a>
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout
+      </a>
+    </div>
+  </nav>
+
+  <div class="main-wrap" style="padding-bottom:100px;">
+    <!-- Header -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(37,99,235,0.2));">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        </div>
+        <div>
+          <h2>Bulk Textbook Upload</h2>
+          <p class="section-sub">Assign a textbook (PDF, DOCX, TXT) to every chapter in one go · Files are indexed into the RAG engine automatically</p>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:10px;align-items:center;">
+          <span id="headerStats" style="font-size:0.82rem;color:var(--muted);"></span>
+          <button class="btn-outline small" id="selectAllSubjectBtn" style="display:none;">Select All Visible</button>
+        </div>
+      </div>
+
+      <div class="section-body">
+        <!-- Subject tabs -->
+        <div class="subject-tabs" id="subjectTabs">
+          <div style="color:var(--muted);font-size:0.85rem;">Loading chapters…</div>
+        </div>
+
+        <!-- Chapters list -->
+        <div id="chaptersContainer">
+          <div style="text-align:center;color:var(--muted);padding:40px;">Loading…</div>
+        </div>
+
+        <!-- Alert area -->
+        <div id="alertArea" style="display:none;margin-top:16px;padding:12px 16px;border-radius:var(--rs);font-size:0.85rem;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sticky footer with upload button -->
+  <div class="sticky-footer" id="stickyFooter" style="display:none;">
+    <div>
+      <div style="font-size:0.85rem;font-weight:600;color:var(--text);" id="footerTitle">Ready to upload</div>
+      <div class="upload-stats" id="footerSub"></div>
+    </div>
+    <div class="progress-bar-wrap" id="progressWrap" style="display:none;">
+      <div class="progress-bar-fill" id="progressBar" style="width:0%;"></div>
+    </div>
+    <div class="upload-stats" id="progressLabel" style="display:none;"></div>
+    <button class="btn-primary" id="uploadAllBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Upload All Selected
+    </button>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    Auth.currentRole().then(function (user) {
+      if (!user || (user.role !== 'admin' && user.role !== 'platform_admin')) {
+        window.location.href = '/login';
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function (e) {
+      e.preventDefault();
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(function () { window.location.href = '/login'; });
+    });
+
+    // ── State ────────────────────────────────────────────────────────────────
+    var allTopics = [];          // all chapters from API
+    var fileMap = {};            // topic_id → File object
+    var uploadResults = {};      // topic_id → {status:'ok'|'error', msg}
+    var currentSubject = 'Physics';
+    var subjects = ['Physics', 'Chemistry', 'Mathematics', 'Biology'];
+    var subjectColors = {
+      Physics: '#22d3ee', Chemistry: '#34d399',
+      Mathematics: '#a78bfa', Biology: '#fbbf24'
+    };
+    var subjectBg = {
+      Physics: 'rgba(8,145,178,0.15)', Chemistry: 'rgba(5,150,105,0.15)',
+      Mathematics: 'rgba(124,58,237,0.15)', Biology: 'rgba(217,119,6,0.15)'
+    };
+
+    // ── Load all topics ──────────────────────────────────────────────────────
+    function loadTopics() {
+      fetch('/api/admin/syllabus?include_inactive=false', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          allTopics = (data.topics || []).sort(function (a, b) {
+            if (a.subject !== b.subject) return a.subject.localeCompare(b.subject);
+            if (a.puc_year !== b.puc_year) return a.puc_year.localeCompare(b.puc_year);
+            return a.chapter_number - b.chapter_number;
+          });
+          buildTabs();
+          renderSubject(currentSubject);
+          updateFooter();
+        })
+        .catch(function () {
+          document.getElementById('chaptersContainer').innerHTML =
+            '<div style="color:var(--red-l);text-align:center;padding:40px;">Failed to load chapters. Make sure you are logged in as admin.</div>';
+        });
+    }
+
+    // ── Build subject tabs ───────────────────────────────────────────────────
+    function buildTabs() {
+      var counts = {};
+      allTopics.forEach(function (t) { counts[t.subject] = (counts[t.subject] || 0) + 1; });
+      var tabBar = document.getElementById('subjectTabs');
+      tabBar.innerHTML = subjects.map(function (s) {
+        var n = counts[s] || 0;
+        return '<button class="subject-tab' + (s === currentSubject ? ' active' : '') + '" data-subject="' + s + '">' +
+          s + ' <span style="font-size:0.72rem;opacity:0.75;">(' + n + ')</span></button>';
+      }).join('');
+
+      tabBar.querySelectorAll('.subject-tab').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          tabBar.querySelectorAll('.subject-tab').forEach(function (b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          currentSubject = btn.getAttribute('data-subject');
+          renderSubject(currentSubject);
+        });
+      });
+    }
+
+    // ── Render chapters for a subject ────────────────────────────────────────
+    function renderSubject(subject) {
+      var topics = allTopics.filter(function (t) { return t.subject === subject; });
+      var container = document.getElementById('chaptersContainer');
+      if (topics.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:var(--muted);padding:32px;">No active chapters for ' + subject + '.</div>';
+        return;
+      }
+
+      // Group by PUC year
+      var pucGroups = {};
+      topics.forEach(function (t) {
+        if (!pucGroups[t.puc_year]) pucGroups[t.puc_year] = [];
+        pucGroups[t.puc_year].push(t);
+      });
+
+      var html = '';
+      ['1st PUC', '2nd PUC'].forEach(function (puc) {
+        if (!pucGroups[puc]) return;
+        html += '<div class="puc-section">';
+        html += '<div class="puc-label">' + puc + ' — ' + pucGroups[puc].length + ' chapters</div>';
+        pucGroups[puc].forEach(function (t) {
+          var color = subjectColors[subject];
+          var bg = subjectBg[subject];
+          var fileObj = fileMap[t.id];
+          var result = uploadResults[t.id];
+          var rowClass = 'chapter-row';
+          if (result && result.status === 'ok') rowClass += ' uploaded';
+          else if (result && result.status === 'error') rowClass += ' error';
+          else if (fileObj) rowClass += ' has-file';
+
+          var fileArea = '';
+          if (result && result.status === 'ok') {
+            fileArea = '<div style="display:flex;align-items:center;gap:6px;">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="var(--green-l,#34d399)" stroke-width="2" style="width:16px;height:16px;flex-shrink:0;"><polyline points="20 6 9 17 4 12"/></svg>' +
+              '<span style="font-size:0.75rem;color:var(--green-l,#34d399);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(result.filename) + '</span>' +
+              '</div>';
+          } else if (result && result.status === 'error') {
+            fileArea = '<span style="font-size:0.75rem;color:var(--red-l,#f87171);">✕ ' + escapeHtml(result.msg) + '</span>';
+          } else if (fileObj) {
+            fileArea = '<div class="file-drop-area">' +
+              '<span class="file-name-label" title="' + escapeHtml(fileObj.name) + '">' + escapeHtml(fileObj.name) + '</span>' +
+              '<button class="clear-btn" onclick="clearFile(' + t.id + ')" title="Remove">×</button>' +
+              '</div>';
+          } else {
+            fileArea = '<div class="file-drop-area">' +
+              '<label class="file-pick-btn" for="file_' + t.id + '">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;vertical-align:middle;margin-right:3px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
+              'Choose file</label>' +
+              '<input type="file" id="file_' + t.id + '" accept=".pdf,.docx,.doc,.txt" style="display:none;" onchange="onFileChosen(' + t.id + ', this)"/>' +
+              '</div>';
+          }
+
+          var existingBadge = t.textbook_filename
+            ? '<span class="existing-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:10px;height:10px;"><polyline points="20 6 9 17 4 12"/></svg>Has textbook</span>'
+            : '';
+
+          html += '<div class="' + rowClass + '" id="row_' + t.id + '" ondragover="onDragOver(event,' + t.id + ')" ondragleave="onDragLeave(event,' + t.id + ')" ondrop="onDrop(event,' + t.id + ')">' +
+            '<div class="ch-num-badge" style="background:' + bg + ';color:' + color + ';">' + t.chapter_number + '</div>' +
+            '<div class="ch-info">' +
+              '<div class="ch-name">' + escapeHtml(t.chapter_name) + existingBadge + '</div>' +
+              (t.description ? '<div class="ch-meta">' + escapeHtml(t.description.slice(0, 80)) + (t.description.length > 80 ? '…' : '') + '</div>' : '') +
+              (result && result.status === 'error' ? '<div class="ch-status err">Upload failed: ' + escapeHtml(result.msg) + '</div>' : '') +
+            '</div>' +
+            '<div>' + fileArea + '</div>' +
+            '</div>';
+        });
+        html += '</div>';
+      });
+
+      container.innerHTML = html;
+    }
+
+    // ── File handlers ────────────────────────────────────────────────────────
+    window.onFileChosen = function (topicId, input) {
+      if (input.files && input.files[0]) {
+        fileMap[topicId] = input.files[0];
+        delete uploadResults[topicId];
+        renderSubject(currentSubject);
+        updateFooter();
+      }
+    };
+
+    window.clearFile = function (topicId) {
+      delete fileMap[topicId];
+      delete uploadResults[topicId];
+      renderSubject(currentSubject);
+      updateFooter();
+    };
+
+    // Drag and drop
+    window.onDragOver = function (e, topicId) {
+      e.preventDefault();
+      var row = document.getElementById('row_' + topicId);
+      if (row) row.style.borderColor = 'var(--purple-l,#a78bfa)';
+    };
+    window.onDragLeave = function (e, topicId) {
+      var row = document.getElementById('row_' + topicId);
+      if (row) row.style.borderColor = '';
+    };
+    window.onDrop = function (e, topicId) {
+      e.preventDefault();
+      var row = document.getElementById('row_' + topicId);
+      if (row) row.style.borderColor = '';
+      var files = e.dataTransfer && e.dataTransfer.files;
+      if (files && files[0]) {
+        var f = files[0];
+        var ok = /\.(pdf|docx|doc|txt)$/i.test(f.name);
+        if (!ok) { showAlert('Only PDF, DOCX, DOC, TXT files are accepted.', 'error'); return; }
+        fileMap[topicId] = f;
+        delete uploadResults[topicId];
+        renderSubject(currentSubject);
+        updateFooter();
+      }
+    };
+
+    // ── Footer & stats ───────────────────────────────────────────────────────
+    function updateFooter() {
+      var count = Object.keys(fileMap).length;
+      var footer = document.getElementById('stickyFooter');
+      footer.style.display = count > 0 ? 'flex' : 'none';
+
+      var total = allTopics.length;
+      var covered = allTopics.filter(function (t) { return t.textbook_filename || fileMap[t.id]; }).length;
+      document.getElementById('headerStats').textContent =
+        covered + ' / ' + total + ' chapters have textbooks';
+
+      document.getElementById('footerTitle').textContent =
+        count + ' file' + (count !== 1 ? 's' : '') + ' ready to upload';
+      document.getElementById('footerSub').textContent =
+        'Files will be uploaded and indexed into the RAG engine for AI question generation.';
+    }
+
+    // ── Upload all ───────────────────────────────────────────────────────────
+    document.getElementById('uploadAllBtn').addEventListener('click', function () {
+      var entries = Object.keys(fileMap);
+      if (entries.length === 0) return;
+
+      // Send in batches to avoid huge multipart requests
+      var BATCH = 10;
+      var batches = [];
+      for (var i = 0; i < entries.length; i += BATCH) {
+        batches.push(entries.slice(i, i + BATCH));
+      }
+
+      var btn = document.getElementById('uploadAllBtn');
+      btn.disabled = true;
+      btn.textContent = 'Uploading…';
+      document.getElementById('progressWrap').style.display = 'flex';
+      document.getElementById('progressLabel').style.display = 'block';
+      document.getElementById('progressBar').style.width = '0%';
+
+      var total = entries.length;
+      var done = 0;
+      var successCount = 0;
+      var errorCount = 0;
+
+      function uploadBatch(batchIdx) {
+        if (batchIdx >= batches.length) {
+          // All done
+          btn.disabled = false;
+          btn.textContent = 'Upload All Selected';
+          var msg = successCount + ' textbook' + (successCount !== 1 ? 's' : '') + ' uploaded successfully.';
+          if (errorCount > 0) msg += ' ' + errorCount + ' failed — check rows marked in red.';
+          showAlert(msg, errorCount > 0 ? 'warn' : 'ok');
+          fileMap = {};
+          renderSubject(currentSubject);
+          updateFooter();
+          loadTopics(); // refresh to get updated textbook links
+          return;
+        }
+
+        var batch = batches[batchIdx];
+        var form = new FormData();
+        batch.forEach(function (topicId) {
+          if (fileMap[topicId]) {
+            form.append('textbook_' + topicId, fileMap[topicId], fileMap[topicId].name);
+          }
+        });
+
+        fetch('/api/admin/syllabus/bulk-textbook', {
+          method: 'POST',
+          credentials: 'include',
+          body: form
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          (data.results || []).forEach(function (r) {
+            uploadResults[r.topic_id] = { status: 'ok', filename: r.filename };
+            successCount++;
+          });
+          (data.error_details || []).forEach(function (e) {
+            uploadResults[e.topic_id] = { status: 'error', msg: e.error };
+            errorCount++;
+          });
+          done += batch.length;
+          var pct = Math.round((done / total) * 100);
+          document.getElementById('progressBar').style.width = pct + '%';
+          document.getElementById('progressLabel').textContent = done + ' / ' + total;
+          uploadBatch(batchIdx + 1);
+        })
+        .catch(function (err) {
+          batch.forEach(function (topicId) {
+            uploadResults[topicId] = { status: 'error', msg: 'Network error' };
+            errorCount++;
+          });
+          done += batch.length;
+          uploadBatch(batchIdx + 1);
+        });
+      }
+
+      uploadBatch(0);
+    });
+
+    // ── Alert ────────────────────────────────────────────────────────────────
+    function showAlert(msg, type) {
+      var el = document.getElementById('alertArea');
+      el.style.display = 'block';
+      if (type === 'ok') {
+        el.style.background = 'rgba(5,150,105,0.12)';
+        el.style.border = '1px solid rgba(5,150,105,0.3)';
+        el.style.color = 'var(--green-l,#34d399)';
+      } else if (type === 'error') {
+        el.style.background = 'rgba(220,38,38,0.10)';
+        el.style.border = '1px solid rgba(220,38,38,0.3)';
+        el.style.color = 'var(--red-l,#f87171)';
+      } else {
+        el.style.background = 'rgba(217,119,6,0.10)';
+        el.style.border = '1px solid rgba(217,119,6,0.3)';
+        el.style.color = 'var(--yellow-l,#fbbf24)';
+      }
+      el.textContent = msg;
+      setTimeout(function () { el.style.display = 'none'; }, 6000);
+    }
+
+    function escapeHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(str || ''));
+      return d.innerHTML;
+    }
+
+    loadTopics();
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Prep — Login</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .role-tabs {
+      display: flex;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--rs);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .role-tab {
+      flex: 1;
+      padding: 9px 12px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      border-right: 1px solid var(--border);
+    }
+    .role-tab:last-child { border-right: none; }
+    .role-tab.active {
+      background: rgba(124,58,237,0.15);
+      color: var(--purple-l);
+    }
+    .role-tab:hover:not(.active) {
+      background: var(--s2);
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/login" class="nav-pill active">Login</a>
+      <a href="/register" class="nav-pill">Register</a>
+    </div>
+  </nav>
+
+  <!-- Login Form -->
+  <main style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);padding:20px;">
+    <div class="section-card" style="max-width:420px;width:100%;padding:32px;">
+      <h2 style="margin-bottom:4px;">Welcome Back</h2>
+      <p class="input-label" style="margin-bottom:20px;text-transform:none;font-size:0.9rem;">Sign in to your account</p>
+
+      <!-- Role selector tabs -->
+      <div class="role-tabs" role="tablist" aria-label="Login type">
+        <button class="role-tab active" id="tabStudent" role="tab" aria-selected="true"  data-role="student">Student</button>
+        <button class="role-tab"        id="tabInstitution" role="tab" aria-selected="false" data-role="institution">Institution</button>
+        <button class="role-tab"        id="tabAdmin" role="tab" aria-selected="false" data-role="admin">Platform Admin</button>
+      </div>
+
+      <div id="loginError" style="display:none;background:rgba(220,38,38,0.1);border:1px solid var(--red);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:0.85rem;color:var(--red-l);"></div>
+
+      <form id="loginForm" autocomplete="on">
+        <div class="input-group" style="margin-bottom:16px;">
+          <label class="input-label" for="email">Email</label>
+          <input class="text-input" type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email"/>
+        </div>
+        <div class="input-group" style="margin-bottom:24px;">
+          <label class="input-label" for="password">Password</label>
+          <input class="text-input" type="password" id="password" name="password" placeholder="Your password" required autocomplete="current-password"/>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%;justify-content:center;" id="loginBtn">
+          Sign In
+        </button>
+      </form>
+
+      <p style="margin-top:20px;text-align:center;font-size:0.85rem;color:var(--muted);">
+        Don't have an account? <a href="#" id="registerLink" style="color:var(--purple-l);">Register</a>
+      </p>
+    </div>
+  </main>
+
+  <!-- Subscription Selection Modal (injected into page) -->
+  <div id="subscriptionModalContainer"></div>
+
+  <!-- Subscription Selection Modal -->
+  <link rel="stylesheet" href="../css/subscription-modal-premium.css"/>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/login-flow.js"></script>
+  <script src="../js/subscription-modal.js"></script>
+  <script>
+  // Inject subscription modal HTML into the page on page load
+  (function() {
+    function injectModal() {
+      var container = document.getElementById('subscriptionModalContainer');
+      if (!container) return;
+      
+      fetch('/html/subscription_modal.html')
+        .then(function(res) { 
+          if (!res.ok) throw new Error('Modal failed to load');
+          return res.text(); 
+        })
+        .then(function(html) {
+          container.innerHTML = html;
+          console.log('[login] Subscription modal injected');
+          // Re-init subscription modal module
+          if (typeof SubscriptionModal !== 'undefined' && typeof SubscriptionModal.init === 'function') {
+            SubscriptionModal.init();
+          }
+        })
+        .catch(function(err) {
+          // Silently ignore modal load errors - it's optional UI enhancement
+          console.warn('[login] Subscription modal optional feature unavailable:', err.message);
+        });
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', injectModal);
+    } else {
+      injectModal();
+    }
+  })();
+
+  (function () {
+    var form      = document.getElementById('loginForm');
+    var errorEl   = document.getElementById('loginError');
+    var loginBtn  = document.getElementById('loginBtn');
+    var tabs      = document.querySelectorAll('.role-tab');
+    var registerLink = document.getElementById('registerLink');
+    var currentRole = 'student'; // 'student' | 'institution' | 'admin'
+
+    // ── Register link with role routing ─────────────────────────────────
+    registerLink.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (currentRole === 'institution') {
+        window.location.href = '/institution-register';
+      } else {
+        window.location.href = '/register';
+      }
+    });
+
+    // ── Role tab switching ──────────────────────────────────────────────
+    tabs.forEach(function (tab) {
+      tab.addEventListener('click', function () {
+        tabs.forEach(function (t) {
+          t.classList.remove('active');
+          t.setAttribute('aria-selected', 'false');
+        });
+        tab.classList.add('active');
+        tab.setAttribute('aria-selected', 'true');
+        currentRole = tab.getAttribute('data-role');
+        hideError();
+      });
+    });
+
+    // ── Helpers ─────────────────────────────────────────────────────────
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+    }
+    function hideError() {
+      errorEl.style.display = 'none';
+    }
+
+    function _safeReturnUrl() {
+      try {
+        var params = new URLSearchParams(window.location.search || '');
+        var raw = params.get('return');
+        if (!raw) return null;
+        if (raw.charAt(0) !== '/' || raw.charAt(1) === '/') return null;
+        return raw;
+      } catch (e) { return null; }
+    }
+
+    function _roleHome(role, data) {
+      if (role === 'admin' || role === 'platform_admin') return '/admin/upload';
+      if (role === 'institution_admin') return '/institution/dashboard';
+      // Institution students get their own platform
+      if (data && data.redirect) return data.redirect;
+      if (data && data.student_subtype === 'institution_linked') return '/student/institution/dashboard';
+      return '/dashboard';
+    }
+
+    function _isSubscriptionModalReady() {
+      return !!document.getElementById('subscriptionModal');
+    }
+
+    function _showSubscriptionModal() {
+      if (typeof SubscriptionModal === 'undefined' || typeof SubscriptionModal.show !== 'function') {
+        return false;
+      }
+      if (!_isSubscriptionModalReady()) {
+        return false;
+      }
+      try {
+        SubscriptionModal.show();
+        return true;
+      } catch (err) {
+        console.warn('[login] SubscriptionModal.show() failed:', err);
+        return false;
+      }
+    }
+
+    /**
+     * Handle successful login for students.
+     * If needs_subscription_selection is true and student is direct_subscriber,
+     * show the subscription modal instead of redirecting to dashboard.
+     */
+    function _handleStudentLoginSuccess(result) {
+      var decision = window.SmartKCETLoginFlow.resolveStudentLoginDecision(result, _safeReturnUrl);
+
+      if (decision.mode === 'redirect') {
+        console.log('[login] Redirecting student to:', decision.redirectUrl);
+        window.location.href = decision.redirectUrl;
+        return;
+      }
+
+      // Direct subscriber without subscription → show subscription modal
+      console.log('[login] Direct subscriber needs subscription selection, showing modal');
+      sessionStorage.setItem('_loginResponse', JSON.stringify(result.data));
+
+      if (_showSubscriptionModal()) {
+        return;
+      }
+
+      console.warn('[login] Subscription modal not available yet; waiting briefly before fallback');
+      setTimeout(function () {
+        if (_showSubscriptionModal()) {
+          return;
+        }
+
+        var fallback = window.SmartKCETLoginFlow.buildStudentLoginFallback({
+          redirectUrl: decision.redirectUrl,
+          message: 'Subscription options are unavailable right now. Redirecting you to your dashboard.'
+        });
+        showError(fallback.message);
+        window.location.href = fallback.redirectUrl;
+      }, 250);
+    }
+
+    // ── Form submit ──────────────────────────────────────────────────────
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      hideError();
+
+      var email    = document.getElementById('email').value.trim();
+      var password = document.getElementById('password').value;
+
+      if (!email || !password) {
+        showError('Please fill in all fields.');
+        return;
+      }
+
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Signing in…';
+
+      try {
+        var result;
+        if (currentRole === 'admin') {
+          result = await Auth.adminLogin(email, password);
+        } else if (currentRole === 'institution') {
+          result = await Auth.institutionLogin(email, password);
+        } else {
+          result = await Auth.login(email, password);
+        }
+
+        if (result.ok) {
+          var role = (result.data && result.data.role) || '';
+          
+          // If response is platform admin or admin, redirect to admin dashboard
+          if (role === 'admin' || role === 'platform_admin' || (result.data && result.data.redirect === '/admin/upload')) {
+            var nextUrl = _safeReturnUrl();
+            window.location.href = nextUrl || _roleHome(role, result.data);
+          } else if (currentRole === 'student' && role === 'student') {
+            _handleStudentLoginSuccess(result);
+          } else {
+            // Admin and institution logins proceed normally
+            var nextUrl = _safeReturnUrl();
+            window.location.href = nextUrl || _roleHome(role, result.data);
+          }
+        } else if (result.status === 503) {
+          showError('Service temporarily unavailable. Please try again later.');
+        } else if (result.status === 423) {
+          var secs = result.data && result.data.retry_after_sec;
+          var mins = secs ? Math.ceil(secs / 60) : 15;
+          showError('Account locked. Try again in ' + mins + ' minute' + (mins > 1 ? 's' : '') + '.');
+        } else {
+          var msg = (result.data && result.data.message) || 'Invalid credentials.';
+          showError(msg);
+        }
+      } catch (err) {
+        console.error('[login] Login error:', err);
+        showError('Network error. Please try again.');
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Sign In';
+      }
+    });
+
+    // ── Redirect if already authenticated ───────────────────────────────
+    // TEMPORARILY DISABLED: this auto-redirect caused the /login page to
+    // "glitch" (instant bounce to /dashboard) whenever a stale session
+    // cookie was present, making it impossible to reach the login form to
+    // switch accounts. Re-enable once stale-session handling is sorted.
+    // (async function () {
+    //   try {
+    //     var user = await Auth.currentRole();
+    //     if (!user) return;  // Not authenticated — stay on login page
+    //     var nextUrl = _safeReturnUrl();
+    //     window.location.href = nextUrl || _roleHome(user.role);
+    //   } catch (e) {
+    //     // Silently ignore auth check errors on login page
+    //     console.log('[login] Auth check skipped (expected when not authenticated)', e);
+    //   }
+    // })();
+
+    // ── Session-expired notice ───────────────────────────────────────────
+    try {
+      var params = new URLSearchParams(window.location.search || '');
+      if (params.get('expired') === '1') {
+        showError('Your session has expired. Please log in again.');
+      }
+    } catch (e) {}
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Prep — Institution Upload</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Institution Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Institution</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/institution/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/institution/students" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Students
+      </a>
+      <a href="/institution/upload" class="nav-pill active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload
+      </a>
+      <a href="/institution/questions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Questions
+      </a>
+      <a href="/institution/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Exams
+      </a>
+      <a href="/institution/analytics" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </a>
+      <a href="/institution/syllabus" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        Syllabus
+      </a>
+      <a href="/institution/subscription" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Subscription
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <main class="main-wrap">
+
+    <!-- Upload Section -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon blue">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </div>
+        <div>
+          <h2>Upload Question Papers</h2>
+          <p class="section-sub">Build your institution's private question bank (max 10 files, 20MB each)</p>
+        </div>
+      </div>
+      <div class="section-body">
+
+        <!-- Subject Selector -->
+        <div class="input-group" style="margin-bottom:16px;">
+          <label class="input-label" for="subjectSelect">Subject <span style="color:var(--red);">*</span></label>
+          <select id="subjectSelect" class="text-input" style="min-width:220px;">
+            <option value="" disabled selected>Select a subject…</option>
+            <option value="Biology">Biology</option>
+            <option value="Physics">Physics</option>
+            <option value="Chemistry">Chemistry</option>
+            <option value="Mathematics">Mathematics</option>
+          </select>
+        </div>
+
+        <!-- Document Type Selector -->
+        <div class="input-group" style="margin-bottom:16px;">
+          <label class="input-label" for="fileTypeSelect">Document Type <span style="color:var(--red);">*</span></label>
+          <select id="fileTypeSelect" class="text-input" style="min-width:220px;">
+            <option value="question_paper" selected>Question Paper (PYQ)</option>
+            <option value="textbook">Textbook</option>
+          </select>
+        </div>
+
+        <!-- Drop Zone -->
+        <div class="drop-zone" id="dropZone">
+          <div class="drop-zone-content">
+            <div class="drop-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+            </div>
+            <p class="drop-title">Drop your question papers here</p>
+            <p class="drop-sub">PDF, DOCX, TXT — Maximum 10 files per batch</p>
+            <button class="btn-outline" type="button" id="browseFilesBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Browse Files
+            </button>
+            <input type="file" id="fileInput" multiple accept=".pdf,.docx,.txt" hidden/>
+          </div>
+        </div>
+
+        <!-- File Grid -->
+        <div class="file-grid" id="fileGrid"></div>
+
+        <!-- Upload Footer -->
+        <div class="upload-footer">
+          <div class="upload-progress-wrap">
+            <div class="upload-count"><span id="fileCount">0</span>/10 files</div>
+            <div class="upload-bar"><div class="upload-bar-fill" id="uploadBarFill"></div></div>
+          </div>
+          <button class="btn-primary" id="uploadBtn" style="display:none" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload to Question Bank
+          </button>
+        </div>
+
+        <div id="uploadResult" style="display:none;margin-top:16px;"></div>
+      </div>
+    </div>
+
+    <!-- Already Indexed Files -->
+    <div class="section-card" id="indexedFilesSection" style="display:none;">
+      <div class="section-card-header">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(5,150,105,0.2),rgba(8,145,178,0.2));">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><polyline points="9 15 12 18 15 15"/></svg>
+        </div>
+        <div>
+          <h2>Indexed Files</h2>
+          <p class="section-sub" id="indexedFilesSubtitle">Files already in your question bank</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <div class="file-grid" id="indexedFileGrid"></div>
+      </div>
+    </div>
+
+    <!-- Question Bank Status -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(37,99,235,0.2));">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div>
+          <h2>Question Bank Status</h2>
+          <p class="section-sub">Questions in your institution's bank (need 80 per subject to create an exam)</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <div id="questionCounts" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+          <div style="text-align:center;color:var(--muted);padding:24px;">Select a subject and upload files to see counts.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- How It Works -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(8,145,178,0.2),rgba(5,150,105,0.2));">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        </div>
+        <div>
+          <h2>How It Works</h2>
+          <p class="section-sub">Build your institution's private question bank</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <ol style="margin:0;padding-left:20px;color:var(--muted2);line-height:1.9;">
+          <li><strong>Upload question papers</strong> — PDF, DOCX, or TXT files containing MCQs</li>
+          <li><strong>AI extracts questions</strong> — Our system parses and extracts individual MCQs automatically</li>
+          <li><strong>Questions are scoped to your institution</strong> — Only your students can access them</li>
+          <li><strong>Create exams</strong> — Go to the Exams tab to generate exam sets from your question bank</li>
+        </ol>
+        <div style="margin-top:16px;padding:12px;background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.3);border-radius:var(--rs);">
+          <strong style="color:var(--yellow-l);">Note:</strong>
+          <span style="color:var(--muted2);"> You need at least 80 questions per subject to create an exam (4 sets × 20 questions).</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/institution-access-control.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    // ── Auth guard ─────────────────────────────────────────────────────────
+    Auth.currentRole().then(function(user) {
+      if (!user || user.role !== 'institution_admin') {
+        window.location.href = '/login';
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(function() { window.location.href = '/login'; });
+    });
+
+    // ── Subscription check for action buttons ───────────────────────────────
+    function checkSubscriptionAndShowModal() {
+      fetch('/api/institution/subscription', {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        var status = data.subscription_status;
+        // If status is null or undefined, show modal
+        if (status === null || status === undefined) {
+          showSubscriptionRequiredModal();
+          return false;
+        }
+        // If status is active/trial, allow action
+        if (status === 'active' || status === 'trial') {
+          return true;
+        }
+        // For other statuses (expired, overdue, etc.), block
+        showSubscriptionRequiredModal();
+        return false;
+      })
+      .catch(function(err) {
+        console.error('Failed to check subscription:', err);
+        showSubscriptionRequiredModal();
+      });
+    }
+
+    function showSubscriptionRequiredModal() {
+      var overlay = document.createElement('div');
+      overlay.id = 'subscriptionRequiredModal';
+      overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(8px);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      `;
+
+      var dialog = document.createElement('div');
+      dialog.style.cssText = `
+        background: var(--s1);
+        border: 1px solid var(--border2);
+        border-radius: 14px;
+        padding: 36px;
+        max-width: 480px;
+        width: 100%;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      `;
+      dialog.innerHTML = `
+        <div style="text-align: center; margin-bottom: 28px;">
+          <div style="font-size: 2.8rem; margin-bottom: 12px;">🔒</div>
+          <h2 style="font-size: 1.4rem; font-weight: 800; margin: 0 0 6px; color: var(--text);">Subscription Required</h2>
+          <p style="color: var(--muted); font-size: 0.88rem; margin: 0;">This feature requires an active subscription. Please select a plan to continue.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <button id="goToPlanBtnUpload" style="
+            padding: 10px 18px;
+            background: linear-gradient(135deg, var(--inst-accent), var(--inst-accent-dark));
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            Select Plan
+          </button>
+          <button id="closeModalBtnUpload" style="
+            padding: 10px 18px;
+            background: transparent;
+            border: 1px solid var(--inst-accent-border);
+            border-radius: 8px;
+            color: var(--inst-accent-light);
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Close
+          </button>
+        </div>
+      `;
+
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+
+      var planBtn = document.getElementById('goToPlanBtnUpload');
+      if (planBtn) {
+        planBtn.addEventListener('click', function() {
+          window.location.href = '/institution/subscription';
+        });
+      }
+
+      var closeBtn = document.getElementById('closeModalBtnUpload');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+          overlay.remove();
+        });
+      }
+
+      // Close on overlay click
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+          overlay.remove();
+        }
+      });
+    }
+
+    // Wire Browse Files button
+    document.getElementById('browseFilesBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      checkSubscriptionAndShowModal();
+      // If subscription is valid, open file picker after a short delay
+      setTimeout(function() {
+        if (!document.getElementById('subscriptionRequiredModal')) {
+          document.getElementById('fileInput').click();
+        }
+      }, 100);
+    });
+
+    // ── State ──────────────────────────────────────────────────────────────
+    var selectedFiles = [];
+    var MAX_FILES = 10;
+
+    var dropZone      = document.getElementById('dropZone');
+    var fileInput     = document.getElementById('fileInput');
+    var fileGrid      = document.getElementById('fileGrid');
+    var fileCountEl   = document.getElementById('fileCount');
+    var uploadBarFill = document.getElementById('uploadBarFill');
+    var uploadBtn     = document.getElementById('uploadBtn');
+    var uploadResult  = document.getElementById('uploadResult');
+    var subjectSelect = document.getElementById('subjectSelect');
+
+    // ── Subject change → refresh indexed files & counts ───────────────────
+    subjectSelect.addEventListener('change', function() {
+      var subject = subjectSelect.value;
+      if (subject) {
+        loadIndexedFiles(subject);
+        loadQuestionCounts();
+      }
+    });
+
+    // ── Drag & Drop ────────────────────────────────────────────────────────
+    dropZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      dropZone.classList.add('drag-over');
+    });
+    dropZone.addEventListener('dragleave', function(e) {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+    });
+    dropZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropZone.classList.remove('drag-over');
+      handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', function() {
+      handleFiles(fileInput.files);
+      fileInput.value = '';
+    });
+
+    // ── Handle file selection ──────────────────────────────────────────────
+    function handleFiles(files) {
+      var validExtensions = ['.pdf', '.docx', '.txt'];
+      var maxSize = 20 * 1024 * 1024;
+
+      for (var i = 0; i < files.length && selectedFiles.length < MAX_FILES; i++) {
+        var file = files[i];
+        var ext = file.name.toLowerCase().substring(file.name.lastIndexOf('.'));
+        if (validExtensions.indexOf(ext) === -1) {
+          showResult('File "' + file.name + '" is not supported. Use PDF, DOCX, or TXT.', 'warn');
+          continue;
+        }
+        if (file.size > maxSize) {
+          showResult('File "' + file.name + '" exceeds 20MB.', 'warn');
+          continue;
+        }
+        if (selectedFiles.some(function(f) { return f.name === file.name; })) continue;
+        selectedFiles.push(file);
+      }
+      renderFileGrid();
+      updateProgress();
+    }
+
+    // ── Render staged file grid ────────────────────────────────────────────
+    function renderFileGrid() {
+      if (selectedFiles.length === 0) { fileGrid.innerHTML = ''; return; }
+
+      fileGrid.innerHTML = selectedFiles.map(function(file, index) {
+        var ext = file.name.substring(file.name.lastIndexOf('.') + 1).toUpperCase();
+        var size = file.size > 1024 * 1024
+          ? (file.size / (1024 * 1024)).toFixed(1) + ' MB'
+          : (file.size / 1024).toFixed(1) + ' KB';
+
+        return '<div class="file-card" id="fc' + index + '">' +
+          '<div class="file-card-icon">' + ext + '</div>' +
+          '<div class="file-card-info">' +
+            '<div class="file-card-name">' + escapeHtml(file.name) + '</div>' +
+            '<div class="file-card-size">' + size + '</div>' +
+            '<div class="file-card-status" id="fcs' + index + '">✓ Ready to upload</div>' +
+          '</div>' +
+          '<button class="file-card-remove" onclick="removeFile(' + index + ')" title="Remove">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+          '</button>' +
+        '</div>';
+      }).join('');
+    }
+
+    function updateFileStatus(index, text, color) {
+      var el = document.getElementById('fcs' + index);
+      if (el) { el.textContent = text; el.style.color = color || ''; }
+      var card = document.getElementById('fc' + index);
+      if (card && color === '#22c55e') {
+        card.style.borderColor = '#22c55e';
+        card.style.background = 'rgba(34,197,94,0.05)';
+      }
+    }
+
+    window.removeFile = function(index) {
+      selectedFiles.splice(index, 1);
+      renderFileGrid();
+      updateProgress();
+    };
+
+    function updateProgress() {
+      fileCountEl.textContent = selectedFiles.length;
+      uploadBarFill.style.width = (selectedFiles.length / MAX_FILES * 100) + '%';
+      uploadBtn.style.display = selectedFiles.length > 0 ? 'inline-flex' : 'none';
+    }
+
+    // ── Upload files one-by-one (per-file progress) ────────────────────────
+    uploadBtn.addEventListener('click', async function() {
+      var subject = subjectSelect.value;
+      if (!subject) { showResult('Please select a subject first.', 'warn'); return; }
+      if (selectedFiles.length === 0) { showResult('Please select at least one file.', 'warn'); return; }
+
+      uploadBtn.disabled = true;
+
+      // Hide remove buttons during upload
+      document.querySelectorAll('.file-card-remove').forEach(function(b) { b.style.display = 'none'; });
+
+      var totalQuestions = 0;
+      var indexedCount = 0;
+      var duplicateCount = 0;
+      var errorCount = 0;
+
+      for (var i = 0; i < selectedFiles.length; i++) {
+        var file = selectedFiles[i];
+        uploadBtn.textContent = 'Uploading ' + (i + 1) + '/' + selectedFiles.length + '…';
+        updateFileStatus(i, '⏳ Uploading…', '#f59e0b');
+
+        var fileType = document.getElementById('fileTypeSelect')?.value || 'question_paper';
+        var formData = new FormData();
+        formData.append('subject', subject);
+        formData.append('file_type', fileType);
+        formData.append('file', file);
+
+        try {
+          updateFileStatus(i, '📖 Extracting…', '#3b82f6');
+          var res = await fetch('/api/institution/content/upload/single', {
+            method: 'POST',
+            credentials: 'include',
+            body: formData,
+          });
+          var data = await res.json();
+
+          if (!res.ok) {
+            var msg = (data && data.message) || (data && data.detail && data.detail.message) || 'Upload failed';
+            updateFileStatus(i, '❌ ' + msg, '#ef4444');
+            errorCount++;
+            if (res.status === 403) {
+              showResult(msg || 'Subscription inactive. Please renew to upload.', 'error');
+              break;
+            }
+            continue;
+          }
+
+          if (data.status === 'indexed') {
+            var qInfo = data.questions_extracted ? ', ' + data.questions_extracted + ' MCQs' : '';
+            updateFileStatus(i, '✓ Indexed (' + data.chunk_count + ' chunks' + qInfo + ')', '#22c55e');
+            totalQuestions += (data.questions_extracted || 0);
+            indexedCount++;
+          } else if (data.status === 'duplicate') {
+            updateFileStatus(i, '⚡ Already indexed (' + data.chunk_count + ' chunks)', '#8b5cf6');
+            duplicateCount++;
+          } else if (data.status === 'unsupported') {
+            updateFileStatus(i, '⚠️ Unsupported file type', '#f59e0b');
+            errorCount++;
+          } else if (data.status === 'empty') {
+            updateFileStatus(i, '⚠️ No text extracted', '#f59e0b');
+            errorCount++;
+          }
+        } catch (err) {
+          updateFileStatus(i, '❌ Network error', '#ef4444');
+          errorCount++;
+        }
+      }
+
+      uploadBtn.disabled = false;
+      uploadBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Upload to Question Bank';
+
+      var parts = [];
+      if (indexedCount > 0) parts.push(indexedCount + ' indexed');
+      if (duplicateCount > 0) parts.push(duplicateCount + ' already existed');
+      if (errorCount > 0) parts.push(errorCount + ' failed');
+
+      if (indexedCount > 0) {
+        showResult('✅ ' + parts.join(', ') + ' — ' + totalQuestions + ' questions extracted for ' + subject + '.', 'success');
+      } else if (duplicateCount > 0 && errorCount === 0) {
+        showResult('⚡ All files already indexed for ' + subject + '.', 'success');
+      } else {
+        showResult('⚠️ ' + parts.join(', ') + '. Try different files.', 'warn');
+      }
+
+      if (indexedCount > 0 || duplicateCount > 0) {
+        loadIndexedFiles(subject);
+        loadQuestionCounts();
+      }
+
+      selectedFiles = [];
+      renderFileGrid();
+      updateProgress();
+    });
+
+    // ── Load indexed files for subject ────────────────────────────────────
+    function loadIndexedFiles(subject) {
+      var section = document.getElementById('indexedFilesSection');
+      var grid = document.getElementById('indexedFileGrid');
+      var subtitle = document.getElementById('indexedFilesSubtitle');
+
+      fetch('/api/institution/content/upload/files?subject=' + encodeURIComponent(subject), {
+        credentials: 'include',
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var files = data.files || [];
+        if (files.length === 0) {
+          section.style.display = 'none';
+          return;
+        }
+        subtitle.textContent = files.length + ' file(s) indexed for ' + subject;
+        section.style.display = 'block';
+        grid.innerHTML = files.map(function(f) {
+          var sizeStr = f.file_size > 1024 * 1024
+            ? (f.file_size / (1024 * 1024)).toFixed(1) + ' MB'
+            : (f.file_size / 1024).toFixed(1) + ' KB';
+          var dateStr = f.indexed_at
+            ? new Date(f.indexed_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+            : '';
+          var badgeHtml = '<span style="font-size: 0.62rem; padding: 1px 6px; border-radius: 4px; font-weight: bold; background: ' + (f.file_type === 'textbook' ? '#8b5cf6' : '#3b82f6') + '; color: #fff; text-transform: uppercase; margin-left: 8px;">' + (f.file_type === 'textbook' ? 'Textbook' : 'PYQ') + '</span>';
+          return '<div class="file-card" style="border-color:#22c55e;background:rgba(34,197,94,0.05);">' +
+            '<div class="file-card-icon" style="color:#22c55e;">✓</div>' +
+            '<div class="file-card-info">' +
+              '<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">' +
+                '<div class="file-card-name" style="margin: 0;">' + escapeHtml(f.filename) + '</div>' +
+                badgeHtml +
+              '</div>' +
+              '<div class="file-card-size">' + sizeStr + ' · ' + f.chunk_count + ' chunks</div>' +
+              '<div class="file-card-status" style="color:#22c55e;">Indexed ' + dateStr + '</div>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+      })
+      .catch(function() { section.style.display = 'none'; });
+    }
+
+    // ── Load question bank counts ─────────────────────────────────────────
+    function loadQuestionCounts() {
+      var container = document.getElementById('questionCounts');
+      fetch('/api/institution/content/questions/counts', { credentials: 'include' })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        var counts = data.counts || {};
+        var threshold = data.threshold || 80;
+        var subjects = ['Biology', 'Physics', 'Chemistry', 'Mathematics'];
+        container.innerHTML = subjects.map(function(s) {
+          var count = counts[s] || 0;
+          var enough = count >= threshold;
+          var color = enough ? 'var(--green-l)' : count > 0 ? 'var(--yellow-l)' : 'var(--muted)';
+          var hint = enough ? '✅ Ready for exam' : count > 0 ? (threshold - count) + ' more needed' : 'Upload papers to start';
+          return '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:var(--rm);padding:16px;text-align:center;">' +
+            '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:4px;">' + s + '</div>' +
+            '<div style="font-size:1.5rem;font-weight:700;color:' + color + ';">' + count + '</div>' +
+            '<div style="font-size:0.75rem;color:var(--muted);margin-top:4px;">' + hint + '</div>' +
+          '</div>';
+        }).join('');
+      })
+      .catch(function() {
+        container.innerHTML = '<div style="color:var(--muted);text-align:center;padding:16px;">Unable to load counts.</div>';
+      });
+    }
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    function showResult(text, type) {
+      uploadResult.style.display = 'block';
+      uploadResult.textContent = text;
+      uploadResult.style.padding = '12px 16px';
+      uploadResult.style.borderRadius = 'var(--rs)';
+      uploadResult.style.fontSize = '0.9rem';
+      if (type === 'success') {
+        uploadResult.style.background = 'rgba(5,150,105,0.12)';
+        uploadResult.style.color = 'var(--green-l)';
+        uploadResult.style.border = '1px solid rgba(5,150,105,0.3)';
+      } else if (type === 'error') {
+        uploadResult.style.background = 'rgba(220,38,38,0.12)';
+        uploadResult.style.color = 'var(--red-l)';
+        uploadResult.style.border = '1px solid rgba(220,38,38,0.3)';
+      } else {
+        uploadResult.style.background = 'rgba(217,119,6,0.12)';
+        uploadResult.style.color = 'var(--yellow-l)';
+        uploadResult.style.border = '1px solid rgba(217,119,6,0.3)';
+      }
+      setTimeout(function() { uploadResult.style.display = 'none'; }, 10000);
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str || ''));
+      return div.innerHTML;
+    }
+
+    // ── Load question counts on page load ──────────────────────────────────
+    loadQuestionCounts();
+
+  })();
+  </script>
+</body>
+</html>

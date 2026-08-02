@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Institution Dashboard — SmartKCET Prep</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/institution.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Institution Portal Navbar -->
+  <nav class="navbar institution-nav" aria-label="Institution portal navigation">
+    <div class="nav-brand">
+      <div class="brand-icon institution-brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai institution-brand-ai">Institution</span></span>
+      <span class="nav-institution-badge">Institution Portal</span>
+    </div>
+    <div class="nav-links institution-nav-links">
+      <a href="/institution/dashboard" class="nav-pill institution-pill active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/institution/upload" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload
+      </a>
+      <a href="/institution/questions" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Questions
+      </a>
+      <a href="/institution/exams" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Exams
+      </a>
+      <a href="/institution/students" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Students
+      </a>
+      <a href="/institution/analytics" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </a>
+      <a href="/institution/syllabus" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        Syllabus
+      </a>
+      <a href="/institution/subscription" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Subscription
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <main class="institution-page" id="institutionDashboardPage">
+    <!-- Page Header -->
+    <div class="institution-page-header">
+      <div>
+        <h1 class="institution-page-title">
+          Institution <span class="institution-page-title-accent">Dashboard</span>
+        </h1>
+        <p class="institution-page-sub" id="institutionName">Overview of your institution's activity and subscription</p>
+      </div>
+      <div class="institution-page-header-actions">
+        <div class="last-updated" id="lastUpdated" role="status" aria-live="polite" aria-atomic="true">Last updated: —</div>
+        <button class="btn-institution-outline" id="refreshDashboardBtn" type="button" aria-label="Refresh dashboard data">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Subscription Alert Banner (overdue / grace_period / expired) -->
+    <div class="institution-alert-banner" id="subscriptionAlertBanner" role="alert" aria-live="polite" style="display:none">
+      <div class="alert-content">
+        <span class="alert-icon" aria-hidden="true">⚠️</span>
+        <div class="alert-text">
+          <strong id="alertTitle">Payment Overdue</strong>
+          <span id="alertMessage">Your institution's access will be suspended soon.</span>
+        </div>
+      </div>
+      <a href="/institution/subscription" class="btn-institution" id="alertActionBtn" aria-describedby="alertTitle alertMessage">Pay Now</a>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-state" id="dashboardLoading" role="status" aria-live="polite">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p>Loading dashboard...</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="empty-state" id="dashboardError" style="display:none" role="alert" aria-live="polite">
+      <div class="empty-icon" aria-hidden="true">⚠️</div>
+      <h3>Unable to load dashboard data</h3>
+      <p id="dashboardErrorMessage">Please check your connection and try again.</p>
+      <div class="empty-actions">
+        <button class="btn-institution" id="retryDashboardBtn" type="button" aria-label="Retry loading dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Retry
+        </button>
+      </div>
+    </div>
+
+    <!-- Dashboard Content -->
+    <div id="dashboardContent" style="display:none">
+
+      <!-- KPI Grid (4 tiles: Total Students, Tests This Week, Tests This Month, Subscription Status) -->
+      <section class="kpi-grid" aria-label="Institution key metrics">
+        <!-- Total Students -->
+        <div class="kpi-tile" id="kpiTileStudents">
+          <div class="kpi-icon" aria-hidden="true">👥</div>
+          <div class="kpi-value" id="kpiTotalStudents">—</div>
+          <div class="kpi-label">Total Students</div>
+        </div>
+
+        <!-- Tests This Week -->
+        <div class="kpi-tile" id="kpiTileWeek">
+          <div class="kpi-icon" aria-hidden="true">📝</div>
+          <div class="kpi-value" id="kpiTestsThisWeek">—</div>
+          <div class="kpi-label">Tests This Week</div>
+        </div>
+
+        <!-- Tests This Month -->
+        <div class="kpi-tile" id="kpiTileMonth">
+          <div class="kpi-icon" aria-hidden="true">📊</div>
+          <div class="kpi-value" id="kpiTestsThisMonth">—</div>
+          <div class="kpi-label">Tests This Month</div>
+        </div>
+
+        <!-- Subscription Status (uses data-status="active|overdue|grace_period|expired") -->
+        <div class="kpi-tile" id="kpiTileStatus" data-status="active">
+          <div class="kpi-icon" aria-hidden="true">✓</div>
+          <div class="kpi-value" id="kpiSubscriptionStatus" role="status" aria-live="polite">—</div>
+          <div class="kpi-label">Subscription Status</div>
+        </div>
+      </section>
+
+      <!-- Quick Actions -->
+      <nav class="quick-actions section-card" aria-label="Quick actions">
+        <a href="/institution/students" class="btn-institution-outline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          Invite Student
+        </a>
+        <a href="/institution/exams" class="btn-institution-outline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+          Create Exam
+        </a>
+        <a href="/institution/upload" class="btn-institution-outline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload Question Paper
+        </a>
+        <a href="/institution/analytics" class="btn-institution-outline">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          View Analytics
+        </a>
+      </nav>
+
+      <!-- Recent Activity Section -->
+      <section class="section-card" aria-labelledby="recentActivityHeading">
+        <div class="section-card-header">
+          <div class="section-icon institution" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+          </div>
+          <div>
+            <h2 id="recentActivityHeading">Recent Activity</h2>
+            <p class="section-sub">10 most recent exam submissions by your students</p>
+          </div>
+        </div>
+        <div class="section-body">
+          <!-- Empty state -->
+          <div class="recent-activity-empty" id="recentActivityEmpty" style="display:none" role="status" aria-live="polite">
+            <p class="empty-message">No exam submissions yet. Activity will appear here as students take tests.</p>
+          </div>
+
+          <!-- Recent activity table -->
+          <div class="responsive-table-wrapper" id="recentActivityWrapper">
+            <table class="results-table" id="recentActivityTable" aria-describedby="recentActivityHeading">
+              <thead>
+                <tr>
+                  <th scope="col">Student</th>
+                  <th scope="col">Subject</th>
+                  <th scope="col">Score</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Time Taken</th>
+                </tr>
+              </thead>
+              <tbody id="recentActivityBody">
+                <!-- Rows are populated by institution-portal.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Student Performance Summary Chart -->
+      <section class="section-card chart-card" aria-labelledby="performanceSummaryHeading">
+        <div class="section-card-header">
+          <div class="section-icon institution" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          </div>
+          <div>
+            <h2 id="performanceSummaryHeading">Student Performance Summary</h2>
+            <p class="section-sub">Average score by subject across all institution students</p>
+          </div>
+        </div>
+        <div class="section-body">
+          <!-- Empty state -->
+          <div class="performance-empty" id="performanceEmpty" style="display:none" role="status" aria-live="polite">
+            <p class="empty-message">No performance data available yet. Charts will appear once students submit exams.</p>
+          </div>
+          <!-- Chart container -->
+          <div class="chart-wrap" id="performanceChartWrap">
+            <canvas id="performanceChart" aria-label="Average score by subject chart" role="img"></canvas>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- Students List Modal -->
+    <div class="modal-overlay" id="studentsModal" role="dialog" aria-modal="true" aria-labelledby="studentsModalTitle" aria-hidden="true" style="display:none;">
+      <div class="modal-dialog" style="max-width: 900px;">
+        <div class="modal-header">
+          <h2 id="studentsModalTitle">All Students</h2>
+          <button type="button" class="modal-close" id="studentsModalClose" aria-label="Close students list">&times;</button>
+        </div>
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+          <!-- Institution Students Section -->
+          <div id="institutionStudentsSection">
+            <h3 id="institutionName" style="margin-top: 0; color: var(--purple-l, #a78bfa); font-size: 1.1rem;">Loading...</h3>
+            <p style="color: var(--muted); margin-bottom: 16px;">Institution-Linked Students</p>
+            <div class="responsive-table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Student ID</th>
+                  </tr>
+                </thead>
+                <tbody id="institutionStudentsBody">
+                  <tr><td colspan="3" style="text-align: center; color: var(--muted); padding: 20px;">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Direct Subscribers Section -->
+          <div id="directSubscribersSection" style="margin-top: 32px;">
+            <h3 style="margin-top: 0; color: var(--green-l, #86efac); font-size: 1.1rem;">Direct Subscribers</h3>
+            <p style="color: var(--muted); margin-bottom: 16px;">All Platform Direct Subscribers</p>
+            <div class="responsive-table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Student ID</th>
+                  </tr>
+                </thead>
+                <tbody id="directSubscribersBody">
+                  <tr><td colspan="3" style="text-align: center; color: var(--muted); padding: 20px;">Loading...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Summary -->
+          <div style="margin-top: 24px; padding: 16px; background: rgba(167, 139, 250, 0.08); border-radius: 8px; border: 1px solid var(--border);">
+            <p style="margin: 0; color: var(--text); font-weight: 500;">
+              <span id="institutionStudentCount">0</span> institution students + <span id="directSubscriberCount">0</span> direct subscribers = <span id="totalStudentCount">0</span> total students
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/router.js"></script>
+  <script src="../js/error-handler.js"></script>
+  <script src="../js/focus-trap.js"></script>
+  <script src="../js/institution-portal.js"></script>
+  <script>
+    // Activate the client-side router so in-app <a href> clicks honour
+    // role-based access control and unauthenticated users are bounced to
+    // /login (REQ-15.1, 15.5–15.8, 15.11).
+    if (typeof Router !== 'undefined' && Router.init) { Router.init(); }
+
+    // Logout handler
+    document.getElementById('logoutBtn').addEventListener('click', function (e) {
+      e.preventDefault();
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(function () { window.location.href = '/login'; });
+    });
+
+    // Initialize dashboard once DOM is ready. The actual data-loading
+    // logic (loadInstitutionDashboard, auto-refresh, alert banners) is
+    // implemented in tasks 9.2 and 9.3 inside institution-portal.js.
+    document.addEventListener('DOMContentLoaded', function () {
+      if (typeof loadInstitutionDashboard === 'function') {
+        loadInstitutionDashboard();
+      }
+    });
+  </script>
+</body>
+</html>

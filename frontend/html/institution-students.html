@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Manage Students — SmartKCET Institution Portal</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/institution.css"/>
+  <style>
+    /* Copy code button styling */
+    .btn-copy-code {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--muted);
+      transition: color 0.2s, transform 0.15s;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .btn-copy-code:hover {
+      color: var(--purple-l, #a78bfa);
+      transform: scale(1.1);
+    }
+    .btn-copy-code:active {
+      transform: scale(0.95);
+    }
+    
+    /* Fix table column alignment */
+    .responsive-table-wrapper table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .responsive-table-wrapper table thead th {
+      text-align: left;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    
+    .responsive-table-wrapper table thead th:last-child {
+      text-align: right;
+    }
+    
+    .responsive-table-wrapper table tbody td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    
+    .responsive-table-wrapper table tbody td:last-child {
+      text-align: right;
+    }
+    
+    /* Code cell with flex container */
+    .code-cell-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+    
+    .invitation-code-cell {
+      font-family: monospace;
+      font-size: 0.85rem;
+      background: rgba(167, 139, 250, 0.1);
+      padding: 4px 8px;
+      border-radius: 4px;
+      white-space: nowrap;
+      color: var(--purple-l, #a78bfa);
+    }
+    
+    /* Invitation number label */
+    .invitation-number-label {
+      font-weight: 500;
+      font-size: 0.95rem;
+      color: var(--text);
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Institution Navbar (purple-themed, distinct from student/admin) -->
+  <nav class="navbar institution-nav" aria-label="Institution portal navigation">
+    <div class="nav-brand">
+      <div class="brand-icon institution-brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai institution-brand-ai">Institution</span></span>
+      <span class="nav-institution-badge">Institution Portal</span>
+    </div>
+    <div class="nav-links institution-nav-links">
+      <a href="/institution/dashboard" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/institution/upload" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload
+      </a>
+      <a href="/institution/questions" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/><circle cx="12" cy="12" r="10"/></svg>
+        Questions
+      </a>
+      <a href="/institution/exams" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Exams
+      </a>
+      <a href="/institution/students" class="nav-pill institution-pill active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Students
+      </a>
+      <a href="/institution/analytics" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </a>
+      <a href="/institution/syllabus" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        Syllabus
+      </a>
+      <a href="/institution/subscription" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Subscription
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <main class="institution-page" id="studentsPage">
+    <!-- Page Header -->
+    <header class="institution-page-header">
+      <div>
+        <h1 class="institution-page-title">Manage <span class="institution-page-title-accent">Students</span></h1>
+        <p class="institution-page-sub">Invite new students and manage existing institution members</p>
+      </div>
+      <div class="institution-page-actions">
+        <button
+          type="button"
+          id="inviteStudentBtn"
+          class="btn-institution"
+          aria-label="Generate a new student invitation"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+          Invite Student
+        </button>
+      </div>
+    </header>
+
+    <!-- Page-level error message (e.g., max pending invites, seat quota full) -->
+    <div
+      id="studentsPageError"
+      class="page-error"
+      role="alert"
+      aria-live="polite"
+      style="display:none;background:rgba(220,38,38,0.1);border:1px solid var(--red);border-radius:var(--rs);padding:12px 16px;margin-bottom:20px;font-size:0.9rem;color:var(--red-l);"
+    ></div>
+
+    <!-- Page-level success message (e.g., invitation revoked) -->
+    <div
+      id="studentsPageSuccess"
+      class="page-success"
+      role="status"
+      aria-live="polite"
+      style="display:none;background:rgba(5,150,105,0.1);border:1px solid var(--green);border-radius:var(--rs);padding:12px 16px;margin-bottom:20px;font-size:0.9rem;color:var(--green-l);"
+    ></div>
+
+    <!-- ───────────────────────── Linked Students Section ───────────────────────── -->
+    <section class="section-card" aria-labelledby="studentsListHeading">
+      <div class="section-card-header">
+        <div class="section-icon institution" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <div>
+          <h2 id="studentsListHeading">Linked Students</h2>
+          <p class="section-sub">Students currently linked to your institution</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <!-- Loading state -->
+        <div
+          id="studentsLoading"
+          role="status"
+          aria-live="polite"
+          style="text-align:center;padding:24px 0;color:var(--muted);font-size:0.9rem;"
+        >
+          Loading students…
+        </div>
+
+        <!-- Empty state -->
+        <div
+          id="studentsEmpty"
+          class="empty-state"
+          style="display:none;padding:24px 0;text-align:center;"
+        >
+          <p class="empty-message" style="color:var(--muted);font-size:0.95rem;">
+            No students linked yet. Click "Invite Student" to send an invitation.
+          </p>
+        </div>
+
+        <!-- Error state -->
+        <div
+          id="studentsError"
+          role="alert"
+          aria-live="polite"
+          style="display:none;padding:16px;border:1px solid var(--red);border-radius:var(--rs);background:rgba(220,38,38,0.08);color:var(--red-l);font-size:0.9rem;"
+        >
+          <span id="studentsErrorMessage">Unable to load students.</span>
+          <button type="button" class="btn-institution-outline" id="studentsRetryBtn" style="margin-left:12px;">
+            Retry
+          </button>
+        </div>
+
+        <!-- Students table (responsive wrapper for mobile horizontal scroll) -->
+        <div class="responsive-table-wrapper" id="studentsTableWrapper" style="display:none;">
+          <table aria-describedby="studentsListHeading">
+            <thead>
+              <tr>
+                <th scope="col">Student Name</th>
+                <th scope="col">KCET ID</th>
+                <th scope="col">Email</th>
+                <th scope="col">Linked Date</th>
+                <th scope="col" style="text-align:right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="studentsTableBody">
+              <!-- Rows populated by institution-portal.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────── Pending Invitations Section ───────────────────────── -->
+    <section class="section-card" aria-labelledby="invitationsListHeading" style="margin-top:24px;">
+      <div class="section-card-header" style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div style="display:flex;align-items:flex-start;gap:12px;flex:1;">
+          <div class="section-icon institution" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          </div>
+          <div>
+            <h2 id="invitationsListHeading">Pending Invitations</h2>
+            <p class="section-sub">Invitations waiting for a student to accept</p>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:center;min-width:48px;height:48px;border-radius:8px;background:rgba(167,139,250,0.1);font-size:1.5rem;font-weight:600;color:var(--purple-l,#a78bfa);" data-invitations-count>0</div>
+      </div>
+      <div class="section-body">
+        <!-- Loading state -->
+        <div
+          id="invitationsLoading"
+          role="status"
+          aria-live="polite"
+          style="text-align:center;padding:24px 0;color:var(--muted);font-size:0.9rem;"
+        >
+          Loading invitations…
+        </div>
+
+        <!-- Empty state -->
+        <div
+          id="invitationsEmpty"
+          class="empty-state"
+          style="display:none;padding:24px 0;text-align:center;"
+        >
+          <p class="empty-message" style="color:var(--muted);font-size:0.95rem;">
+            No pending invitations. Click "Invite Student" above to create one.
+          </p>
+        </div>
+
+        <!-- Error state -->
+        <div
+          id="invitationsError"
+          role="alert"
+          aria-live="polite"
+          style="display:none;padding:16px;border:1px solid var(--red);border-radius:var(--rs);background:rgba(220,38,38,0.08);color:var(--red-l);font-size:0.9rem;"
+        >
+          <span id="invitationsErrorMessage">Unable to load invitations.</span>
+          <button type="button" class="btn-institution-outline" id="invitationsRetryBtn" style="margin-left:12px;">
+            Retry
+          </button>
+        </div>
+
+        <!-- Pending invitations table -->
+        <div class="responsive-table-wrapper" id="invitationsTableWrapper" style="display:none;">
+          <table aria-describedby="invitationsListHeading">
+            <thead>
+              <tr>
+                <th scope="col">Code</th>
+                <th scope="col">Created Date</th>
+                <th scope="col">Expiry Date</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody id="invitationsTableBody">
+              <!-- Rows populated by institution-portal.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ───────────────────────── Invitation Modal ─────────────────────────
+       Displays the generated invitation link, code, copy buttons, and
+       expiry notice. Visibility and dynamic values are managed by
+       institution-portal.js (task 10.2).
+       Requirements: 10.2, 10.3, 10.4, 10.5
+  ─────────────────────────────────────────────────────────────────────── -->
+  <div
+    class="modal-overlay"
+    id="invitationModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="invitationModalTitle"
+    aria-hidden="true"
+    style="display:none;"
+  >
+    <div class="modal-dialog invitation-modal-dialog" role="document">
+      <div class="modal-header">
+        <h2 id="invitationModalTitle">Student Invitation Generated</h2>
+        <button
+          type="button"
+          class="modal-close"
+          id="invitationModalCloseBtn"
+          aria-label="Close invitation dialog"
+        >&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="invitation-notice" id="invitationExpiryNotice">
+          This invitation expires in 7 days.
+        </p>
+
+        <!-- Invitation Link box -->
+        <div class="invitation-link-box">
+          <label for="invitationLinkInput">Invitation Link</label>
+          <div class="invitation-input-row">
+            <input
+              type="text"
+              id="invitationLinkInput"
+              readonly
+              value=""
+              aria-describedby="invitationExpiryNotice"
+            />
+            <button
+              type="button"
+              class="btn-copy"
+              id="copyLinkBtn"
+              data-copy="link"
+              aria-label="Copy invitation link to clipboard"
+              aria-describedby="invitationCopyFeedback"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              Copy Link
+            </button>
+          </div>
+        </div>
+
+        <!-- Invitation Code box -->
+        <div class="invitation-code-box">
+          <label for="invitationCodeInput">Invitation Code</label>
+          <div class="invitation-input-row">
+            <input
+              type="text"
+              id="invitationCodeInput"
+              readonly
+              value=""
+              aria-describedby="invitationExpiryNotice"
+            />
+            <button
+              type="button"
+              class="btn-copy"
+              id="copyCodeBtn"
+              data-copy="code"
+              aria-label="Copy invitation code to clipboard"
+              aria-describedby="invitationCopyFeedback"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+              Copy Code
+            </button>
+          </div>
+        </div>
+
+        <!-- Copy confirmation (auto-dismisses after 3s) -->
+        <div
+          class="copy-feedback"
+          id="invitationCopyFeedback"
+          role="status"
+          aria-live="polite"
+          style="display:none;"
+        ></div>
+
+        <div class="modal-actions">
+          <button
+            type="button"
+            class="btn-institution"
+            id="invitationModalDoneBtn"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="../js/auth.js"></script>
+  <script src="../js/router.js"></script>
+  <script src="../js/error-handler.js"></script>
+  <script src="../js/focus-trap.js"></script>
+  <script src="../js/institution-portal.js"></script>
+  <script src="../js/institution-access-control.js"></script>
+  <script>
+    // Activate the client-side router so in-app <a href> clicks honour
+    // role-based access control and unauthenticated users are bounced to
+    // /login (REQ-15.1, 15.5–15.8, 15.11).
+    if (typeof Router !== 'undefined' && Router.init) { Router.init(); }
+
+    // Logout handler — consistent with other institution portal pages
+    (function () {
+      var logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+            .finally(function () { window.location.href = '/login'; });
+        });
+      }
+    })();
+
+    // ── Subscription check for action buttons ───────────────────────────────
+    function checkSubscriptionAndShowModal() {
+      return new Promise(function(resolve) {
+        fetch('/api/institution/subscription', {
+          method: 'GET',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          var status = data.subscription_status;
+          // If status is null or undefined, show modal
+          if (status === null || status === undefined) {
+            showSubscriptionRequiredModal();
+            resolve(false);
+            return;
+          }
+          // If status is active/trial, allow action
+          if (status === 'active' || status === 'trial') {
+            resolve(true);
+            return;
+          }
+          // For other statuses (expired, overdue, etc.), block
+          showSubscriptionRequiredModal();
+          resolve(false);
+        })
+        .catch(function(err) {
+          console.error('Failed to check subscription:', err);
+          showSubscriptionRequiredModal();
+          resolve(false);
+        });
+      });
+    }
+
+    function showSubscriptionRequiredModal() {
+      var overlay = document.createElement('div');
+      overlay.id = 'subscriptionRequiredModal';
+      overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(8px);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      `;
+
+      var dialog = document.createElement('div');
+      dialog.style.cssText = `
+        background: var(--s1);
+        border: 1px solid var(--border2);
+        border-radius: 14px;
+        padding: 36px;
+        max-width: 480px;
+        width: 100%;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      `;
+      dialog.innerHTML = `
+        <div style="text-align: center; margin-bottom: 28px;">
+          <div style="font-size: 2.8rem; margin-bottom: 12px;">🔒</div>
+          <h2 style="font-size: 1.4rem; font-weight: 800; margin: 0 0 6px; color: var(--text);">Subscription Required</h2>
+          <p style="color: var(--muted); font-size: 0.88rem; margin: 0;">This feature requires an active subscription. Please select a plan to continue.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <button id="goToPlanBtnStudents" style="
+            padding: 10px 18px;
+            background: linear-gradient(135deg, var(--inst-accent), var(--inst-accent-dark));
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            Select Plan
+          </button>
+          <button id="closeModalBtnStudents" style="
+            padding: 10px 18px;
+            background: transparent;
+            border: 1px solid var(--inst-accent-border);
+            border-radius: 8px;
+            color: var(--inst-accent-light);
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Close
+          </button>
+        </div>
+      `;
+
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+
+      var planBtn = document.getElementById('goToPlanBtnStudents');
+      if (planBtn) {
+        planBtn.addEventListener('click', function() {
+          window.location.href = '/institution/subscription';
+        });
+      }
+
+      var closeBtn = document.getElementById('closeModalBtnStudents');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+          overlay.remove();
+        });
+      }
+
+      // Close on overlay click
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+          overlay.remove();
+        }
+      });
+    }
+
+    // Wire Invite Student button
+    (function() {
+      var inviteBtn = document.getElementById('inviteStudentBtn');
+      if (inviteBtn) {
+        inviteBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          checkSubscriptionAndShowModal().then(function(allowed) {
+            if (allowed && window.InstitutionStudents && typeof window.InstitutionStudents._onInviteClick === 'function') {
+              window.InstitutionStudents._onInviteClick();
+            }
+          });
+        });
+      }
+    })();
+
+    // Page bootstrap — actual data loading and event wiring is implemented in
+    // institution-portal.js (tasks 10.2 and 10.3). This page provides only the
+    // structural HTML required by task 10.1.
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.InstitutionStudents && typeof window.InstitutionStudents.init === 'function') {
+        window.InstitutionStudents.init();
+      }
+      // Load the linked students list
+      loadStudentsList();
+    });
+
+    function loadStudentsList() {
+      var loadingEl = document.getElementById('studentsLoading');
+      var wrapperEl = document.getElementById('studentsTableWrapper');
+      var tbody     = document.getElementById('studentsTableBody');
+      var emptyEl   = document.getElementById('studentsEmpty');
+      var errorEl   = document.getElementById('studentsError');
+
+      if (loadingEl) loadingEl.style.display = '';
+      if (wrapperEl) wrapperEl.style.display = 'none';
+      if (emptyEl)   emptyEl.style.display = 'none';
+      if (errorEl)   errorEl.style.display = 'none';
+
+      fetch('/api/institution/students', { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (loadingEl) loadingEl.style.display = 'none';
+
+          var students = data.students || [];
+          if (students.length === 0) {
+            if (emptyEl) emptyEl.style.display = '';
+            return;
+          }
+
+          if (wrapperEl) wrapperEl.style.display = '';
+          if (tbody) {
+            tbody.innerHTML = students.map(function(s) {
+              var joinDate = s.linked_at || s.joined_at || s.created_at || '';
+              var dateStr = joinDate ? new Date(joinDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+              return '<tr>' +
+                '<td style="font-weight:600;">' + escHtml(s.display_name || s.name || '—') + '</td>' +
+                '<td style="color:var(--muted);">' + escHtml(s.kcet_student_id || '—') + '</td>' +
+                '<td style="color:var(--muted2);font-size:0.82rem;">' + escHtml(s.email || '—') + '</td>' +
+                '<td style="font-size:0.82rem;">' + dateStr + '</td>' +
+                '<td>' +
+                  '<button class="btn-outline small" style="color:var(--red-l);border-color:var(--red-l);" ' +
+                    'onclick="removeStudent(\'' + (s.id || s.user_id || '') + '\')">Remove</button>' +
+                '</td>' +
+              '</tr>';
+            }).join('');
+          }
+
+          // Update header count
+          var countEl = document.querySelector('[data-student-count]');
+          if (countEl) countEl.textContent = students.length + ' student' + (students.length !== 1 ? 's' : '');
+        })
+        .catch(function() {
+          if (loadingEl) loadingEl.style.display = 'none';
+          if (errorEl) errorEl.style.display = '';
+        });
+    }
+
+    window.removeStudent = function(studentId) {
+      if (!studentId || !confirm('Remove this student from your institution?')) return;
+      fetch('/api/institution/students/' + studentId, {
+        method: 'DELETE', credentials: 'include',
+      }).then(function(r) {
+        if (r.ok) { loadStudentsList(); }
+        else { alert('Failed to remove student.'); }
+      }).catch(function() { alert('Network error.'); });
+    };
+
+    function escHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(str || ''));
+      return d.innerHTML;
+    }
+  </script>
+</body>
+</html>

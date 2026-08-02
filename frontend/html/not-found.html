@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Page Not Found — SmartKCET Prep</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    /* Local styles for the 404 page so it does not depend on
+       subscription.css or institution.css. */
+    .nf-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 80px 20px 60px;
+      text-align: center;
+    }
+    .nf-code {
+      font-size: 5rem;
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--purple-l), var(--cyan-l));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .nf-title {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .nf-message {
+      color: var(--muted2);
+      font-size: 1rem;
+      margin-bottom: 28px;
+    }
+    .nf-path {
+      display: inline-block;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.85rem;
+      color: var(--muted);
+      background: var(--s2);
+      border: 1px solid var(--border);
+      border-radius: var(--rs);
+      padding: 6px 12px;
+      margin-bottom: 28px;
+      max-width: 100%;
+      overflow-wrap: break-word;
+      word-break: break-all;
+    }
+    .nf-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+  </nav>
+
+  <main class="nf-wrap" role="main">
+    <div class="section-card" style="padding:48px 32px;">
+      <div class="nf-code" aria-hidden="true">404</div>
+      <h1 class="nf-title">Page not found</h1>
+      <p class="nf-message">
+        The page you are looking for does not exist or has been moved.
+      </p>
+      <div class="nf-path" id="nfRequestedPath" aria-label="Requested path"></div>
+      <div class="nf-actions">
+        <a href="/" id="nfHomeLink" class="btn-primary" data-no-router>Go to Home</a>
+        <a href="#" id="nfBackLink" class="btn-outline" data-no-router>Go Back</a>
+      </div>
+    </div>
+  </main>
+
+  <script src="../js/auth.js"></script>
+  <script>
+  // ── 404 page bootstrap ──────────────────────────────────────────────────
+  // Resolves a role-appropriate home URL using Auth.currentRole() so the
+  // "Go to Home" button respects REQ-15.6 / 15.7 / 15.8.
+  //
+  //   - student            → /dashboard
+  //   - institution_admin  → /institution/dashboard
+  //   - platform_admin     → /admin/upload
+  //   - unauthenticated    → /
+  (function () {
+    'use strict';
+
+    var ROLE_HOME = {
+      student: '/dashboard',
+      institution_admin: '/institution/dashboard',
+      platform_admin: '/admin/upload',
+      // Backward-compat alias used by some legacy /api/auth/me payloads.
+      admin: '/admin/upload'
+    };
+
+    var pathEl = document.getElementById('nfRequestedPath');
+    var homeLink = document.getElementById('nfHomeLink');
+    var backLink = document.getElementById('nfBackLink');
+
+    // Show the path the user actually tried to visit. We pull it from a
+    // `?path=...` query string when present (set by the backend or
+    // Router.navigate() on unknown routes); otherwise fall back to the
+    // current location pathname.
+    var requested = '';
+    try {
+      var params = new URLSearchParams(window.location.search);
+      requested = params.get('path') || '';
+    } catch (e) {
+      requested = '';
+    }
+    if (!requested) {
+      requested = window.location.pathname;
+    }
+    if (pathEl) {
+      pathEl.textContent = requested === '/not-found' ? '' : requested;
+      if (!pathEl.textContent) {
+        pathEl.style.display = 'none';
+      }
+    }
+
+    // Browser back button. If there is no history entry (e.g. user
+    // pasted the URL directly), fall back to the role home page.
+    if (backLink) {
+      backLink.addEventListener('click', function (event) {
+        event.preventDefault();
+        if (window.history.length > 1) {
+          window.history.back();
+        } else {
+          window.location.href = homeLink.getAttribute('href') || '/';
+        }
+      });
+    }
+
+    // Resolve the role-aware home URL on page load. Defaults to "/" so
+    // unauthenticated users reach the landing page (REQ-15.9).
+    (async function setHomeLink() {
+      var target = '/';
+      if (typeof Auth !== 'undefined' && Auth && typeof Auth.currentRole === 'function') {
+        try {
+          var user = await Auth.currentRole();
+          if (user && user.role && Object.prototype.hasOwnProperty.call(ROLE_HOME, user.role)) {
+            target = ROLE_HOME[user.role];
+          }
+        } catch (err) {
+          // Treat any auth failure as unauthenticated — leave target at "/".
+          // eslint-disable-next-line no-console
+          console.warn('[404] Auth.currentRole() failed:', err);
+        }
+      }
+      if (homeLink) {
+        homeLink.setAttribute('href', target);
+      }
+    })();
+  })();
+  </script>
+</body>
+</html>

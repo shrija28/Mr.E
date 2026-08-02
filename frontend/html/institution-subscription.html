@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Institution Subscription — SmartKCET Institution Portal</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/institution.css"/>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Institution Portal Navbar (purple-themed, distinct from student/admin) -->
+  <nav class="navbar institution-nav" aria-label="Institution portal navigation">
+    <div class="nav-brand">
+      <div class="brand-icon institution-brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai institution-brand-ai">Institution</span></span>
+      <span class="nav-institution-badge">Institution Portal</span>
+    </div>
+    <div class="nav-links institution-nav-links">
+      <a href="/institution/dashboard" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/institution/upload" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload
+      </a>
+      <a href="/institution/questions" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/><circle cx="12" cy="12" r="10"/></svg>
+        Questions
+      </a>
+      <a href="/institution/exams" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Exams
+      </a>
+      <a href="/institution/students" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        Students
+      </a>
+      <a href="/institution/analytics" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </a>
+      <a href="/institution/syllabus" class="nav-pill institution-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        Syllabus
+      </a>
+      <a href="/institution/subscription" class="nav-pill institution-pill active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Subscription
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <main class="institution-page" id="institutionSubscriptionPage">
+    <!-- Page Header -->
+    <header class="institution-page-header">
+      <div>
+        <h1 class="institution-page-title">
+          Institution <span class="institution-page-title-accent">Subscription</span>
+        </h1>
+        <p class="institution-page-sub">Plan details, seat usage, test limits, and renewal information</p>
+      </div>
+      <div class="institution-page-actions">
+        <a href="/institution/pricing" class="btn-institution" style="text-decoration:none;margin-right:8px;">
+          ⭐ Upgrade Plan
+        </a>
+        <button class="btn-institution-outline" id="refreshSubscriptionBtn" type="button" aria-label="Refresh subscription details">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+      </div>
+    </header>
+
+    <!-- Subscription Alert Banner (overdue / grace_period / expired) -->
+    <div
+      class="institution-alert-banner"
+      id="subscriptionAlertBanner"
+      role="alert"
+      aria-live="polite"
+      style="display:none;"
+    >
+      <div class="alert-content">
+        <span class="alert-icon" aria-hidden="true">⚠️</span>
+        <div class="alert-text">
+          <strong id="subscriptionAlertTitle">Payment Overdue</strong>
+          <span id="subscriptionAlertMessage">Your institution's access will be suspended soon.</span>
+        </div>
+      </div>
+      <button type="button" class="btn-institution" id="subscriptionAlertActionBtn">Pay Now</button>
+    </div>
+
+    <!-- Loading State -->
+    <div
+      id="subscriptionLoading"
+      role="status"
+      aria-live="polite"
+      style="text-align:center;padding:48px 24px;color:var(--muted);font-size:0.95rem;"
+    >
+      Loading subscription details…
+    </div>
+
+    <!-- Error State -->
+    <div
+      id="subscriptionError"
+      class="empty-state"
+      role="alert"
+      aria-live="polite"
+      style="display:none;"
+    >
+      <div class="empty-icon" aria-hidden="true">⚠️</div>
+      <h3>Unable to load subscription details</h3>
+      <p id="subscriptionErrorMessage">Please check your connection and try again.</p>
+      <div class="empty-actions">
+        <button class="btn-institution" id="subscriptionRetryBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Retry
+        </button>
+      </div>
+    </div>
+
+    <!-- Empty State (no subscription found) -->
+    <div
+      id="subscriptionEmpty"
+      class="empty-state"
+      style="display:none;"
+    >
+      <div class="empty-icon" aria-hidden="true">📋</div>
+      <h3>No subscription found</h3>
+      <p>Your institution does not currently have an active subscription. Choose a plan to get started.</p>
+      <div class="empty-actions">
+        <a href="/institution/pricing" class="btn-institution" style="text-decoration:none;">View Plans & Pricing →</a>
+      </div>
+    </div>
+
+    <!-- Subscription Content -->
+    <div id="subscriptionContent" style="display:none;">
+
+      <!-- ───────── Subscription Details Card ───────── -->
+      <section class="section-card" aria-labelledby="subscriptionDetailsHeading">
+        <div class="section-card-header">
+          <div class="section-icon institution" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+          <div>
+            <h2 id="subscriptionDetailsHeading">Current Plan</h2>
+            <p class="section-sub">Subscription details for your institution</p>
+          </div>
+        </div>
+        <div class="section-body">
+          <!-- Plan Header: Plan name + Status badge -->
+          <div class="subscription-plan-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+            <div>
+              <div
+                id="subscriptionPlanName"
+                style="font-size:1.4rem;font-weight:800;color:var(--text);"
+              >—</div>
+              <div
+                id="subscriptionInstitutionName"
+                style="color:var(--muted);font-size:0.9rem;margin-top:4px;"
+              ></div>
+            </div>
+            <span
+              id="subscriptionStatusBadge"
+              class="status-badge"
+              data-status="active"
+              role="status"
+              aria-live="polite"
+              style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;"
+            >—</span>
+          </div>
+
+          <!-- Detail Grid: 2-3 column responsive grid of subscription metrics -->
+          <div
+            class="subscription-detail-grid"
+            style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px;"
+          >
+            <!-- Max Seats (used / total) -->
+            <div class="subscription-detail-item" style="padding:14px 16px;background:var(--s2,var(--s1));border:1px solid var(--border);border-radius:var(--rs);">
+              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:6px;">Student Seats</div>
+              <div style="font-size:1.2rem;font-weight:700;color:var(--text);">
+                <span id="subscriptionSeatsUsed">—</span>
+                <span style="color:var(--muted);font-weight:500;"> / </span>
+                <span id="subscriptionSeatsTotal">—</span>
+              </div>
+              <div id="subscriptionSeatsHint" style="font-size:0.78rem;color:var(--muted2);margin-top:4px;">seats in use</div>
+            </div>
+
+            <!-- Weekly Test Limit -->
+            <div class="subscription-detail-item" style="padding:14px 16px;background:var(--s2,var(--s1));border:1px solid var(--border);border-radius:var(--rs);">
+              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:6px;">Weekly Tests</div>
+              <div style="font-size:1.2rem;font-weight:700;color:var(--text);">
+                <span id="subscriptionWeeklyLimit">—</span>
+              </div>
+              <div id="subscriptionWeeklyRemaining" style="font-size:0.78rem;color:var(--muted2);margin-top:4px;">— remaining</div>
+            </div>
+
+            <!-- Monthly Test Limit -->
+            <div class="subscription-detail-item" style="padding:14px 16px;background:var(--s2,var(--s1));border:1px solid var(--border);border-radius:var(--rs);">
+              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:6px;">Monthly Tests</div>
+              <div style="font-size:1.2rem;font-weight:700;color:var(--text);">
+                <span id="subscriptionMonthlyLimit">—</span>
+              </div>
+              <div id="subscriptionMonthlyRemaining" style="font-size:0.78rem;color:var(--muted2);margin-top:4px;">— remaining</div>
+            </div>
+
+            <!-- Renewal / End Date -->
+            <div class="subscription-detail-item" style="padding:14px 16px;background:var(--s2,var(--s1));border:1px solid var(--border);border-radius:var(--rs);">
+              <div
+                id="subscriptionRenewalLabel"
+                style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:6px;"
+              >Next Renewal</div>
+              <div id="subscriptionRenewalDate" style="font-size:1.05rem;font-weight:700;color:var(--text);">—</div>
+              <div id="subscriptionRenewalHint" style="font-size:0.78rem;color:var(--muted2);margin-top:4px;"></div>
+            </div>
+
+            <!-- Start Date -->
+            <div class="subscription-detail-item" style="padding:14px 16px;background:var(--s2,var(--s1));border:1px solid var(--border);border-radius:var(--rs);">
+              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:6px;">Started</div>
+              <div id="subscriptionStartDate" style="font-size:1.05rem;font-weight:700;color:var(--text);">—</div>
+            </div>
+
+            <!-- Billing Period -->
+            <div class="subscription-detail-item" id="subscriptionBillingPeriodItem" style="padding:14px 16px;background:var(--s2,var(--s1));border:1px solid var(--border);border-radius:var(--rs);">
+              <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--muted);margin-bottom:6px;">Billing Period</div>
+              <div id="subscriptionBillingPeriod" style="font-size:1.05rem;font-weight:700;color:var(--text);text-transform:capitalize;">—</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ───────── Payment History Section ───────── -->
+      <section class="section-card" aria-labelledby="paymentHistoryHeading" style="margin-top:24px;">
+        <div class="section-card-header">
+          <div class="section-icon institution" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+          </div>
+          <div>
+            <h2 id="paymentHistoryHeading">Payment History</h2>
+            <p class="section-sub">Past billing records for your institution's subscription</p>
+          </div>
+        </div>
+        <div class="section-body">
+          <!-- Empty state (no payment history) -->
+          <div
+            id="paymentHistoryEmpty"
+            class="empty-state"
+            style="display:none;padding:32px 0;text-align:center;background:transparent;border:none;"
+          >
+            <p class="empty-message" style="color:var(--muted);font-size:0.95rem;">
+              No payment history available yet.
+            </p>
+          </div>
+
+          <!-- Error state -->
+          <div
+            id="paymentHistoryError"
+            role="alert"
+            aria-live="polite"
+            style="display:none;padding:16px;border:1px solid var(--red);border-radius:var(--rs);background:rgba(220,38,38,0.08);color:var(--red-l);font-size:0.9rem;"
+          >
+            <span id="paymentHistoryErrorMessage">Unable to load payment history.</span>
+            <button type="button" class="btn-institution-outline" id="paymentHistoryRetryBtn" style="margin-left:12px;">
+              Retry
+            </button>
+          </div>
+
+          <!-- Payment history table -->
+          <div class="responsive-table-wrapper" id="paymentHistoryWrapper" style="display:none;">
+            <style>
+              .billing-tbl { width:100%;border-collapse:collapse;font-size:0.85rem; }
+              .billing-tbl th { text-align:left;padding:12px 16px;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap; }
+              .billing-tbl td { padding:14px 16px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:middle; }
+              .billing-tbl tr:hover td { background:rgba(255,255,255,0.02); }
+              .billing-tbl .amt { font-weight:800;font-size:0.95rem;color:var(--text); }
+              .billing-tbl .period { text-transform:capitalize;color:var(--muted2); }
+              .billing-tbl .date { color:var(--muted2);white-space:nowrap; }
+              .billing-tbl .txn { font-family:'JetBrains Mono',Consolas,monospace;font-size:0.78rem;color:var(--muted);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:inline-block;vertical-align:middle; }
+              .billing-tbl .copy-btn { background:none;border:none;cursor:pointer;color:var(--muted);font-size:0.8rem;padding:2px 6px;border-radius:4px;transition:color 0.15s; }
+              .billing-tbl .copy-btn:hover { color:var(--text); }
+              .status-pill { display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:0.75rem;font-weight:700;white-space:nowrap; }
+              .status-pill.success { background:rgba(5,150,105,0.15);color:var(--green-l); }
+              .status-pill.pending { background:rgba(217,119,6,0.15);color:var(--yellow-l); }
+              .status-pill.failed  { background:rgba(220,38,38,0.12);color:var(--red-l); }
+              .status-pill.created { background:rgba(37,99,235,0.12);color:#60a5fa; }
+              .status-pill.refunded { background:rgba(107,114,128,0.15);color:var(--muted); }
+              .billing-tbl .actions-cell { white-space:nowrap; }
+              .billing-tbl .action-link { font-size:0.78rem;color:var(--purple-l,#a78bfa);text-decoration:none;font-weight:600;transition:opacity 0.15s; }
+              .billing-tbl .action-link:hover { opacity:0.7; }
+              @media(max-width:700px) {
+                .billing-tbl, .billing-tbl thead, .billing-tbl tbody, .billing-tbl th, .billing-tbl td, .billing-tbl tr { display:block;width:100%; }
+                .billing-tbl thead { display:none; }
+                .billing-tbl tr { margin-bottom:12px;border:1px solid var(--border);border-radius:var(--rs);padding:12px;background:var(--card-bg); }
+                .billing-tbl td { padding:6px 0;border:none; }
+                .billing-tbl td::before { content:attr(data-label);display:block;font-size:0.68rem;text-transform:uppercase;color:var(--muted);letter-spacing:0.4px;margin-bottom:2px; }
+              }
+            </style>
+            <table class="billing-tbl" aria-describedby="paymentHistoryHeading">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Plan</th>
+                  <th>Status</th>
+                  <th>Transaction ID</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="paymentHistoryBody">
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Scripts -->
+  <script src="../js/auth.js"></script>
+  <script src="../js/router.js"></script>
+  <script src="../js/error-handler.js"></script>
+  <script src="../js/focus-trap.js"></script>
+  <script src="../js/institution-portal.js"></script>
+  <script>
+    // Activate the client-side router so in-app <a href> clicks honour
+    // role-based access control and unauthenticated users are bounced to
+    // /login (REQ-15.1, 15.5–15.8, 15.11).
+    if (typeof Router !== 'undefined' && Router.init) { Router.init(); }
+
+    // Logout handler — consistent with other institution portal pages
+    (function () {
+      var logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+            .finally(function () { window.location.href = '/login'; });
+        });
+      }
+    })();
+
+    // Page bootstrap — actual data loading and event wiring is implemented in
+    // institution-portal.js (task 11.2). This page provides only the structural
+    // HTML required by task 11.1.
+    document.addEventListener('DOMContentLoaded', function () {
+      // Check for payment success flag in URL
+      var urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('payment') === 'success') {
+        var planName = urlParams.get('plan') || 'Plan';
+        showPaymentSuccessMessage(planName);
+        // Clean up URL by removing payment params
+        window.history.replaceState({}, document.title, '/institution/subscription');
+      }
+      
+      if (typeof loadInstitutionSubscription === 'function') {
+        loadInstitutionSubscription();
+      }
+      loadPaymentHistory();
+    });
+
+    // ── Payment Success Message ────────────────────────────────────────────────
+    function showPaymentSuccessMessage(planName) {
+      var banner = document.createElement('div');
+      banner.style.cssText = 'margin: 0 0 24px 0; padding: 16px 20px; background: rgba(5, 150, 105, 0.1); border: 1px solid rgba(5, 150, 105, 0.3); border-radius: 8px; color: var(--green-l); font-size: 0.95rem; display: flex; align-items: center; gap: 12px;';
+      banner.innerHTML = '<span style="font-size: 1.2rem;">✅</span><div><strong>Payment Successful!</strong><br><span style="font-size: 0.85rem; color: var(--muted); margin-top: 4px; display: block;">' + (planName || 'Your plan') + ' is now active. Your dashboard has been updated.</span></div>';
+      var content = document.getElementById('subscriptionContent');
+      if (content && content.parentNode) {
+        content.parentNode.insertBefore(banner, content);
+        // Auto-hide after 8 seconds
+        setTimeout(function() {
+          banner.style.opacity = '0';
+          banner.style.transition = 'opacity 0.3s';
+          setTimeout(function() { banner.remove(); }, 300);
+        }, 8000);
+      }
+    }
+
+    // ── Payment history ────────────────────────────────────────────────────────
+    function loadPaymentHistory() {
+      var wrapper  = document.getElementById('paymentHistoryWrapper');
+      var emptyEl  = document.getElementById('paymentHistoryEmpty');
+      var errorEl  = document.getElementById('paymentHistoryError');
+      var tbody    = document.getElementById('paymentHistoryBody');
+
+      fetch('/api/payments/history', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          var records = data.history || [];
+          if (records.length === 0) {
+            emptyEl.style.display  = '';
+            wrapper.style.display  = 'none';
+            return;
+          }
+          emptyEl.style.display  = 'none';
+          wrapper.style.display  = '';
+          tbody.innerHTML = records.map(function (rec) {
+            var date = rec.date
+              ? new Date(rec.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+              : '—';
+            var amt = rec.amount
+              ? '₹' + Number(rec.amount).toLocaleString('en-IN')
+              : '—';
+
+            // Status badge
+            var statusMap = {
+              paid:     { cls: 'success',  icon: '🟢', label: 'Paid' },
+              pending:  { cls: 'pending',  icon: '🟡', label: 'Pending' },
+              created:  { cls: 'created',  icon: '🔵', label: 'Processing' },
+              failed:   { cls: 'failed',   icon: '🔴', label: 'Failed' },
+              refunded: { cls: 'refunded', icon: '⚪', label: 'Refunded' },
+            };
+            var st = statusMap[rec.payment_status] || statusMap.pending;
+            var statusHtml = '<span class="status-pill ' + st.cls + '">' + st.icon + ' ' + st.label + '</span>';
+
+            // Transaction ID with copy button
+            var txnId = rec.transaction_ref || '—';
+            var txnHtml = txnId !== '—'
+              ? '<span class="txn" title="' + txnId + '">' + txnId + '</span>' +
+                '<button class="copy-btn" onclick="copyTxn(\'' + txnId + '\', this)" title="Copy">📋</button>'
+              : '<span style="color:var(--muted);">—</span>';
+
+            // Plan name
+            var planHtml = '<span class="period">' + (rec.plan_name || '—') + '</span>';
+
+            return '<tr>' +
+              '<td data-label="Date" class="date">' + date + '</td>' +
+              '<td data-label="Amount" class="amt">' + amt + '</td>' +
+              '<td data-label="Plan">' + planHtml + '</td>' +
+              '<td data-label="Status">' + statusHtml + '</td>' +
+              '<td data-label="Transaction">' + txnHtml + '</td>' +
+              '<td data-label="Actions" class="actions-cell">' +
+                '<a href="#" class="action-link" onclick="event.preventDefault();">View Receipt</a>' +
+              '</td>' +
+            '</tr>';
+          }).join('');
+        })
+        .catch(function () {
+          errorEl.style.display = '';
+        });
+    }
+
+    // Copy transaction ID helper
+    window.copyTxn = function(text, btn) {
+      navigator.clipboard.writeText(text).then(function() {
+        var orig = btn.textContent;
+        btn.textContent = '✓';
+        setTimeout(function() { btn.textContent = orig; }, 1500);
+      });
+    };
+  </script>
+</body>
+</html>

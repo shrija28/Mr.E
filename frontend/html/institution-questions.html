@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Prep — Institution Questions</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    /* ── Questions table — scoped overrides ──────────────────────────────
+       The global .results-table td has white-space:nowrap which collapses
+       long MCQ text. These scoped rules fix layout without touching other
+       tables in the app.
+    ───────────────────────────────────────────────────────────────────── */
+    #questionsTable {
+      table-layout: fixed;
+      width: 100%;
+    }
+
+    /* Column widths: fixed so they never collapse regardless of content */
+    #questionsTable col.col-question  { width: 44%; }
+    #questionsTable col.col-subject   { width: 10%; }
+    #questionsTable col.col-topic     { width: 12%; }
+    #questionsTable col.col-options   { width: 28%; }
+    #questionsTable col.col-action    { width: 6%;  }
+
+    /* All cells in this table: allow wrapping */
+    #questionsTable td,
+    #questionsTable th {
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      vertical-align: top;
+    }
+
+    /* Question text */
+    .q-text {
+      font-size: 0.87rem;
+      line-height: 1.5;
+      font-weight: 500;
+      color: var(--text);
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
+
+    /* Options list inside the options cell */
+    .q-options {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .q-option {
+      font-size: 0.77rem;
+      line-height: 1.4;
+      color: var(--muted2);
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
+    .q-option.correct {
+      color: var(--green-l);
+      font-weight: 600;
+    }
+
+    /* Subject badge — keep it on one line but allow shrink */
+    #questionsTable .score-badge {
+      white-space: nowrap;
+      display: inline-block;
+    }
+
+    /* Topic cell */
+    .q-topic {
+      font-size: 0.8rem;
+      color: var(--muted);
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
+
+    /* Mobile: collapse to card layout below 640px */
+    @media (max-width: 640px) {
+      #questionsTable,
+      #questionsTable thead,
+      #questionsTable tbody,
+      #questionsTable th,
+      #questionsTable td,
+      #questionsTable tr {
+        display: block;
+        width: 100%;
+      }
+      #questionsTable thead { display: none; }
+      #questionsTable tr {
+        margin-bottom: 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--rs);
+        padding: 12px;
+        background: var(--card-bg);
+      }
+      #questionsTable td {
+        padding: 6px 0;
+        border: none;
+      }
+      #questionsTable td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.7rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        margin-bottom: 2px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Institution Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Institution</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/institution/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/institution/students" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Students
+      </a>
+      <a href="/institution/upload" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload
+      </a>
+      <a href="/institution/questions" class="nav-pill active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Questions
+      </a>
+      <a href="/institution/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Exams
+      </a>
+      <a href="/institution/analytics" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </a>
+      <a href="/institution/syllabus" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        Syllabus
+      </a>
+      <a href="/institution/subscription" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Subscription
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <main class="main-wrap">
+
+    <!-- Question Bank Summary -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(37,99,235,0.2));">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div>
+          <h2>Institution Question Bank</h2>
+          <p class="section-sub">Questions extracted from your uploaded papers — scoped exclusively to your institution</p>
+        </div>
+        <div style="margin-left:auto;">
+          <a href="/institution/upload" class="btn-primary" style="text-decoration:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload More
+          </a>
+        </div>
+      </div>
+      <div class="section-body">
+        <!-- Per-subject count tiles -->
+        <div id="countTiles" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px;">
+          <div style="text-align:center;color:var(--muted);padding:24px;">Loading…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters + Question List -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(8,145,178,0.2),rgba(5,150,105,0.2));">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        </div>
+        <div>
+          <h2>All Questions</h2>
+          <p class="section-sub" id="questionSubtitle">Loading…</p>
+        </div>
+      </div>
+      <div class="section-body" style="padding-bottom:0;">
+        <!-- Subject filter -->
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px;">
+          <div class="input-group" style="margin:0;">
+            <label class="input-label" for="subjectFilter">Filter by subject</label>
+            <select id="subjectFilter" class="text-input" style="min-width:180px;">
+              <option value="">All Subjects</option>
+              <option value="Biology">Biology</option>
+              <option value="Physics">Physics</option>
+              <option value="Chemistry">Chemistry</option>
+              <option value="Mathematics">Mathematics</option>
+            </select>
+          </div>
+          <div style="margin-top:18px;">
+            <button class="btn-outline small" id="refreshBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-body" style="padding:0;">
+        <div class="table-scroll">
+          <table class="results-table" id="questionsTable">
+            <colgroup>
+              <col class="col-question"/>
+              <col class="col-subject"/>
+              <col class="col-topic"/>
+              <col class="col-options"/>
+              <col class="col-action"/>
+            </colgroup>
+            <thead>
+              <tr>
+                <th>Question</th>
+                <th>Subject</th>
+                <th>Topic</th>
+                <th>Options (✓ = correct)</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="questionsTableBody">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:40px;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div id="paginationBar" style="display:flex;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--border);">
+          <span id="paginationInfo" style="font-size:0.82rem;color:var(--muted);">—</span>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-outline small" id="prevBtn" disabled>← Prev</button>
+            <button class="btn-outline small" id="nextBtn" disabled>Next →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Confirm Delete Modal -->
+  <div id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r);padding:28px;max-width:420px;width:90%;">
+      <h3 style="margin:0 0 12px;font-size:1.1rem;">Delete Question?</h3>
+      <p style="color:var(--muted);font-size:0.9rem;margin:0 0 20px;">This will permanently remove the question from your bank. This cannot be undone.</p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn-outline small" id="deleteCancelBtn">Cancel</button>
+        <button class="btn-primary small" id="deleteConfirmBtn" style="background:var(--red);border-color:var(--red);">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/institution-access-control.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    // ── Auth guard ─────────────────────────────────────────────────────────
+    Auth.currentRole().then(function(user) {
+      if (!user || user.role !== 'institution_admin') {
+        window.location.href = '/login';
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(function() { window.location.href = '/login'; });
+    });
+
+    // ── State ──────────────────────────────────────────────────────────────
+    var currentPage = 1;
+    var currentSubject = '';
+    var pendingDeleteId = null;
+
+    // ── Load question counts ───────────────────────────────────────────────
+    function loadCounts() {
+      fetch('/api/institution/content/questions/counts', { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var counts = data.counts || {};
+          var threshold = data.threshold || 80;
+          var subjects = ['Biology', 'Physics', 'Chemistry', 'Mathematics'];
+          document.getElementById('countTiles').innerHTML = subjects.map(function(s) {
+            var count = counts[s] || 0;
+            var enough = count >= threshold;
+            var color = enough ? 'var(--green-l)' : count > 0 ? 'var(--yellow-l)' : 'var(--muted)';
+            var hint = enough ? '✅ Enough for exam' : count > 0 ? (threshold - count) + ' more needed' : 'Upload papers';
+            return '<div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--rm);padding:16px;text-align:center;">' +
+              '<div style="font-size:0.82rem;color:var(--muted);margin-bottom:4px;">' + s + '</div>' +
+              '<div style="font-size:1.6rem;font-weight:700;color:' + color + ';">' + count + '</div>' +
+              '<div style="font-size:0.72rem;color:var(--muted2);margin-top:3px;">' + hint + '</div>' +
+            '</div>';
+          }).join('');
+        })
+        .catch(function() {
+          document.getElementById('countTiles').innerHTML =
+            '<div style="color:var(--muted);text-align:center;padding:16px;">Unable to load counts.</div>';
+        });
+    }
+
+    // ── Load questions ─────────────────────────────────────────────────────
+    function loadQuestions(page, subject) {
+      var tbody = document.getElementById('questionsTableBody');
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:40px;">Loading…</td></tr>';
+
+      var url = '/api/institution/content/questions?page=' + page;
+      if (subject) url += '&subject=' + encodeURIComponent(subject);
+
+      fetch(url, { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var questions = data.questions || [];
+          var total = data.total || 0;
+          var pageSize = data.page_size || 50;
+
+          document.getElementById('questionSubtitle').textContent =
+            total + ' question' + (total !== 1 ? 's' : '') + (subject ? ' in ' + subject : ' across all subjects');
+
+          if (questions.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:40px;">' +
+              (subject ? 'No questions for ' + subject + '.' : 'No questions yet. ') +
+              '<a href="/institution/upload" style="color:var(--purple-l);">Upload question papers</a> to get started.' +
+              '</td></tr>';
+            updatePagination(page, total, pageSize);
+            return;
+          }
+
+          tbody.innerHTML = questions.map(function(q) {
+            var opts = Array.isArray(q.options) ? q.options : [];
+            var optsHtml = '<div class="q-options">' + opts.map(function(o, i) {
+              var letter = ['A', 'B', 'C', 'D'][i] || (i + 1);
+              var isCorrect = String(q.correct_option) === String(i);
+              return '<div class="q-option' + (isCorrect ? ' correct' : '') + '">' +
+                '<strong>' + letter + '.</strong> ' + escapeHtml(String(o || '')) +
+                (isCorrect ? ' ✓' : '') +
+              '</div>';
+            }).join('') + '</div>';
+
+            return '<tr>' +
+              '<td data-label="Question"><div class="q-text">' + escapeHtml(q.question_text) + '</div></td>' +
+              '<td data-label="Subject"><span class="score-badge">' + escapeHtml(q.subject) + '</span></td>' +
+              '<td data-label="Topic"><div class="q-topic">' + escapeHtml(q.topic || '—') + '</div></td>' +
+              '<td data-label="Options">' + optsHtml + '</td>' +
+              '<td data-label="Action">' +
+                '<button class="btn-outline small" style="color:var(--red-l);border-color:var(--red-l);white-space:nowrap;" ' +
+                  'onclick="confirmDelete(\'' + q.id + '\')">' +
+                  'Delete' +
+                '</button>' +
+              '</td>' +
+            '</tr>';
+          }).join('');
+
+          updatePagination(page, total, pageSize);
+        })
+        .catch(function() {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--red-l);padding:40px;">Failed to load questions. Please try again.</td></tr>';
+        });
+    }
+
+    function updatePagination(page, total, pageSize) {
+      var totalPages = Math.ceil(total / pageSize) || 1;
+      var start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+      var end = Math.min(page * pageSize, total);
+
+      document.getElementById('paginationInfo').textContent =
+        'Showing ' + start + '–' + end + ' of ' + total + ' questions';
+      document.getElementById('prevBtn').disabled = page <= 1;
+      document.getElementById('nextBtn').disabled = page >= totalPages;
+    }
+
+    // ── Delete flow ────────────────────────────────────────────────────────
+    window.confirmDelete = function(questionId) {
+      pendingDeleteId = questionId;
+      document.getElementById('deleteModal').style.display = 'flex';
+    };
+
+    document.getElementById('deleteCancelBtn').addEventListener('click', function() {
+      pendingDeleteId = null;
+      document.getElementById('deleteModal').style.display = 'none';
+    });
+
+    document.getElementById('deleteConfirmBtn').addEventListener('click', function() {
+      if (!pendingDeleteId) return;
+      var id = pendingDeleteId;
+      pendingDeleteId = null;
+      document.getElementById('deleteModal').style.display = 'none';
+
+      fetch('/api/institution/content/questions/' + id, {
+        method: 'DELETE',
+        credentials: 'include',
+      })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (data.deleted) {
+            loadQuestions(currentPage, currentSubject);
+            loadCounts();
+          } else {
+            alert('Failed to delete question: ' + (data.error || 'unknown error'));
+          }
+        })
+        .catch(function() {
+          alert('Network error. Please try again.');
+        });
+    });
+
+    // ── Filters & pagination ───────────────────────────────────────────────
+    document.getElementById('subjectFilter').addEventListener('change', function() {
+      currentSubject = this.value;
+      currentPage = 1;
+      loadQuestions(currentPage, currentSubject);
+    });
+
+    document.getElementById('refreshBtn').addEventListener('click', function() {
+      loadQuestions(currentPage, currentSubject);
+      loadCounts();
+    });
+
+    document.getElementById('prevBtn').addEventListener('click', function() {
+      if (currentPage > 1) { currentPage--; loadQuestions(currentPage, currentSubject); }
+    });
+
+    document.getElementById('nextBtn').addEventListener('click', function() {
+      currentPage++;
+      loadQuestions(currentPage, currentSubject);
+    });
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str || ''));
+      return div.innerHTML;
+    }
+
+    // ── Init ───────────────────────────────────────────────────────────────
+    loadCounts();
+    loadQuestions(1, '');
+
+  })();
+  </script>
+</body>
+</html>

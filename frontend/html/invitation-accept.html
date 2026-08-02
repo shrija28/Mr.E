@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Prep — Accept Invitation</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar" aria-label="Main navigation">
+    <div class="nav-brand">
+      <div class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-pill">Dashboard</a>
+    </div>
+  </nav>
+
+  <!-- Invitation Acceptance Card -->
+  <main style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);padding:20px;">
+    <section class="section-card" style="max-width:520px;width:100%;padding:32px;" aria-labelledby="invitationTitle">
+      <h1 id="invitationTitle" style="margin-bottom:8px;">Institution Invitation</h1>
+      <p class="input-label" style="margin-bottom:24px;text-transform:none;font-size:0.9rem;">
+        Review the invitation details below and choose to accept or decline.
+      </p>
+
+      <!-- Error message display area (hidden by default; populated by invitation.js) -->
+      <div
+        id="invitationError"
+        role="alert"
+        aria-live="polite"
+        style="display:none;background:rgba(220,38,38,0.1);border:1px solid var(--red);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:0.85rem;color:var(--red-l);"
+      ></div>
+
+      <!-- Loading indicator (shown while details are being fetched) -->
+      <div
+        id="invitationLoading"
+        role="status"
+        aria-live="polite"
+        style="text-align:center;padding:24px 0;color:var(--muted);font-size:0.9rem;"
+      >
+        Loading invitation details…
+      </div>
+
+      <!-- Invitation details (hidden until details are loaded by invitation.js) -->
+      <section
+        id="invitationDetails"
+        style="display:none;"
+        aria-labelledby="invitationDetailsHeading"
+      >
+        <h2 id="invitationDetailsHeading" class="visually-hidden">
+          Invitation Details
+        </h2>
+
+        <!-- Institution name -->
+        <div class="input-group" style="margin-bottom:16px;">
+          <span class="input-label" id="institutionNameLabel">Institution</span>
+          <p
+            id="institutionName"
+            aria-labelledby="institutionNameLabel"
+            style="font-size:1.1rem;font-weight:600;color:var(--text);margin:0;"
+          >—</p>
+        </div>
+
+        <!-- Expiry date -->
+        <div class="input-group" style="margin-bottom:16px;">
+          <span class="input-label" id="invitationExpiryLabel">Invitation Expires</span>
+          <p
+            id="invitationExpiry"
+            aria-labelledby="invitationExpiryLabel"
+            style="font-size:0.95rem;color:var(--text);margin:0;"
+          >—</p>
+        </div>
+
+        <!-- Benefits summary -->
+        <div class="input-group" style="margin-bottom:24px;">
+          <span class="input-label" id="invitationBenefitsLabel">What You'll Get</span>
+          <ul
+            id="invitationBenefits"
+            aria-labelledby="invitationBenefitsLabel"
+            style="margin:8px 0 0;padding-left:20px;color:var(--text);font-size:0.9rem;line-height:1.6;"
+          >
+            <li>Access to your institution's curated exams</li>
+            <li>Personalized analytics and progress tracking</li>
+            <li>Coverage under your institution's subscription</li>
+          </ul>
+        </div>
+
+        <!-- Action buttons -->
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <button
+            type="button"
+            id="acceptBtn"
+            class="btn-primary"
+            aria-describedby="invitationBenefitsLabel"
+            style="flex:1;min-width:140px;justify-content:center;"
+          >
+            Accept Invitation
+          </button>
+          <button
+            type="button"
+            id="declineBtn"
+            class="btn-outline"
+            style="flex:1;min-width:140px;justify-content:center;"
+          >
+            Decline
+          </button>
+        </div>
+      </section>
+
+      <!-- Retry section (hidden by default; shown by invitation.js when details fail to load) -->
+      <div id="invitationRetry" style="display:none;text-align:center;margin-top:16px;">
+        <button type="button" id="retryBtn" class="btn-secondary" aria-label="Retry loading invitation details" style="justify-content:center;">
+          Retry
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Scripts -->
+  <script src="../js/auth.js"></script>
+  <script src="../js/router.js"></script>
+  <script src="../js/error-handler.js"></script>
+  <script src="../js/focus-trap.js"></script>
+  <script src="../js/institution-portal.js"></script>
+  <!-- invitation.js extracts the ?code= URL parameter and populates this page (created in task 13.2) -->
+  <script src="../js/invitation.js"></script>
+  <script>
+    // Activate the client-side router so in-app <a href> clicks honour
+    // role-based access control. The invitation-accept page itself is
+    // public, but we still want its in-page links (Dashboard, etc.) to
+    // be routed through the same RBAC pipeline (REQ-15.1, 15.11).
+    if (typeof Router !== 'undefined' && Router.init) { Router.init(); }
+  </script>
+</body>
+</html>

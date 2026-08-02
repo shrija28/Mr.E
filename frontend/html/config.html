@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Admin — Diagnostics</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Admin Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Admin</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/admin/upload" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload
+      </a>
+      <a href="/admin/questions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Questions
+      </a>
+      <a href="/admin/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Exams
+      </a>
+      <a href="/admin/analytics" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Analytics
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <main class="main-wrap">
+    <!-- Backend Diagnostics Card -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon purple">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33h.09a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82v.09a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        </div>
+        <div>
+          <h2>Backend Diagnostics</h2>
+          <p class="section-sub">Developer diagnostic page — test backend connectivity</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <!-- Endpoint Info -->
+        <div class="input-group" style="margin-bottom:20px">
+          <label class="input-label">API Endpoint</label>
+          <input
+            type="text"
+            class="text-input"
+            value="/api"
+            disabled
+            aria-label="Fixed API endpoint"
+          />
+        </div>
+
+        <!-- Actions -->
+        <div class="rag-actions">
+          <button type="button" class="btn-outline" id="testBtn" onclick="testConnection()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Test Connection
+          </button>
+        </div>
+
+        <!-- Connection Result -->
+        <div id="connectionResult" class="connection-result" style="display:none"></div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../js/auth.js"></script>
+  <script>
+    // ── Admin Auth Guard ──────────────────────────────────────────────────────
+    (async function () {
+      var user = await Auth.currentRole();
+      if (!user || (user.role !== 'admin' && user.role !== 'platform_admin')) {
+        window.location.href = '/login';
+        return;
+      }
+    })();
+
+    // Logout handler
+    document.getElementById('logoutBtn').addEventListener('click', function (e) {
+      e.preventDefault();
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(function() { window.location.href = '/login'; });
+    });
+
+    // ── Test Connection ───────────────────────────────────────────────────────
+    async function testConnection() {
+      var resultEl = document.getElementById('connectionResult');
+
+      resultEl.textContent = 'Testing connection...';
+      resultEl.className = 'connection-result';
+      resultEl.style.display = 'block';
+
+      try {
+        var res = await fetch('/api/health', {
+          method: 'GET',
+          credentials: 'include'
+        });
+        if (res.ok) {
+          var data = await res.json();
+          resultEl.textContent = '\u2713 Connected! Backend is running. Status: ' + (data.status || 'ok');
+          resultEl.className = 'connection-result success';
+        } else {
+          resultEl.textContent = '\u2717 Backend returned error (' + res.status + ')';
+          resultEl.className = 'connection-result error';
+        }
+      } catch (e) {
+        resultEl.textContent = '\u2717 Cannot connect: ' + e.message;
+        resultEl.className = 'connection-result error';
+      }
+    }
+  </script>
+</body>
+</html>

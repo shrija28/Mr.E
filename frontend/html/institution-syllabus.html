@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Prep — KCET Syllabus</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .chapter-card { background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:12px 16px;display:flex;align-items:flex-start;gap:10px; }
+    .ch-num { min-width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.72rem;font-weight:700;flex-shrink:0; }
+    .ch-body { flex:1; }
+    .ch-name { font-size:0.88rem;font-weight:600;color:var(--text); }
+    .ch-desc { font-size:0.77rem;color:var(--muted);margin-top:3px;line-height:1.4; }
+    .puc-header { font-size:0.72rem;text-transform:uppercase;letter-spacing:0.6px;color:var(--muted);font-weight:700;margin:16px 0 8px; }
+    .subject-tab { padding:8px 16px;border-radius:var(--rs);cursor:pointer;font-size:0.85rem;font-weight:600;border:1px solid var(--border);color:var(--muted2);background:var(--s2);transition:all 0.15s; }
+    .subject-tab.active { background:var(--purple-l,#a78bfa);color:#fff;border-color:var(--purple-l,#a78bfa); }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Institution Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Institution</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/institution/dashboard" class="nav-pill">Dashboard</a>
+      <a href="/institution/students" class="nav-pill">Students</a>
+      <a href="/institution/upload" class="nav-pill">Upload</a>
+      <a href="/institution/questions" class="nav-pill">Questions</a>
+      <a href="/institution/exams" class="nav-pill">Exams</a>
+      <a href="/institution/syllabus" class="nav-pill active">Syllabus</a>
+      <a href="/institution/subscription" class="nav-pill">Subscription</a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">Logout</a>
+    </div>
+  </nav>
+
+  <main class="main-wrap">
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(37,99,235,0.2));">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        </div>
+        <div>
+          <h2>KCET Syllabus</h2>
+          <p class="section-sub">Official Karnataka PUC syllabus — 1st &amp; 2nd PUC chapters for all subjects · Source: KEA / DPUE Karnataka</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <!-- Subject tabs -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+          <button class="subject-tab active" data-subject="Physics">⚡ Physics</button>
+          <button class="subject-tab" data-subject="Chemistry">🧪 Chemistry</button>
+          <button class="subject-tab" data-subject="Mathematics">📐 Mathematics</button>
+          <button class="subject-tab" data-subject="Biology">🌱 Biology</button>
+        </div>
+
+        <div id="syllabusContent">
+          <div style="text-align:center;color:var(--muted);padding:40px;">Loading syllabus…</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="../js/auth.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    Auth.currentRole().then(function(user) {
+      if (!user || user.role !== 'institution_admin') { window.location.href = '/login'; }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(function() { window.location.href = '/login'; });
+    });
+
+    var currentSubject = 'Physics';
+    var syllabusCache = {};
+
+    var subjectColors = {
+      Physics: { num: 'rgba(8,145,178,0.2)', text: '#22d3ee', puc1: 'rgba(8,145,178,0.08)', puc2: 'rgba(37,99,235,0.08)' },
+      Chemistry: { num: 'rgba(5,150,105,0.2)', text: '#34d399', puc1: 'rgba(5,150,105,0.08)', puc2: 'rgba(4,120,87,0.08)' },
+      Mathematics: { num: 'rgba(124,58,237,0.2)', text: '#a78bfa', puc1: 'rgba(124,58,237,0.08)', puc2: 'rgba(79,70,229,0.08)' },
+      Biology: { num: 'rgba(217,119,6,0.2)', text: '#fbbf24', puc1: 'rgba(217,119,6,0.08)', puc2: 'rgba(180,83,9,0.08)' },
+    };
+
+    function loadSubject(subject) {
+      if (syllabusCache[subject]) { renderSubject(subject, syllabusCache[subject]); return; }
+      document.getElementById('syllabusContent').innerHTML =
+        '<div style="text-align:center;color:var(--muted);padding:40px;">Loading…</div>';
+      fetch('/api/syllabus/' + encodeURIComponent(subject))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          syllabusCache[subject] = data;
+          renderSubject(subject, data);
+        })
+        .catch(function() {
+          document.getElementById('syllabusContent').innerHTML =
+            '<div style="text-align:center;color:var(--red-l);padding:40px;">Failed to load syllabus.</div>';
+        });
+    }
+
+    function renderSubject(subject, data) {
+      var colors = subjectColors[subject] || subjectColors.Physics;
+      var pucYears = data.puc_years || [];
+      var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;"><div></div>';
+      html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;">';
+
+      pucYears.forEach(function(puc) {
+        var bgColor = puc.puc_year === '1st PUC' ? colors.puc1 : colors.puc2;
+        html += '<div style="background:' + bgColor + ';border:1px solid var(--border);border-radius:var(--r);padding:16px;">';
+        html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">';
+        html += '<span style="font-size:0.85rem;font-weight:700;color:' + colors.text + ';">' + puc.puc_year + '</span>';
+        html += '<span style="font-size:0.75rem;color:var(--muted);">(' + puc.total_chapters + ' chapters)</span>';
+        html += '</div>';
+        html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+
+        (puc.chapters || []).forEach(function(ch) {
+          html += '<div class="chapter-card">';
+          html += '<div class="ch-num" style="background:' + colors.num + ';color:' + colors.text + ';">' + ch.chapter_number + '</div>';
+          html += '<div class="ch-body">';
+          html += '<div class="ch-name">' + escapeHtml(ch.chapter_name) + '</div>';
+          if (ch.description) {
+            html += '<div class="ch-desc">' + escapeHtml(ch.description) + '</div>';
+          }
+          html += '</div></div>';
+        });
+
+        html += '</div></div>';
+      });
+
+      html += '</div>';
+      document.getElementById('syllabusContent').innerHTML = html;
+    }
+
+    // Tab switching
+    document.querySelectorAll('.subject-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.subject-tab').forEach(function(t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+        currentSubject = tab.getAttribute('data-subject');
+        loadSubject(currentSubject);
+      });
+    });
+
+    function escapeHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(str || ''));
+      return d.innerHTML;
+    }
+
+    loadSubject('Physics');
+  })();
+  </script>
+</body>
+</html>

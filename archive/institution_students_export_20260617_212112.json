@@ -1,0 +1,14 @@
+[
+  {
+    "id": "c0105370-9d3a-43b9-9c13-472000e48e70",
+    "student_id": "KCET0011",
+    "email": "shama@gmail.com",
+    "display_name": "Shama",
+    "institution_id": "54c3aa94-6d92-47f2-93d4-b3089c0026dc",
+    "institution_name": "Unknown",
+    "role": "student",
+    "student_subtype": "institution_linked",
+    "created_at": "2026-06-17 15:07:54",
+    "note": "Password cannot be recovered (bcrypt hashed). Re-register with same email."
+  }
+]

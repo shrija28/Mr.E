@@ -1,0 +1,121 @@
+<!-- Subscription Selection Modal -->
+<!-- This modal is designed to be included/injected into other pages -->
+<div id="subscriptionModal" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="modalTitle" aria-describedby="modalSubtitle" aria-modal="true" aria-hidden="true">
+  <div class="modal-dialog subscription-modal">
+    <div class="modal-header">
+      <div class="modal-header-content">
+        <h2 id="modalTitle" class="modal-title">Choose Your <span class="grad">Plan</span></h2>
+        <p id="modalSubtitle" class="modal-subtitle">Select the plan that best fits your exam preparation needs</p>
+      </div>
+      <button class="modal-close" aria-label="Close plan selection dialog" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="modal-plan-grid">
+        <!-- Free Plan Card -->
+        <div class="pc" data-plan="free">
+          <div class="pc-name">Free</div>
+          <div class="pc-tagline">Start your KCET journey for free</div>
+          <div class="pc-price"><span class="sym">₹</span><span class="amt">0</span><span class="per">/mo</span></div>
+          <div class="pc-nosave"></div>
+          <ul class="pc-feats">
+            <li class="yes"><span class="ic">✅</span><span>3–5 mock tests</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Limited question bank access</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Basic score analytics</span></li>
+            <li class="no"><span class="ic">❌</span><span>Unlimited mock tests</span></li>
+            <li class="no"><span class="ic">❌</span><span>Full topic analytics</span></li>
+            <li class="no"><span class="ic">❌</span><span>AI recommendations</span></li>
+            <li class="no"><span class="ic">❌</span><span>Weak-topic analysis</span></li>
+          </ul>
+          <button class="pc-cta outline" type="button" data-action="select-free" aria-label="Start with Free Plan">Start Free</button>
+        </div>
+        
+        <!-- 7-Day Premium Trial Card -->
+        <div class="pc" data-plan="trial">
+          <div class="pc-badge pc-trial-badge">Most Popular</div>
+          <div class="pc-name">7-Day Premium Trial</div>
+          <div class="pc-tagline">7 days of full premium access — ₹99</div>
+          <div class="pc-price"><span class="sym">₹</span><span class="amt">99</span></div>
+          <div class="pc-nosave"></div>
+          <ul class="pc-feats">
+            <li class="yes"><span class="ic">✅</span><span>Unlimited mock tests</span></li>
+            <li class="yes"><span class="ic">✅</span><span>KCET premium question bank</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Topic-wise analytics</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Weak-topic analysis</span></li>
+            <li class="yes"><span class="ic">✅</span><span>AI recommendations</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Performance reports</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Leaderboard ranking</span></li>
+          </ul>
+          <button class="pc-cta trial" type="button" data-action="select-trial" data-plan-id="" aria-label="Start 7-Day Premium Trial for ₹99">Start 7-Day Trial — ₹99</button>
+        </div>
+        
+        <!-- Pro Monthly Plan Card -->
+        <div class="pc featured" data-plan="monthly">
+          <div class="pc-badge">⭐ Best Value</div>
+          <div class="pc-name">Pro Monthly</div>
+          <div class="pc-tagline">Full premium access, billed monthly</div>
+          <div class="pc-price"><span class="sym">₹</span><span class="amt">349</span><span class="per">/month</span></div>
+          <div class="pc-nosave"></div>
+          <ul class="pc-feats">
+            <li class="yes"><span class="ic">✅</span><span>Unlimited mock tests</span></li>
+            <li class="yes"><span class="ic">✅</span><span>KCET premium question bank</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Topic-wise analytics</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Weak-topic analysis</span></li>
+            <li class="yes"><span class="ic">✅</span><span>AI recommendations</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Performance reports</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Leaderboard ranking + medals</span></li>
+          </ul>
+          <button class="pc-cta primary" type="button" data-action="select-monthly" data-plan-id="" aria-label="Subscribe to Pro Monthly for ₹349/month">Subscribe Monthly</button>
+        </div>
+        
+        <!-- Pro Yearly Plan Card -->
+        <div class="pc" data-plan="yearly">
+          <div class="pc-name">Pro Yearly</div>
+          <div class="pc-tagline">Best value — save ₹1189 vs monthly</div>
+          <div class="pc-price"><span class="sym">₹</span><span class="amt">2,999</span><span class="per">/year</span></div>
+          <div class="pc-save">Save ₹1,189/year</div>
+          <ul class="pc-feats">
+            <li class="yes"><span class="ic">✅</span><span>Everything in Pro Monthly</span></li>
+            <li class="yes"><span class="ic">✅</span><span>12 months full access</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Unlimited mock tests</span></li>
+            <li class="yes"><span class="ic">✅</span><span>KCET premium question bank</span></li>
+            <li class="yes"><span class="ic">✅</span><span>AI recommendations</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Advanced performance reports</span></li>
+            <li class="yes"><span class="ic">✅</span><span>Priority feature access</span></li>
+          </ul>
+          <button class="pc-cta primary" type="button" data-action="select-yearly" data-plan-id="" aria-label="Subscribe to Pro Yearly for ₹2,999/year">Subscribe Yearly</button>
+        </div>
+      </div>
+      
+      <!-- Error Message Area -->
+      <div class="modal-error" id="modalError" role="alert" aria-live="polite" style="display: none;">
+        <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <div class="error-content">
+          <p class="error-message" id="errorMessage"></p>
+          <button class="btn-retry" type="button" style="display: none;" aria-label="Retry the previous action">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/>
+            </svg>
+            Retry
+          </button>
+        </div>
+      </div>
+      
+      <!-- Loading Spinner -->
+      <div class="modal-loading" id="modalLoading" style="display: none;" role="status" aria-live="polite">
+        <div class="spinner" aria-hidden="true"></div>
+        <p>Processing your selection...</p>
+      </div>
+    </div>
+  </div>
+</div>

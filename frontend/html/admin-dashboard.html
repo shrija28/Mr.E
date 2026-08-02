@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Admin — Dashboard</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── Clickable KPI cards ── */
+    .kpi-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;margin-bottom:24px; }
+
+    .kpi-card {
+      background:var(--card-bg);
+      border:1px solid var(--border);
+      border-radius:var(--r);
+      padding:18px 20px;
+      position:relative;
+      overflow:hidden;
+      cursor:pointer;
+      text-decoration:none;
+      display:block;
+      transition:border-color 0.18s, transform 0.15s, box-shadow 0.18s;
+    }
+    .kpi-card:hover {
+      border-color:rgba(255,255,255,0.18);
+      transform:translateY(-2px);
+      box-shadow:0 8px 24px rgba(0,0,0,0.25);
+    }
+    .kpi-card:hover .kpi-arrow { opacity:1; transform:translateX(0); }
+    .kpi-card .kpi-val { font-size:2rem;font-weight:800;line-height:1;margin-bottom:4px;color:var(--text); }
+    .kpi-card .kpi-lbl { font-size:0.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px; }
+    .kpi-card .kpi-sub { font-size:0.72rem;color:var(--muted2);margin-top:4px; }
+    .kpi-card .kpi-accent { position:absolute;bottom:0;left:0;height:3px;width:100%;opacity:0.6; }
+    .kpi-arrow {
+      position:absolute;right:14px;bottom:14px;
+      font-size:0.75rem;color:var(--muted);
+      opacity:0;transform:translateX(-4px);
+      transition:opacity 0.15s, transform 0.15s;
+    }
+
+    /* ── Quick actions ── */
+    .quick-actions {
+      display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;
+      padding:16px 20px;
+      background:var(--card-bg);
+      border:1px solid var(--border);
+      border-radius:var(--r);
+      align-items:center;
+    }
+    .quick-actions-label {
+      font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px;
+      color:var(--muted);font-weight:700;margin-right:4px;white-space:nowrap;
+    }
+    .qa-btn {
+      display:inline-flex;align-items:center;gap:6px;
+      padding:7px 14px;border-radius:var(--rs);
+      font-size:0.82rem;font-weight:600;
+      border:1px solid var(--border);
+      color:var(--muted2);background:var(--s2);
+      text-decoration:none;cursor:pointer;
+      transition:border-color 0.15s, color 0.15s, background 0.15s, transform 0.12s;
+    }
+    .qa-btn:hover { border-color:rgba(255,255,255,0.2);color:var(--text);background:var(--s3);transform:translateY(-1px); }
+    .qa-btn svg { width:13px;height:13px;flex-shrink:0; }
+
+    /* ── Section headers with "View All" ── */
+    .section-nav { display:flex;align-items:center;justify-content:space-between;width:100%; }
+    .view-all-link {
+      font-size:0.78rem;font-weight:600;color:var(--purple-l,#a78bfa);
+      text-decoration:none;display:flex;align-items:center;gap:4px;
+      transition:opacity 0.15s;white-space:nowrap;
+    }
+    .view-all-link:hover { opacity:0.75; }
+
+    /* ── Alert items with resolve link ── */
+    .alert-item {
+      display:flex;align-items:center;gap:10px;
+      padding:10px 14px;border-radius:var(--rs);margin-bottom:6px;font-size:0.85rem;
+      cursor:pointer;transition:opacity 0.15s;
+    }
+    .alert-item:hover { opacity:0.85; }
+    .alert-warn  { background:rgba(217,119,6,0.12);border:1px solid rgba(217,119,6,0.3);color:var(--yellow-l); }
+    .alert-error { background:rgba(220,38,38,0.12);border:1px solid rgba(220,38,38,0.3);color:var(--red-l); }
+    .alert-info  { background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.25);color:#60a5fa; }
+    .alert-resolve { margin-left:auto;font-size:0.72rem;font-weight:700;white-space:nowrap; }
+
+    /* ── Clickable institution rows ── */
+    .inst-row { cursor:pointer;transition:background 0.12s; }
+    .inst-row:hover td { background:rgba(255,255,255,0.03); }
+
+    /* ── Clickable institution question bars ── */
+    .inst-q-row {
+      display:flex;align-items:center;gap:10px;
+      padding:6px 0;cursor:pointer;border-radius:var(--rs);
+      transition:background 0.12s;
+    }
+    .inst-q-row:hover { background:rgba(255,255,255,0.03); }
+
+    /* ── Activity panel ── */
+    .activity-item {
+      display:flex;align-items:flex-start;gap:12px;
+      padding:10px 0;border-bottom:1px solid rgba(255,255,255,0.04);
+      cursor:pointer;transition:opacity 0.15s;text-decoration:none;
+    }
+    .activity-item:hover { opacity:0.75; }
+    .activity-item:last-child { border-bottom:none; }
+    .activity-dot {
+      width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;
+    }
+    .activity-text { font-size:0.85rem;color:var(--text);line-height:1.4; }
+    .activity-time { font-size:0.72rem;color:var(--muted);margin-top:2px; }
+
+    /* ── Charts container ── */
+    .charts-2col { display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px; }
+    @media(max-width:900px) { .charts-2col { grid-template-columns:1fr; } }
+
+    /* ── Sub-summary tiles ── */
+    .sub-tile {
+      border-radius:var(--rs);padding:14px;text-align:center;
+      cursor:pointer;transition:transform 0.15s,opacity 0.15s;
+      text-decoration:none;display:block;
+    }
+    .sub-tile:hover { transform:translateY(-2px);opacity:0.85; }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Admin Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Admin</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/admin/dashboard" class="nav-pill active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
+      </a>
+      <a href="/admin/institutions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Institutions
+      </a>
+      <a href="/admin/upload" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload
+      </a>
+      <a href="/admin/questions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Questions
+      </a>
+      <a href="/admin/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Exams
+      </a>
+      <a href="/admin/syllabus" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Syllabus
+      </a>
+      <a href="/admin/subscriptions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Subscriptions
+      </a>
+      <a href="/admin/analytics" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Analytics
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>Logout
+      </a>
+    </div>
+  </nav>
+
+  <div class="main-wrap">
+
+    <!-- ── Page header ──────────────────────────────────────────────────── -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+      <div>
+        <h1 style="font-size:1.6rem;font-weight:800;margin:0 0 3px;">Platform Dashboard</h1>
+        <p style="color:var(--muted);margin:0;font-size:0.82rem;" id="lastUpdated">Loading…</p>
+      </div>
+      <button class="btn-outline" id="refreshBtn" style="display:flex;align-items:center;gap:6px;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        Refresh
+      </button>
+    </div>
+
+    <!-- ── Quick Actions ────────────────────────────────────────────────── -->
+    <div class="quick-actions">
+      <span class="quick-actions-label">⚡ Quick Actions</span>
+      <a href="/admin/student-manage?action=create" class="qa-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Add Student
+      </a>
+      <a href="/admin/institutions" class="qa-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Add Institution
+      </a>
+      <a href="/admin/upload" class="qa-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload Question Paper
+      </a>
+      <a href="/admin/exams" class="qa-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Create Exam
+      </a>
+      <a href="/admin/subscriptions" class="qa-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Manage Subscriptions
+      </a>
+      <a href="/admin/syllabus" class="qa-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        Add KCET Topic
+      </a>
+      <a href="/admin/analytics" class="qa-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        View Analytics
+      </a>
+    </div>
+
+    <!-- ── Alerts ────────────────────────────────────────────────────────── -->
+    <div id="alertsSection" style="margin-bottom:20px;display:none;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);font-weight:700;">⚠️ Alerts</span>
+        <a href="/admin/subscriptions" class="view-all-link">Resolve All →</a>
+      </div>
+      <div id="alertsList"></div>
+    </div>
+
+    <!-- ── KPI Cards (all clickable) ─────────────────────────────────────── -->
+    <div style="font-size:0.72rem;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:10px;font-weight:700;">Platform Overview</div>
+    <div class="kpi-grid">
+      <a href="/admin/institutions" class="kpi-card">
+        <div class="kpi-accent" style="background:linear-gradient(90deg,#2563eb,#0891b2);"></div>
+        <div class="kpi-val" id="kpiInstitutions">—</div>
+        <div class="kpi-lbl">Institutions</div>
+        <div class="kpi-sub" id="kpiInstitutionsSub">—</div>
+        <span class="kpi-arrow">→</span>
+      </a>
+      <a href="/admin/students" class="kpi-card">
+        <div class="kpi-accent" style="background:linear-gradient(90deg,#7c3aed,#4f46e5);"></div>
+        <div class="kpi-val" id="kpiStudents">—</div>
+        <div class="kpi-lbl">Total Students</div>
+        <div class="kpi-sub" id="kpiStudentsSub">—</div>
+        <span class="kpi-arrow">→</span>
+      </a>
+      <a href="/admin/questions" class="kpi-card">
+        <div class="kpi-accent" style="background:linear-gradient(90deg,#059669,#0d9488);"></div>
+        <div class="kpi-val" id="kpiQuestions">—</div>
+        <div class="kpi-lbl">Total Questions</div>
+        <div class="kpi-sub" id="kpiQuestionsSub">—</div>
+        <span class="kpi-arrow">→</span>
+      </a>
+      <a href="/admin/exams" class="kpi-card">
+        <div class="kpi-accent" style="background:linear-gradient(90deg,#d97706,#b45309);"></div>
+        <div class="kpi-val" id="kpiExams">—</div>
+        <div class="kpi-lbl">Exams Created</div>
+        <div class="kpi-sub" id="kpiExamsSub">—</div>
+        <span class="kpi-arrow">→</span>
+      </a>
+      <a href="/admin/analytics" class="kpi-card">
+        <div class="kpi-accent" style="background:linear-gradient(90deg,#0891b2,#0d9488);"></div>
+        <div class="kpi-val" id="kpiAttempts">—</div>
+        <div class="kpi-lbl">Exam Attempts</div>
+        <div class="kpi-sub" id="kpiAttemptsSub">—</div>
+        <span class="kpi-arrow">→</span>
+      </a>
+      <a href="/admin/subscriptions" class="kpi-card">
+        <div class="kpi-accent" style="background:linear-gradient(90deg,#059669,#16a34a);"></div>
+        <div class="kpi-val" id="kpiActiveSubs">—</div>
+        <div class="kpi-lbl">Active Subscriptions</div>
+        <div class="kpi-sub" id="kpiActiveSubsSub">—</div>
+        <span class="kpi-arrow">→</span>
+      </a>
+    </div>
+
+    <!-- ── Charts row ─────────────────────────────────────────────────────── -->
+    <div class="charts-2col">
+      <!-- Admin question bank — bars are clickable → filtered /admin/questions?subject=X -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-nav">
+            <div>
+              <h3 style="margin:0;font-size:1rem;">Admin Question Bank</h3>
+              <p class="section-sub" style="margin:0;">Click a subject bar to filter questions</p>
+            </div>
+            <a href="/admin/questions" class="view-all-link">Manage →</a>
+          </div>
+        </div>
+        <div class="section-body" style="height:220px;"><canvas id="adminQChart"></canvas></div>
+      </div>
+
+      <!-- Exams by subject — doughnut segments are clickable → /admin/exams?subject=X -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-nav">
+            <div>
+              <h3 style="margin:0;font-size:1rem;">Exams by Subject</h3>
+              <p class="section-sub" style="margin:0;">Click a segment to filter exams</p>
+            </div>
+            <a href="/admin/exams" class="view-all-link">View All →</a>
+          </div>
+        </div>
+        <div class="section-body" style="height:220px;"><canvas id="examsChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ── Institution Questions + Activity panel ─────────────────────────── -->
+    <div class="charts-2col">
+
+      <!-- Institution questions — each bar row clickable → /admin/institutions -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-nav">
+            <div>
+              <h3 style="margin:0;font-size:1rem;">Institution Question Banks</h3>
+              <p class="section-sub" style="margin:0;">Click institution to manage</p>
+            </div>
+            <a href="/admin/institutions" class="view-all-link">Manage →</a>
+          </div>
+        </div>
+        <div class="section-body">
+          <div id="instQList" style="display:flex;flex-direction:column;">
+            <div style="color:var(--muted);text-align:center;padding:20px;">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity panel -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-nav">
+            <div>
+              <h3 style="margin:0;font-size:1rem;">Recent Activity</h3>
+              <p class="section-sub" style="margin:0;">Latest platform events</p>
+            </div>
+            <a href="/admin/analytics" class="view-all-link">Full Log →</a>
+          </div>
+        </div>
+        <div class="section-body" style="padding-top:4px;">
+          <div id="activityList">
+            <div style="color:var(--muted);text-align:center;padding:24px;">Loading…</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Recent Institutions + Subscription Summary ─────────────────────── -->
+    <div class="charts-2col" style="margin-top:0;">
+
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-nav">
+            <div><h3 style="margin:0;font-size:1rem;">Recent Institutions</h3></div>
+            <a href="/admin/institutions" class="view-all-link">View All →</a>
+          </div>
+        </div>
+        <div class="section-body" style="padding:0;">
+          <table class="results-table" id="recentInstTable">
+            <thead><tr><th>Institution</th><th>Status</th><th>Joined</th></tr></thead>
+            <tbody id="recentInstBody">
+              <tr><td colspan="3" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section-card">
+        <div class="section-card-header">
+          <div class="section-nav">
+            <div><h3 style="margin:0;font-size:1rem;">Subscription Overview</h3></div>
+            <a href="/admin/subscriptions" class="view-all-link">Manage →</a>
+          </div>
+        </div>
+        <div class="section-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <a href="/admin/subscriptions" class="sub-tile" style="background:rgba(5,150,105,0.12);border:1px solid rgba(5,150,105,0.3);">
+              <div style="font-size:1.6rem;font-weight:800;color:var(--green-l);" id="tilActiveSubs">—</div>
+              <div style="font-size:0.75rem;color:var(--muted);">Active</div>
+            </a>
+            <a href="/admin/subscriptions" class="sub-tile" style="background:rgba(220,38,38,0.1);border:1px solid rgba(220,38,38,0.25);">
+              <div style="font-size:1.6rem;font-weight:800;color:var(--red-l);" id="tilExpiredSubs">—</div>
+              <div style="font-size:0.75rem;color:var(--muted);">Expired</div>
+            </a>
+            <a href="/admin/subscriptions" class="sub-tile" style="background:rgba(217,119,6,0.12);border:1px solid rgba(217,119,6,0.3);">
+              <div style="font-size:1.6rem;font-weight:800;color:var(--yellow-l);" id="tilOverdueSubs">—</div>
+              <div style="font-size:0.75rem;color:var(--muted);">Overdue</div>
+            </a>
+            <a href="/admin/subscriptions" class="sub-tile" style="background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.25);">
+              <div style="font-size:1.6rem;font-weight:800;color:#60a5fa;" id="tilNoSubs">—</div>
+              <div style="font-size:0.75rem;color:var(--muted);">No Subscription</div>
+            </a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ── Direct Subscriber Students ───────────────────────────────────── -->
+    <div class="section-card" style="margin-top:20px;">
+      <div class="section-card-header">
+        <div class="section-nav">
+          <div>
+            <h3 style="margin:0;font-size:1rem;">Direct Subscriber Students</h3>
+            <p class="section-sub" style="margin:0;">Personal/independent students</p>
+          </div>
+        </div>
+      </div>
+      <div class="section-body" style="padding:0;">
+        <table class="results-table" id="directSubTable">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>KCET ID</th>
+              <th>Email</th>
+              <th>Subscription Status</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody id="directSubBody">
+            <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">Loading…</td></tr>
+          </tbody>
+        </table>
+        <div class="table-footer" id="directSubFooter" style="text-align:center;padding:8px;font-size:0.8rem;color:var(--muted);">—</div>
+      </div>
+    </div>
+
+  </div><!-- /main-wrap -->
+
+  <script src="../js/auth.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    // ── Auth guard ──────────────────────────────────────────────────────────
+    Auth.currentRole().then(function (user) {
+      if (!user || (user.role !== 'admin' && user.role !== 'platform_admin')) {
+        window.location.href = '/login';
+      }
+    }).catch(function(err) {
+      // Auth check failed - redirect to login
+      console.log('[dashboard] Auth check failed:', err);
+      window.location.href = '/login';
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function (e) {
+      e.preventDefault();
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(function () { window.location.href = '/login'; });
+    });
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
+    var charts = {};
+    var chartSubjects = ['Biology', 'Chemistry', 'Mathematics', 'Physics'];
+    var chartColors = [
+      'rgba(217,119,6,0.75)',
+      'rgba(5,150,105,0.75)',
+      'rgba(124,58,237,0.75)',
+      'rgba(8,145,178,0.75)',
+    ];
+
+    function fmt(n) {
+      return n === null || n === undefined ? '—' : Number(n).toLocaleString();
+    }
+
+    function escapeHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(str || ''));
+      return d.innerHTML;
+    }
+
+    function statusBadge(s) {
+      var map = {
+        active:       'rgba(5,150,105,0.15);color:var(--green-l)',
+        trial:        'rgba(5,150,105,0.1);color:var(--green-l)',
+        inactive:     'rgba(107,114,128,0.15);color:var(--muted)',
+        overdue:      'rgba(217,119,6,0.15);color:var(--yellow-l)',
+        grace_period: 'rgba(217,119,6,0.12);color:var(--yellow-l)',
+        expired:      'rgba(220,38,38,0.12);color:var(--red-l)',
+        none:         'rgba(107,114,128,0.1);color:var(--muted2)',
+      };
+      var sty = map[s] || map.none;
+      return '<span style="background:' + sty + ';padding:2px 8px;border-radius:8px;font-size:0.72rem;font-weight:700;">' + escapeHtml(s || 'none') + '</span>';
+    }
+
+    // ── Load & render ────────────────────────────────────────────────────────
+    function loadDashboard() {
+      fetch('/api/admin/dashboard', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          renderKPIs(data.overview || {});
+          renderAlerts(data.alerts || []);
+          renderCharts(data);
+          renderInstQuestions((data.question_bank || {}).institution_by_institution || []);
+          renderActivity(data);
+          renderRecentInstitutions(data.recent_institutions || []);
+          loadDirectSubscribers();
+          document.getElementById('lastUpdated').textContent =
+            'Last updated: ' + new Date().toLocaleTimeString();
+        })
+        .catch(function (err) {
+          console.error('Dashboard load failed:', err);
+          document.getElementById('lastUpdated').textContent =
+            '⚠️ Failed to load — click Refresh to retry';
+        });
+    }
+
+    // ── KPIs ─────────────────────────────────────────────────────────────────
+    function renderKPIs(ov) {
+      document.getElementById('kpiInstitutions').textContent    = fmt(ov.total_institutions);
+      document.getElementById('kpiInstitutionsSub').textContent = fmt(ov.active_institutions) + ' active';
+      document.getElementById('kpiStudents').textContent        = fmt(ov.total_students);
+      document.getElementById('kpiStudentsSub').textContent     = fmt(ov.institution_linked_students) + ' via institutions';
+      document.getElementById('kpiQuestions').textContent       = fmt(ov.total_questions);
+      document.getElementById('kpiQuestionsSub').textContent    = 'Admin: ' + fmt(ov.admin_questions) + ' · Inst: ' + fmt(ov.institution_questions);
+      document.getElementById('kpiExams').textContent           = fmt(ov.total_exams);
+      document.getElementById('kpiExamsSub').textContent        = fmt(ov.published_exams) + ' published';
+      document.getElementById('kpiAttempts').textContent        = fmt(ov.total_exam_attempts);
+      document.getElementById('kpiAttemptsSub').textContent     = 'Avg score: ' + (ov.avg_score || 0) + '%';
+      document.getElementById('kpiActiveSubs').textContent      = fmt(ov.active_subscriptions);
+      document.getElementById('kpiActiveSubsSub').textContent   = fmt(ov.expired_subscriptions) + ' expired';
+
+      document.getElementById('tilActiveSubs').textContent  = fmt(ov.active_subscriptions);
+      document.getElementById('tilExpiredSubs').textContent  = fmt(ov.expired_subscriptions);
+      document.getElementById('tilOverdueSubs').textContent  = fmt(ov.overdue_subscriptions);
+      var noSubs = (ov.total_institutions || 0) - (ov.active_institutions || 0);
+      document.getElementById('tilNoSubs').textContent = fmt(noSubs);
+    }
+
+    // ── Alerts ───────────────────────────────────────────────────────────────
+    function renderAlerts(alerts) {
+      var section = document.getElementById('alertsSection');
+      if (alerts.length === 0) { section.style.display = 'none'; return; }
+
+      document.getElementById('alertsList').innerHTML = alerts.map(function (a) {
+        var cls  = a.severity === 'error' ? 'alert-error' : a.severity === 'warning' ? 'alert-warn' : 'alert-info';
+        var icon = a.severity === 'error' ? '🔴' : a.severity === 'warning' ? '⚠️' : 'ℹ️';
+        return '<div class="alert-item ' + cls + '" onclick="window.location.href=\'/admin/subscriptions\'">' +
+          '<span>' + icon + '</span>' +
+          '<span style="flex:1;">' + escapeHtml(a.message) + '</span>' +
+          '<span class="alert-resolve">Resolve →</span>' +
+        '</div>';
+      }).join('');
+      section.style.display = 'block';
+    }
+
+    // ── Charts ───────────────────────────────────────────────────────────────
+    function renderCharts(data) {
+      var adminBySubject = (data.question_bank || {}).admin_by_subject || {};
+      var qVals = chartSubjects.map(function (s) { return adminBySubject[s] || 0; });
+
+      if (charts.adminQ) charts.adminQ.destroy();
+      charts.adminQ = new Chart(document.getElementById('adminQChart'), {
+        type: 'bar',
+        data: {
+          labels: chartSubjects,
+          datasets: [{
+            label: 'Questions',
+            data: qVals,
+            backgroundColor: chartColors,
+            borderRadius: 6,
+            borderSkipped: false,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: '#6868a0' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { ticks: { color: '#6868a0' }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true },
+          },
+          // Click bar → navigate to /admin/questions?subject=X
+          onClick: function (evt, elements) {
+            if (elements && elements.length > 0) {
+              var idx     = elements[0].index;
+              var subject = chartSubjects[idx];
+              window.location.href = '/admin/questions?subject=' + encodeURIComponent(subject);
+            }
+          },
+          onHover: function (evt, elements) {
+            evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+          },
+        },
+      });
+
+      var examsBySubj = (data.exams || {}).by_subject || {};
+      var eVals = chartSubjects.map(function (s) { return examsBySubj[s] || 0; });
+
+      if (charts.exams) charts.exams.destroy();
+      charts.exams = new Chart(document.getElementById('examsChart'), {
+        type: 'doughnut',
+        data: {
+          labels: chartSubjects,
+          datasets: [{
+            data: eVals,
+            backgroundColor: chartColors,
+            borderWidth: 0,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#e8e8f4', padding: 10, font: { size: 11 } } },
+          },
+          // Click segment → navigate to /admin/exams?subject=X
+          onClick: function (evt, elements) {
+            if (elements && elements.length > 0) {
+              var idx     = elements[0].index;
+              var subject = chartSubjects[idx];
+              window.location.href = '/admin/exams?subject=' + encodeURIComponent(subject);
+            }
+          },
+          onHover: function (evt, elements) {
+            evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+          },
+        },
+      });
+    }
+
+    // ── Institution question bars (clickable) ────────────────────────────────
+    function renderInstQuestions(instList) {
+      var el = document.getElementById('instQList');
+      if (instList.length === 0) {
+        el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:16px 0;">No institution questions uploaded yet.</div>';
+        return;
+      }
+      var maxVal = Math.max.apply(null, instList.map(function (i) { return i.count; })) || 1;
+      el.innerHTML = instList.map(function (i) {
+        var pct = Math.round(i.count / maxVal * 100);
+        return '<div class="inst-q-row" onclick="window.location.href=\'/admin/institutions\'">' +
+          '<div style="min-width:140px;font-size:0.83rem;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + escapeHtml(i.name) + '">' + escapeHtml(i.name) + '</div>' +
+          '<div style="flex:1;background:var(--s2);border-radius:4px;height:8px;overflow:hidden;">' +
+            '<div style="width:' + pct + '%;height:100%;background:var(--purple-l,#a78bfa);border-radius:4px;transition:width 0.4s;"></div>' +
+          '</div>' +
+          '<div style="min-width:40px;text-align:right;font-size:0.83rem;font-weight:700;">' + fmt(i.count) + '</div>' +
+          '<span style="font-size:0.72rem;color:var(--muted);margin-left:4px;">→</span>' +
+        '</div>';
+      }).join('');
+    }
+
+    // ── Activity panel ────────────────────────────────────────────────────────
+    function renderActivity(data) {
+      // Build activity feed from dashboard data — synthetic events from real data
+      var activities = [];
+      var ov = data.overview || {};
+
+      // Recent institution registrations
+      (data.recent_institutions || []).slice(0, 3).forEach(function (inst) {
+        var d = inst.registered_at ? new Date(inst.registered_at) : null;
+        activities.push({
+          icon: '🏫', color: '#60a5fa',
+          text: '<strong>' + escapeHtml(inst.name) + '</strong> joined the platform',
+          time: d ? d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'Recently',
+          href: '/admin/institutions',
+        });
+      });
+
+      // Question uploads
+      if (ov.institution_indexed_files > 0) {
+        activities.push({
+          icon: '📄', color: '#34d399',
+          text: '<strong>' + fmt(ov.institution_indexed_files) + '</strong> files indexed by institutions',
+          time: 'Total',
+          href: '/admin/questions',
+        });
+      }
+      if (ov.admin_indexed_files > 0) {
+        activities.push({
+          icon: '📄', color: '#a78bfa',
+          text: '<strong>' + fmt(ov.admin_indexed_files) + '</strong> admin question papers indexed',
+          time: 'Total',
+          href: '/admin/upload',
+        });
+      }
+
+      // Subscription alerts
+      (data.alerts || []).slice(0, 2).forEach(function (a) {
+        activities.push({
+          icon: a.severity === 'error' ? '🔴' : '⚠️',
+          color: a.severity === 'error' ? '#f87171' : '#fbbf24',
+          text: escapeHtml(a.message),
+          time: 'Alert',
+          href: '/admin/subscriptions',
+        });
+      });
+
+      // Exam activity
+      if (ov.total_exam_attempts > 0) {
+        activities.push({
+          icon: '✏️', color: '#22d3ee',
+          text: '<strong>' + fmt(ov.total_exam_attempts) + '</strong> total exam attempts recorded',
+          time: 'Total',
+          href: '/admin/analytics',
+        });
+      }
+
+      // Published exams
+      if (ov.published_exams > 0) {
+        activities.push({
+          icon: '✅', color: '#34d399',
+          text: '<strong>' + fmt(ov.published_exams) + '</strong> exam' + (ov.published_exams !== 1 ? 's' : '') + ' currently published',
+          time: 'Current',
+          href: '/admin/exams',
+        });
+      }
+
+      var el = document.getElementById('activityList');
+      if (activities.length === 0) {
+        el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:24px 0;">No recent activity.</div>';
+        return;
+      }
+
+      el.innerHTML = activities.slice(0, 7).map(function (a) {
+        return '<a href="' + a.href + '" class="activity-item">' +
+          '<div class="activity-dot" style="background:' + a.color + ';"></div>' +
+          '<div>' +
+            '<div class="activity-text">' + a.icon + ' ' + a.text + '</div>' +
+            '<div class="activity-time">' + a.time + '</div>' +
+          '</div>' +
+        '</a>';
+      }).join('');
+    }
+
+    // ── Recent institutions ───────────────────────────────────────────────────
+    function renderRecentInstitutions(recentInst) {
+      var tbody = document.getElementById('recentInstBody');
+      if (recentInst.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:24px;">No institutions yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = recentInst.map(function (inst) {
+        var date = inst.registered_at
+          ? new Date(inst.registered_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+          : '—';
+        return '<tr class="inst-row" onclick="window.location.href=\'/admin/institutions\'">' +
+          '<td style="font-weight:600;">' + escapeHtml(inst.name) + '</td>' +
+          '<td>' + statusBadge(inst.status) + '</td>' +
+          '<td style="color:var(--muted);font-size:0.8rem;">' + date + '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    // ── Direct subscriber students ───────────────────────────────────────────
+    function loadDirectSubscribers() {
+      fetch('/api/admin/direct-subscribers', { credentials: 'include' })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          renderDirectSubscribers(data.students || []);
+        })
+        .catch(function (err) {
+          console.error('Direct subscribers load failed:', err);
+          var tbody = document.getElementById('directSubBody');
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">Failed to load</td></tr>';
+        });
+    }
+
+    function renderDirectSubscribers(students) {
+      var tbody = document.getElementById('directSubBody');
+      var footer = document.getElementById('directSubFooter');
+      
+      if (students.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">No direct subscriber students yet.</td></tr>';
+        footer.textContent = 'Showing 0 students';
+        return;
+      }
+
+      tbody.innerHTML = students.map(function (student) {
+        var subStatus = student.subscription_status || 'no_subscription';
+        var joinDate = student.created_at
+          ? new Date(student.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+          : '—';
+        
+        return '<tr>' +
+          '<td><strong>' + escapeHtml(student.name || '—') + '</strong></td>' +
+          '<td><code style="background:rgba(255,255,255,0.08);padding:2px 6px;border-radius:4px;font-size:0.8rem;">' + escapeHtml(student.kcet_student_id || '—') + '</code></td>' +
+          '<td style="color:var(--muted);font-size:0.9rem;">' + escapeHtml(student.email || '—') + '</td>' +
+          '<td>' + statusBadge(subStatus) + '</td>' +
+          '<td style="color:var(--muted);font-size:0.9rem;">' + joinDate + '</td>' +
+        '</tr>';
+      }).join('');
+      
+      footer.textContent = 'Showing ' + students.length + ' direct subscriber ' + (students.length !== 1 ? 'students' : 'student');
+    }
+
+    // ── Wire up ───────────────────────────────────────────────────────────────
+    document.getElementById('refreshBtn').addEventListener('click', loadDashboard);
+    loadDashboard();
+  })();
+  </script>
+</body>
+</html>

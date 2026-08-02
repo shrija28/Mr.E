@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Exams — SmartKCET Prep</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+  <nav class="navbar" aria-label="Main navigation">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/student/institution/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/student/institution/exams" class="nav-pill active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        My Exams
+      </a>
+      <a href="/student/institution/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Practice
+      </a>
+      <a href="/student/institution/leaderboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15l-3 3h6l-3-3z"/><path d="M5 9l7-7 7 7"/><path d="M4 19h16"/></svg>
+        Leaderboard
+      </a>
+      <a href="/student/institution/performance" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Performance
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <main class="dash-main">
+    <div class="dash-hero">
+      <div>
+        <h1 class="dash-title">My <span class="hero-gradient">Exams</span></h1>
+        <p class="dash-sub">Only your institution's exams are shown here</p>
+      </div>
+    </div>
+    <div id="examsContainer">
+      <div class="section-card">
+        <div class="section-body" style="text-align:center;padding:40px;color:var(--muted)">Loading exams…</div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script>
+  Auth.currentRole().then(function(u) {
+    if (!u || u.role !== 'student' || u.student_subtype !== 'institution_linked') {
+      window.location.href = u && u.role === 'student' ? '/dashboard' : '/login';
+    }
+  });
+  document.getElementById('logoutBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+      .finally(function() { window.location.href = '/login'; });
+  });
+
+  function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  fetch('/api/institution/student/exams', { credentials: 'include' })
+    .then(function(r) { return r.ok ? r.json() : { subjects: [] }; })
+    .then(function(data) {
+      var subjects = data.subjects || [];
+      var container = document.getElementById('examsContainer');
+      if (!subjects.length) {
+        container.innerHTML = '<div class="section-card"><div class="section-body" style="text-align:center;padding:40px;color:var(--muted)">📚 No exams available yet. Check back soon.</div></div>';
+        return;
+      }
+      container.innerHTML = subjects.map(function(s) {
+        return '<div class="section-card" style="margin-bottom:20px">' +
+          '<div class="section-card-header">' +
+            '<div class="section-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg></div>' +
+            '<div><h2 style="margin-bottom:2px">' + esc(s.subject) + '</h2>' +
+            '<p class="section-sub">' + (s.available_exams || 0) + ' exam(s) available</p></div>' +
+          '</div>' +
+          '<div class="section-body">' +
+            '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">' +
+            (s.exams || []).map(function(e) {
+              // Build buttons for each set so student picks Set A/B/C/D
+              var setButtons = (e.sets || []).map(function(es) {
+                return '<a href="/exam?set=' + encodeURIComponent(es.exam_set_id) + '" class="btn-outline" style="font-size:0.78rem;padding:5px 10px;text-decoration:none;display:inline-flex;align-items:center;gap:4px">' +
+                  'Set ' + esc(es.set_label) +
+                '</a>';
+              }).join('');
+              if (!setButtons) {
+                setButtons = '<a href="/student/institution/exams" class="btn-primary" style="font-size:0.8rem;justify-content:center;text-decoration:none;display:flex">No sets yet</a>';
+              }
+              return '<div style="background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:16px">' +
+                '<div style="font-weight:600;margin-bottom:6px">' + esc(e.exam_name || s.subject + ' Exam') + '</div>' +
+                '<div style="font-size:0.75rem;color:var(--muted);margin-bottom:12px">' +
+                (e.is_institution_exam
+                  ? '🏫 <span style="color:var(--purple-l)">Institution Exam</span>'
+                  : '🌐 <span style="color:var(--cyan-l)">Platform Exam</span>') +
+                ' &bull; ' + (e.set_count || 0) + ' sets</div>' +
+                '<div style="display:flex;gap:6px;flex-wrap:wrap">' + setButtons + '</div>' +
+                '</div>';
+            }).join('') +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+    });
+  </script>
+</body>
+</html>

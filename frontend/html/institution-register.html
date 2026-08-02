@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Prep — Institution Registration</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/login" class="nav-pill">Login</a>
+      <a href="/institution-register" class="nav-pill active">Register Institution</a>
+    </div>
+  </nav>
+
+  <!-- Register Form -->
+  <main style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);padding:20px;">
+    <div class="section-card" style="max-width:420px;width:100%;padding:32px;">
+      <h2 style="margin-bottom:8px;">Register Your Institution</h2>
+      <p class="input-label" style="margin-bottom:24px;text-transform:none;font-size:0.9rem;">Create an admin account for your institution</p>
+
+      <div id="registerError" style="display:none;background:rgba(220,38,38,0.1);border:1px solid var(--red);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:0.85rem;color:var(--red-l);"></div>
+      <div id="registerSuccess" style="display:none;background:rgba(5,150,105,0.1);border:1px solid var(--green);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:0.85rem;color:var(--green-l);"></div>
+
+      <form id="registerForm" autocomplete="on">
+        <div class="input-group" style="margin-bottom:16px;">
+          <label class="input-label" for="institutionName">Institution Name</label>
+          <input class="text-input" type="text" id="institutionName" name="institutionName" placeholder="e.g., ABC College of Engineering" required minlength="1" maxlength="100" autocomplete="organization"/>
+        </div>
+        <div class="input-group" style="margin-bottom:16px;">
+          <label class="input-label" for="email">Institution Email</label>
+          <input class="text-input" type="email" id="email" name="email" placeholder="admin@institution.edu" required autocomplete="email"/>
+        </div>
+        <div class="input-group" style="margin-bottom:16px;">
+          <label class="input-label" for="phone">Contact Phone</label>
+          <input class="text-input" type="tel" id="phone" name="phone" placeholder="+91 9876543210" required pattern="[0-9]{10,15}" autocomplete="tel"/>
+          <small style="color:var(--muted);font-size:0.75rem;margin-top:4px;display:block;">10-15 digits including country code</small>
+        </div>
+        <div class="input-group" style="margin-bottom:16px;">
+          <label class="input-label" for="password">Password</label>
+          <input class="text-input" type="password" id="password" name="password" placeholder="Min 8 chars, at least 1 digit" required minlength="8" autocomplete="new-password"/>
+        </div>
+        <div class="input-group" style="margin-bottom:24px;">
+          <label class="input-label" for="confirmPassword">Confirm Password</label>
+          <input class="text-input" type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter password" required autocomplete="new-password"/>
+        </div>
+
+        <button type="submit" class="btn-primary" style="width:100%;justify-content:center;" id="registerBtn">
+          Register Institution
+        </button>
+      </form>
+
+      <div style="margin-top:20px;text-align:center;">
+        <p style="font-size:0.85rem;color:var(--muted);">
+          Already have an account? <a href="/login" style="color:var(--purple-l);">Sign in</a>
+        </p>
+        <p style="font-size:0.85rem;color:var(--muted);margin-top:12px;">
+          Looking to register as a student? <a href="/register" style="color:var(--purple-l);">Register here</a>
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <script src="../js/auth.js"></script>
+  <script>
+  (function () {
+    var form = document.getElementById('registerForm');
+    var errorEl = document.getElementById('registerError');
+    var successEl = document.getElementById('registerSuccess');
+    var registerBtn = document.getElementById('registerBtn');
+
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.style.display = 'block';
+      successEl.style.display = 'none';
+    }
+
+    function showSuccess(msg) {
+      successEl.innerHTML = msg;
+      successEl.style.display = 'block';
+      errorEl.style.display = 'none';
+    }
+
+    function hideMessages() {
+      errorEl.style.display = 'none';
+      successEl.style.display = 'none';
+    }
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      hideMessages();
+
+      var institutionName = document.getElementById('institutionName').value.trim();
+      var email = document.getElementById('email').value.trim();
+      var phone = document.getElementById('phone').value.trim();
+      var password = document.getElementById('password').value;
+      var confirmPassword = document.getElementById('confirmPassword').value;
+
+      if (!institutionName || !email || !phone || !password) {
+        showError('Please fill in all fields.');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        showError('Passwords do not match.');
+        return;
+      }
+
+      if (password.length < 8) {
+        showError('Password must be at least 8 characters.');
+        return;
+      }
+
+      if (!/\d/.test(password)) {
+        showError('Password must contain at least one digit.');
+        return;
+      }
+
+      // Validate phone (digits only, 10-15 digits)
+      var phoneDigits = phone.replace(/\D/g, '');
+      if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+        showError('Phone number must be between 10 and 15 digits.');
+        return;
+      }
+
+      registerBtn.disabled = true;
+      registerBtn.textContent = 'Registering institution…';
+
+      try {
+        var body = {
+          name: institutionName,
+          admin_email: email,
+          admin_password: password,
+          contact_phone: phoneDigits,
+        };
+
+        var res = await fetch('/api/institution/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(body),
+        });
+        var data = await res.json();
+
+        if (res.ok) {
+          showSuccess(
+            '🎉 Institution registered successfully!' +
+            '<br><strong>' + institutionName + '</strong>' +
+            '<br><small style="color:var(--muted)">Your admin account has been created.</small>' +
+            '<br><span style="color:var(--muted);font-size:0.8rem;">Redirecting to dashboard…</span>'
+          );
+          form.reset();
+          // Auto-redirect to institution dashboard after 2 seconds
+          setTimeout(function() { window.location.href = '/institution/dashboard'; }, 2000);
+          return;
+        } else if (res.status === 409) {
+          showError('This email is already registered as an institution.');
+        } else if (res.status === 400 && data) {
+          showError(data.message || 'Validation error.');
+        } else {
+          showError('Registration failed. Please try again.');
+        }
+      } catch (err) {
+        console.error('[institution-register] Error:', err);
+        showError('Network error. Please try again.');
+      } finally {
+        registerBtn.disabled = false;
+        registerBtn.textContent = 'Register Institution';
+      }
+    });
+
+    // Redirect if already authenticated
+    Auth.redirectIfAuthenticated();
+  })();
+  </script>
+</body>
+</html>

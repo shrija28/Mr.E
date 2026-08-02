@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Subscription — SmartKCET Prep</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/subscription.css"/>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Navbar -->
+  <nav class="navbar" aria-label="Main navigation">
+    <div class="nav-brand">
+      <div class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/exam" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Exam
+      </a>
+      <a href="/subscription" class="nav-pill active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Subscription
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <!-- Subscription Banner Placeholder -->
+  <div id="subscription-banner-mount"></div>
+
+  <main class="main-wrap">
+    <!-- Page Header -->
+    <div class="dash-hero">
+      <div>
+        <h1 class="dash-title">Subscription <span class="hero-gradient">Management</span></h1>
+        <p class="dash-sub">Manage your subscription plan, billing, and payment details</p>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-state" id="loadingState" role="status" aria-live="polite">
+      <div class="loading-spinner" aria-hidden="true"></div>
+      <p>Loading subscription details...</p>
+    </div>
+
+    <!-- No Subscription State -->
+    <section class="empty-state" id="noSubscriptionState" style="display:none" aria-labelledby="noSubHeading">
+      <div class="empty-icon" aria-hidden="true">💳</div>
+      <h3 id="noSubHeading">No Active Subscription</h3>
+      <p>Choose a plan to start taking exams and track your progress.</p>
+      <div class="empty-actions">
+        <button class="btn-primary" onclick="showPlanSelection()">Choose a Plan →</button>
+      </div>
+    </section>
+
+    <!-- Subscription Content -->
+    <div id="subscriptionContent" style="display:none">
+      
+      <!-- Current Plan Card -->
+      <section class="section-card subscription-plan-card" aria-labelledby="currentPlanHeading">
+        <div class="section-card-header">
+          <div class="section-icon purple" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div>
+            <h2 id="currentPlanHeading">Current Plan</h2>
+            <p class="section-sub">Your active subscription details</p>
+          </div>
+        </div>
+        <div class="section-body">
+          <div class="plan-details-grid">
+            <!-- Plan Name & Status -->
+            <div class="plan-detail-item">
+              <div class="plan-detail-label">Plan</div>
+              <div class="plan-detail-value" id="planName">—</div>
+            </div>
+            <div class="plan-detail-item">
+              <div class="plan-detail-label">Status</div>
+              <div class="plan-status-badge" id="planStatus" role="status" aria-live="polite">—</div>
+            </div>
+            
+            <!-- Dates -->
+            <div class="plan-detail-item">
+              <div class="plan-detail-label">Started</div>
+              <div class="plan-detail-value" id="planStartDate">—</div>
+            </div>
+            <div class="plan-detail-item" id="renewalDateItem">
+              <div class="plan-detail-label">Next Renewal</div>
+              <div class="plan-detail-value" id="planRenewalDate">—</div>
+            </div>
+            <div class="plan-detail-item" id="expiryDateItem" style="display:none">
+              <div class="plan-detail-label">Expires</div>
+              <div class="plan-detail-value" id="planExpiryDate">—</div>
+            </div>
+            
+            <!-- Remaining Attempts (for Free Trial and Institution) -->
+            <div class="plan-detail-item full-width" id="remainingAttemptsItem" style="display:none">
+              <div class="plan-detail-label">Remaining Attempts</div>
+              <div class="plan-detail-value">
+                <span id="remainingAttempts">—</span>
+              </div>
+            </div>
+
+            <!-- Institution Details -->
+            <div class="plan-detail-item full-width" id="institutionDetailsItem" style="display:none">
+              <div class="plan-detail-label">Institution</div>
+              <div class="plan-detail-value" id="institutionName">—</div>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="plan-actions" id="planActions">
+            <!-- Upgrade Button (for Free Trial) -->
+            <button class="btn-primary" id="upgradeBtn" style="display:none" onclick="window.location.href='/pricing'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+              Upgrade to Pro
+            </button>
+
+            <!-- Change Billing Period (for Pro) -->
+            <button class="btn-secondary" id="changeBillingBtn" style="display:none" onclick="window.location.href='/pricing'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Change Billing Period
+            </button>
+
+            <!-- Cancel Subscription (for Pro) -->
+            <button class="btn-outline" id="cancelBtn" style="display:none" onclick="showCancelModal()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              Cancel Subscription
+            </button>
+
+            <!-- Reactivate (for Cancelled) -->
+            <button class="btn-primary" id="reactivateBtn" style="display:none" onclick="window.location.href='/pricing'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              Reactivate Subscription
+            </button>
+
+            <!-- Pricing page link -->
+            <a href="/pricing" class="btn-outline" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              View Plans &amp; Pricing
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <!-- Right column: Features + CTA cards (injected by JS, grid column 2 on desktop) -->
+      <div class="sub-right-col" id="subRightCol" aria-live="polite"></div>
+
+      <!-- Billing History Section (only for Pro users) -->
+      <section class="section-card" id="billingHistorySection" style="display:none" aria-labelledby="billingHistoryHeading">
+        <div class="section-card-header">
+          <div class="section-icon blue" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          </div>
+          <div>
+            <h2 id="billingHistoryHeading">Billing History</h2>
+            <p class="section-sub">Your past transactions and invoices</p>
+          </div>
+        </div>
+        <div class="section-body">
+          <!-- Loading State -->
+          <div class="billing-loading" id="billingLoading" role="status" aria-live="polite">
+            <div class="loading-spinner small" aria-hidden="true"></div>
+            <p>Loading billing history...</p>
+          </div>
+
+          <!-- Empty State -->
+          <div class="billing-empty" id="billingEmpty" style="display:none" role="status" aria-live="polite">
+            <p class="empty-message">No billing history available yet.</p>
+          </div>
+
+          <!-- Error State -->
+          <div class="billing-error" id="billingError" style="display:none" role="alert" aria-live="polite">
+            <p class="error-message">Unable to load billing history. Please try again later.</p>
+            <button class="btn-secondary small" onclick="loadBillingHistory()" aria-label="Retry loading billing history">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              Retry
+            </button>
+          </div>
+
+          <!-- Billing Table (Desktop) -->
+          <div class="billing-table-wrapper" id="billingTableWrapper" style="display:none">
+            <div class="table-scroll">
+              <table class="billing-table" aria-describedby="billingHistoryHeading">
+                <thead>
+                  <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Amount</th>
+                    <th scope="col">Billing Period</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Transaction Ref</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                  </tr>
+                </thead>
+                <tbody id="billingTableBody">
+                  <!-- Rows will be inserted here -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Billing Cards (Mobile) -->
+          <div class="billing-cards" id="billingCards" style="display:none" aria-label="Billing history (mobile view)">
+            <!-- Cards will be inserted here -->
+          </div>
+
+          <!-- Pagination (shared by desktop table and mobile cards — REQ-8.5, REQ-13.4) -->
+          <nav class="billing-pagination" id="billingPagination" style="display:none" aria-label="Billing history pagination">
+            <button class="btn-outline small" id="prevPageBtn" onclick="previousPage()" aria-label="Previous page">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+              Previous
+            </button>
+            <div class="pagination-info" id="paginationInfo" role="status" aria-live="polite">Page 1 of 1</div>
+            <button class="btn-outline small" id="nextPageBtn" onclick="nextPage()" aria-label="Next page">
+              Next
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </nav>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Plan Selection Modal -->
+  <div class="modal-overlay" id="planSelectionModal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="planModalTitle" aria-hidden="true">
+    <div class="modal-dialog plan-selection-dialog">
+      <div class="modal-header">
+        <h2 id="planModalTitle">Choose Your Plan</h2>
+        <button class="modal-close" aria-label="Close plan selection dialog" onclick="closePlanSelectionModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtitle">Select the plan that best fits your exam preparation needs</p>
+        
+        <div class="plan-cards">
+          <!-- Free Trial Card -->
+          <div class="plan-card">
+            <div class="plan-card-header">
+              <h3>Free Trial</h3>
+              <div class="plan-price">
+                <span class="price-amount">Free</span>
+                <span class="price-period">7 days</span>
+              </div>
+            </div>
+            <ul class="plan-features">
+              <li class="feature-included">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                5 exam attempts total
+              </li>
+              <li class="feature-included">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                Basic score display
+              </li>
+              <li class="feature-excluded">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                No leaderboard access
+              </li>
+            </ul>
+            <button class="btn-plan btn-trial" onclick="selectFreeTrial()">Start Free Trial</button>
+          </div>
+          
+          <!-- Pro Card -->
+          <div class="plan-card plan-card-pro">
+            <div class="plan-badge">Recommended</div>
+            <div class="plan-card-header">
+              <h3>Pro Subscription</h3>
+              <div class="plan-price">
+                <span class="price-amount">₹99</span>
+                <span class="price-period">/week</span>
+              </div>
+            </div>
+            <ul class="plan-features">
+              <li class="feature-included">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                Unlimited exam attempts
+              </li>
+              <li class="feature-included">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                Full analytics and AI recommendations
+              </li>
+              <li class="feature-included">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                Leaderboard access and rankings
+              </li>
+            </ul>
+            <div class="billing-period-select">
+              <label for="billingPeriod">Billing Period:</label>
+              <select id="billingPeriod" class="select-input" aria-describedby="billingPeriodHelp planModalError">
+                <option value="weekly">Weekly (₹99)</option>
+                <option value="monthly">Monthly (₹349)</option>
+              </select>
+              <small id="billingPeriodHelp" class="visually-hidden">Choose how often your Pro subscription will be billed.</small>
+            </div>
+            <button class="btn-plan btn-pro" onclick="selectPro()">Subscribe to Pro</button>
+          </div>
+        </div>
+        
+        <div class="modal-error" id="planModalError" style="display:none" role="alert" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Compare Plans Modal -->
+  <div class="modal-overlay" id="comparePlansModal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="compareModalTitle" aria-hidden="true">
+    <div class="modal-dialog compare-dialog">
+      <div class="modal-header">
+        <h2 id="compareModalTitle">Compare Plans</h2>
+        <button class="modal-close" aria-label="Close compare plans dialog" onclick="closeComparePlansModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="comparison-table">
+          <table aria-describedby="compareModalTitle">
+            <thead>
+              <tr>
+                <th scope="col">Feature</th>
+                <th scope="col">Free Trial</th>
+                <th scope="col">Pro</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Exam Attempts</td>
+                <td>5 total</td>
+                <td>Unlimited</td>
+              </tr>
+              <tr>
+                <td>Duration</td>
+                <td>7 days</td>
+                <td>Weekly or Monthly</td>
+              </tr>
+              <tr>
+                <td>Score Display</td>
+                <td>✓ Basic</td>
+                <td>✓ Detailed</td>
+              </tr>
+              <tr>
+                <td>Performance Analytics</td>
+                <td>✗</td>
+                <td>✓ Full Analytics</td>
+              </tr>
+              <tr>
+                <td>AI Recommendations</td>
+                <td>✗</td>
+                <td>✓ Personalized</td>
+              </tr>
+              <tr>
+                <td>Leaderboard</td>
+                <td>✗</td>
+                <td>✓ Access & Rankings</td>
+              </tr>
+              <tr>
+                <td>Topic-wise Analysis</td>
+                <td>✗</td>
+                <td>✓ Detailed Breakdown</td>
+              </tr>
+              <tr>
+                <td>Price</td>
+                <td>Free</td>
+                <td>₹99/week or ₹349/month</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cancel Confirmation Modal -->
+  <div class="modal-overlay" id="cancelModal" style="display:none" role="dialog" aria-modal="true" aria-labelledby="cancelModalTitle" aria-describedby="cancelModalDesc" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h2 id="cancelModalTitle">Cancel Subscription</h2>
+        <button class="modal-close" aria-label="Close cancel subscription dialog" onclick="closeCancelModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="cancelModalDesc">Are you sure you want to cancel your subscription?</p>
+        <p class="modal-note">Your access will continue until the end of your current billing period (<span id="cancelEndDate">—</span>).</p>
+        <div class="modal-actions">
+          <button class="btn-outline" onclick="closeCancelModal()">Keep Subscription</button>
+          <button class="btn-primary" onclick="confirmCancel()">Yes, Cancel</button>
+        </div>
+        <div class="modal-error" id="cancelModalError" style="display:none" role="alert" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/router.js"></script>
+  <script src="../js/error-handler.js"></script>
+  <script src="../js/focus-trap.js"></script>
+  <script src="../js/subscription.js"></script>
+  <script src="../js/subscription-banner.js"></script>
+  <script src="../js/subscription-page.js"></script>
+  <script src="../js/plan-comparison.js"></script>
+  <script src="../js/upgrade-prompt.js"></script>
+  <script>
+  // Activate the client-side router so in-app <a href> clicks honour
+  // role-based access control and unauthenticated users are bounced to
+  // /login (REQ-15.1, 15.5–15.8, 15.11).
+  if (typeof Router !== 'undefined' && Router.init) { Router.init(); }
+
+  // Logout handler
+  document.getElementById('logoutBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+      .finally(function() { window.location.href = '/login'; });
+  });
+
+  // Initialize page
+  document.addEventListener('DOMContentLoaded', function() {
+    loadSubscriptionPage();
+  });
+  </script>
+</body>
+</html>

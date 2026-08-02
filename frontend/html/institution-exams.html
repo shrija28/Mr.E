@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Prep — Institution Exams</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Institution Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Institution</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/institution/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/institution/students" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Students
+      </a>
+      <a href="/institution/upload" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload
+      </a>
+      <a href="/institution/questions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Questions
+      </a>
+      <a href="/institution/exams" class="nav-pill active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Exams
+      </a>
+      <a href="/institution/analytics" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Analytics
+      </a>
+      <a href="/institution/syllabus" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        Syllabus
+      </a>
+      <a href="/institution/subscription" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Subscription
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <div class="main-wrap">
+
+    <!-- Create Exam Section -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(37,99,235,0.2));">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <div>
+          <h2>Create Institution Exam</h2>
+          <p class="section-sub">Generate an exam from your institution's question bank (4 sets × 20 questions = 80 questions required)</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="input-group">
+            <label class="input-label" for="examNameInput">Exam Name</label>
+            <input type="text" id="examNameInput" class="text-input" placeholder="e.g. Mid-Term 2024" style="min-width:200px;"/>
+          </div>
+          <div class="input-group">
+            <label class="input-label" for="subjectSelect">Subject</label>
+            <select id="subjectSelect" class="text-input" style="min-width:200px;">
+              <option value="">Select subject…</option>
+              <option value="Biology">Biology</option>
+              <option value="Physics">Physics</option>
+              <option value="Chemistry">Chemistry</option>
+              <option value="Mathematics">Mathematics</option>
+            </select>
+          </div>
+          <button id="createExamBtn" class="btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Create Exam
+          </button>
+        </div>
+        <div id="createMessage" style="margin-top:12px;display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Question Bank Status -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(217,119,6,0.2),rgba(234,179,8,0.2));">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div>
+          <h2>Question Bank Status</h2>
+          <p class="section-sub">Questions available in your institution's bank (need 80 per subject for exam creation)</p>
+        </div>
+      </div>
+      <div class="section-body">
+        <div id="questionBankStatus" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;">
+          <div style="text-align:center;color:var(--muted);padding:24px;">Loading question counts…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Exams List Section -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(8,145,178,0.2),rgba(5,150,105,0.2));">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+        </div>
+        <div>
+          <h2>Institution Exams</h2>
+          <p class="section-sub" id="examCount">Loading exams…</p>
+        </div>
+      </div>
+      <div class="section-body" style="padding:0;">
+        <div class="table-scroll">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Subject</th>
+                <th>Created</th>
+                <th>Sets</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="examsTableBody">
+              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="../js/auth.js"></script>
+  <script src="../js/institution-access-control.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    // ── Auth guard: redirect non-institution-admins ──────────────────────
+    Auth.currentRole().then(function (user) {
+      if (!user || user.role !== 'institution_admin') {
+        window.location.href = '/login';
+      }
+    });
+
+    // ── Logout ───────────────────────────────────────────────────────────
+    document.getElementById('logoutBtn').addEventListener('click', function (e) {
+      e.preventDefault();
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(function() { window.location.href = '/login'; });
+    });
+
+    // ── Subscription check for action buttons ───────────────────────────────
+    function checkSubscriptionAndShowModal() {
+      return new Promise(function(resolve) {
+        fetch('/api/institution/subscription', {
+          method: 'GET',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+          var status = data.subscription_status;
+          // If status is null or undefined, show modal
+          if (status === null || status === undefined) {
+            showSubscriptionRequiredModal();
+            resolve(false);
+            return;
+          }
+          // If status is active/trial, allow action
+          if (status === 'active' || status === 'trial') {
+            resolve(true);
+            return;
+          }
+          // For other statuses (expired, overdue, etc.), block
+          showSubscriptionRequiredModal();
+          resolve(false);
+        })
+        .catch(function(err) {
+          console.error('Failed to check subscription:', err);
+          showSubscriptionRequiredModal();
+          resolve(false);
+        });
+      });
+    }
+
+    function showSubscriptionRequiredModal() {
+      var overlay = document.createElement('div');
+      overlay.id = 'subscriptionRequiredModal';
+      overlay.style.cssText = `
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.75);
+        backdrop-filter: blur(8px);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      `;
+
+      var dialog = document.createElement('div');
+      dialog.style.cssText = `
+        background: var(--s1);
+        border: 1px solid var(--border2);
+        border-radius: 14px;
+        padding: 36px;
+        max-width: 480px;
+        width: 100%;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      `;
+      dialog.innerHTML = `
+        <div style="text-align: center; margin-bottom: 28px;">
+          <div style="font-size: 2.8rem; margin-bottom: 12px;">🔒</div>
+          <h2 style="font-size: 1.4rem; font-weight: 800; margin: 0 0 6px; color: var(--text);">Subscription Required</h2>
+          <p style="color: var(--muted); font-size: 0.88rem; margin: 0;">This feature requires an active subscription. Please select a plan to continue.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <button id="goToPlanBtnExams" style="
+            padding: 10px 18px;
+            background: linear-gradient(135deg, var(--inst-accent), var(--inst-accent-dark));
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            Select Plan
+          </button>
+          <button id="closeModalBtnExams" style="
+            padding: 10px 18px;
+            background: transparent;
+            border: 1px solid var(--inst-accent-border);
+            border-radius: 8px;
+            color: var(--inst-accent-light);
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+          ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Close
+          </button>
+        </div>
+      `;
+
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+
+      var planBtn = document.getElementById('goToPlanBtnExams');
+      if (planBtn) {
+        planBtn.addEventListener('click', function() {
+          window.location.href = '/institution/subscription';
+        });
+      }
+
+      var closeBtn = document.getElementById('closeModalBtnExams');
+      if (closeBtn) {
+        closeBtn.addEventListener('click', function() {
+          overlay.remove();
+        });
+      }
+
+      // Close on overlay click
+      overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) {
+          overlay.remove();
+        }
+      });
+    }
+
+    // ── State ────────────────────────────────────────────────────────────
+    var exams = [];
+
+    // ── Load question bank status ────────────────────────────────────────
+    function loadQuestionBankStatus() {
+      var container = document.getElementById('questionBankStatus');
+      fetch('/api/institution/content/questions/counts', { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var counts = data.counts || {};
+          var threshold = data.threshold || 80;
+          var subjects = ['Biology', 'Physics', 'Chemistry', 'Mathematics'];
+          container.innerHTML = subjects.map(function(s) {
+            var count = counts[s] || 0;
+            var enough = count >= threshold;
+            var color = enough ? 'var(--green-l)' : count > 0 ? 'var(--yellow-l)' : 'var(--muted)';
+            var hint = enough ? '✅ Ready for exam' : count > 0 ? (threshold - count) + ' more needed' : 'No questions yet';
+            return '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:var(--rm);padding:16px;text-align:center;">' +
+              '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:4px;">' + s + '</div>' +
+              '<div style="font-size:1.5rem;font-weight:700;color:' + color + ';">' + count + '</div>' +
+              '<div style="font-size:0.75rem;color:var(--muted);margin-top:4px;">' + hint + '</div>' +
+            '</div>';
+          }).join('');
+        })
+        .catch(function() {
+          var subjects = ['Biology', 'Physics', 'Chemistry', 'Mathematics'];
+          container.innerHTML = subjects.map(function(s) {
+            return '<div style="background:var(--card-bg);border:1px solid var(--border);border-radius:var(--rm);padding:16px;text-align:center;">' +
+              '<div style="font-size:0.85rem;color:var(--muted);margin-bottom:4px;">' + s + '</div>' +
+              '<div style="font-size:1.5rem;font-weight:700;color:var(--muted);">—</div>' +
+              '<div style="font-size:0.75rem;color:var(--muted);margin-top:4px;">questions</div>' +
+            '</div>';
+          }).join('');
+        });
+    }
+
+    // ── Load exams ───────────────────────────────────────────────────────
+    function loadExams() {
+      fetch('/api/institution/content/exams', { credentials: 'include' })
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          exams = data.exams || [];
+          renderExams();
+        })
+        .catch(function () {
+          document.getElementById('examsTableBody').innerHTML =
+            '<tr><td colspan="5" style="text-align:center;color:var(--red-l);padding:32px;">Failed to load exams</td></tr>';
+        });
+    }
+
+    // ── Render exams table ───────────────────────────────────────────────
+    function renderExams() {
+      var tbody = document.getElementById('examsTableBody');
+      var countEl = document.getElementById('examCount');
+
+      if (exams.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px;">No exams created yet. Upload question papers first, then create an exam.</td></tr>';
+        countEl.textContent = '0 exams';
+        return;
+      }
+
+      countEl.textContent = exams.length + ' exam' + (exams.length !== 1 ? 's' : '');
+
+      tbody.innerHTML = exams.map(function (exam) {
+        var examName = exam.exam_name || 'Untitled';
+        var createdDate = exam.created_at ? new Date(exam.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+        var statusClass = exam.is_published ? 'score-high' : '';
+        var statusText = exam.is_published ? 'Published' : 'Draft';
+
+        return '<tr>' +
+          '<td>' + escapeHtml(examName) + '</td>' +
+          '<td>' + escapeHtml(exam.subject) + '</td>' +
+          '<td>' + createdDate + '</td>' +
+          '<td>' + (exam.set_count || 4) + ' sets</td>' +
+          '<td><span class="score-badge ' + statusClass + '">' + statusText + '</span></td>' +
+          '</tr>';
+      }).join('');
+    }
+
+    // ── Create exam ──────────────────────────────────────────────────────
+    document.getElementById('createExamBtn').addEventListener('click', function () {
+      var subject = document.getElementById('subjectSelect').value;
+      var examName = document.getElementById('examNameInput').value.trim();
+      var msgEl = document.getElementById('createMessage');
+
+      if (!subject) {
+        showMessage(msgEl, 'Please select a subject.', 'warn');
+        return;
+      }
+
+      // Check subscription before allowing exam creation
+      checkSubscriptionAndShowModal().then(function(allowed) {
+        if (!allowed) return;
+        
+        var btn = document.getElementById('createExamBtn');
+        btn.disabled = true;
+        btn.textContent = 'Creating…';
+
+        var url = '/api/institution/content/exams?subject=' + encodeURIComponent(subject);
+        if (examName) {
+          url += '&exam_name=' + encodeURIComponent(examName);
+        }
+
+        fetch(url, {
+          method: 'POST',
+          credentials: 'include',
+        })
+          .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; }); })
+          .then(function (result) {
+            btn.disabled = false;
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Create Exam';
+
+            if (result.ok) {
+              showMessage(msgEl, 'Exam created successfully for ' + subject + '!', 'success');
+              loadExams();
+            } else if (result.status === 422) {
+              var d = result.data;
+              showMessage(msgEl, 'Cannot create exam: Your institution\'s ' + subject + ' bank has only ' + (d.count || 0) + ' questions (need ' + (d.required || 80) + '). Upload more question papers first.', 'error');
+            } else if (result.status === 403) {
+              showMessage(msgEl, (result.data && result.data.message) || 'Subscription inactive. Please renew to create exams.', 'error');
+            } else {
+              showMessage(msgEl, (result.data && result.data.message) || 'Failed to create exam.', 'error');
+            }
+          })
+          .catch(function () {
+            btn.disabled = false;
+            btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Create Exam';
+            showMessage(msgEl, 'Network error. Please try again.', 'error');
+          });
+      });
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+    function showMessage(el, text, type) {
+      el.style.display = 'block';
+      el.textContent = text;
+      el.style.padding = '10px 14px';
+      el.style.borderRadius = 'var(--rs)';
+      el.style.fontSize = '0.85rem';
+      el.style.fontWeight = '600';
+      if (type === 'success') {
+        el.style.background = 'rgba(5,150,105,0.12)';
+        el.style.color = 'var(--green-l)';
+        el.style.border = '1px solid rgba(5,150,105,0.3)';
+      } else if (type === 'error') {
+        el.style.background = 'rgba(220,38,38,0.12)';
+        el.style.color = 'var(--red-l)';
+        el.style.border = '1px solid rgba(220,38,38,0.3)';
+      } else {
+        el.style.background = 'rgba(217,119,6,0.12)';
+        el.style.color = 'var(--yellow-l)';
+        el.style.border = '1px solid rgba(217,119,6,0.3)';
+      }
+      setTimeout(function () { el.style.display = 'none'; }, 8000);
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str || ''));
+      return div.innerHTML;
+    }
+
+    // ── Init ─────────────────────────────────────────────────────────────
+    loadQuestionBankStatus();
+    loadExams();
+  })();
+  </script>
+</body>
+</html>

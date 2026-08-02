@@ -1,0 +1,515 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   SUBSCRIPTION MODAL - EXACT PRICING PAGE DESIGN
+   This modal now uses the EXACT same CSS as student-pricing.html
+   Classes copied from pricing page inline styles - NO custom redesign
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── CSS Variable Fallbacks (for pricing page compatibility) ────────────── */
+:root {
+  --card-bg: var(--s1, #0e0e1c);
+}
+
+/* ── Modal Overlay ──────────────────────────────────────────────────────── */
+.modal-overlay#subscriptionModal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, .78);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0s linear 0.3s;
+}
+
+.modal-overlay#subscriptionModal[style*="display: flex"],
+.modal-overlay#subscriptionModal.open {
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.3s ease;
+}
+
+/* ── Modal Dialog Container ─────────────────────────────────────────────── */
+.modal-dialog.subscription-modal {
+  position: relative;
+  width: 92vw;
+  max-width: 1600px;
+  min-width: 1300px;
+  height: auto;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 28px 72px rgba(0, 0, 0, 0.5);
+  color: var(--text);
+  overflow: hidden;
+  transform: translateY(20px) scale(0.96);
+  transition: transform 0.3s ease;
+}
+
+.modal-overlay.open .modal-dialog.subscription-modal {
+  transform: translateY(0) scale(1);
+}
+
+/* ── Modal Header ───────────────────────────────────────────────────────── */
+.subscription-modal .modal-header {
+  padding: 40px 48px 32px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+}
+
+.subscription-modal .modal-header-content {
+  flex: 1;
+}
+
+.subscription-modal .modal-title {
+  font-size: 1.9rem;
+  font-weight: 900;
+  margin: 0 0 8px;
+  line-height: 1.15;
+  color: var(--text);
+}
+
+.subscription-modal .modal-title .grad {
+  background: linear-gradient(90deg, #a78bfa, #60a5fa);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.subscription-modal .modal-subtitle {
+  color: var(--muted);
+  font-size: 0.95rem;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.subscription-modal .modal-close {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.subscription-modal .modal-close:hover {
+  color: var(--text);
+  background: var(--s1);
+  border-color: var(--border);
+}
+
+.subscription-modal .modal-close svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.5;
+}
+
+/* ── Modal Body ─────────────────────────────────────────────────────────── */
+.subscription-modal .modal-body {
+  padding: 40px 48px 48px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+/* ── Grid - EXACT COPY FROM PRICING PAGE (.pg) ──────────────────────────── */
+.subscription-modal .modal-plan-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 32px;
+  margin: 0;
+}
+
+@media (max-width: 1199px) {
+  .subscription-modal .modal-plan-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .subscription-modal .modal-plan-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Card - EXACT COPY FROM PRICING PAGE (.pc) ──────────────────────────── */
+.subscription-modal .pc {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 36px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  position: relative;
+  transition: transform .15s, box-shadow .15s, border-color .18s;
+}
+
+.subscription-modal .pc:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .32);
+}
+
+.subscription-modal .pc.featured {
+  border-color: var(--purple-l, #a78bfa);
+  box-shadow: 0 0 0 1px var(--purple-l, #a78bfa), 0 8px 28px rgba(124, 58, 237, .18);
+}
+
+/* ── Badge - EXACT COPY FROM PRICING PAGE (.pc-badge) ───────────────────── */
+.subscription-modal .pc-badge {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #a78bfa, #60a5fa);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 800;
+  padding: 4px 16px;
+  border-radius: 20px;
+  white-space: nowrap;
+  letter-spacing: .02em;
+}
+
+.subscription-modal .pc-trial-badge {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+/* ── Typography - EXACT COPY FROM PRICING PAGE ──────────────────────────── */
+.subscription-modal .pc-name {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.subscription-modal .pc-tagline {
+  font-size: .8rem;
+  color: var(--muted);
+  margin-bottom: 20px;
+  min-height: 32px;
+}
+
+/* ── Price - EXACT COPY FROM PRICING PAGE (.pc-price) ───────────────────── */
+.subscription-modal .pc-price {
+  margin-bottom: 6px;
+}
+
+.subscription-modal .pc-price .amt {
+  font-size: 2.8rem;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--text);
+}
+
+.subscription-modal .pc-price .sym {
+  font-size: 1.4rem;
+  font-weight: 700;
+  vertical-align: super;
+  color: var(--text);
+}
+
+.subscription-modal .pc-price .per {
+  font-size: .82rem;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+/* ── Save Badge - EXACT COPY FROM PRICING PAGE (.pc-save) ───────────────── */
+.subscription-modal .pc-save {
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--green-l);
+  background: rgba(5, 150, 105, .15);
+  padding: 2px 10px;
+  border-radius: 12px;
+  display: inline-block;
+  margin-bottom: 18px;
+}
+
+.subscription-modal .pc-nosave {
+  height: 22px;
+  margin-bottom: 18px;
+}
+
+/* ── Features List - EXACT COPY FROM PRICING PAGE (.pc-feats) ───────────── */
+.subscription-modal .pc-feats {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.subscription-modal .pc-feats li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: .84rem;
+  line-height: 1.35;
+}
+
+.subscription-modal .pc-feats li.yes {
+  color: var(--text);
+}
+
+.subscription-modal .pc-feats li.no {
+  color: var(--muted);
+  opacity: .6;
+}
+
+.subscription-modal .pc-feats li .ic {
+  flex-shrink: 0;
+  margin-top: 1px;
+  font-size: .85rem;
+}
+
+/* ── CTA Buttons - EXACT COPY FROM PRICING PAGE (.pc-cta) ───────────────── */
+.subscription-modal .pc-cta {
+  width: 100%;
+  padding: 13px;
+  border-radius: 10px;
+  font-size: .92rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: opacity .15s, transform .12s, background .15s;
+  margin-top: auto;
+}
+
+.subscription-modal .pc-cta:hover:not(:disabled) {
+  opacity: .88;
+  transform: translateY(-1px);
+}
+
+.subscription-modal .pc-cta.primary {
+  background: linear-gradient(135deg, #a78bfa, #6366f1);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(124, 58, 237, .3);
+}
+
+.subscription-modal .pc-cta.trial {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #fff;
+  box-shadow: 0 4px 16px rgba(245, 158, 11, .3);
+}
+
+.subscription-modal .pc-cta.outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+
+.subscription-modal .pc-cta.current {
+  background: rgba(5, 150, 105, .15);
+  border: 1px solid rgba(5, 150, 105, .35);
+  color: var(--green-l);
+  cursor: default;
+}
+
+.subscription-modal .pc-cta:disabled {
+  cursor: not-allowed;
+}
+
+/* ── Error Message ──────────────────────────────────────────────────────── */
+.subscription-modal .modal-error {
+  display: none;
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: rgba(220, 38, 38, 0.12);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  border-radius: 12px;
+  color: var(--red-l);
+  font-size: .88rem;
+  line-height: 1.4;
+}
+
+.subscription-modal .modal-error[style*="display: block"]:not([style*="display: none"]) {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.subscription-modal .error-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.subscription-modal .error-content {
+  flex: 1;
+}
+
+.subscription-modal .error-message {
+  margin: 0;
+}
+
+.subscription-modal .btn-retry {
+  margin-top: 10px;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: .85rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.subscription-modal .btn-retry:hover {
+  background: var(--s1);
+  border-color: var(--purple-l);
+}
+
+.subscription-modal .btn-retry svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* ── Loading Overlay ────────────────────────────────────────────────────── */
+.subscription-modal .modal-loading {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  background: rgba(10, 10, 20, 0.92);
+  backdrop-filter: blur(4px);
+  border-radius: inherit;
+}
+
+.subscription-modal .modal-loading[style*="display: flex"],
+.subscription-modal .modal-loading[style*="display: block"] {
+  display: flex !important;
+}
+
+.subscription-modal .spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(124, 58, 237, 0.2);
+  border-top-color: #a78bfa;
+  border-radius: 50%;
+  animation: modalSpinnerRotate 0.8s linear infinite;
+}
+
+.subscription-modal .modal-loading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: .9rem;
+  font-weight: 500;
+}
+
+@keyframes modalSpinnerRotate {
+  to { transform: rotate(360deg); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Tablet (1199px and below) - 2 columns */
+@media (max-width: 1199px) {
+  .modal-dialog.subscription-modal {
+    width: 95vw;
+    min-width: unset;
+    max-width: 1000px;
+  }
+
+  .subscription-modal .modal-header {
+    padding: 28px 32px 22px;
+  }
+
+  .subscription-modal .modal-body {
+    padding: 28px 32px 32px;
+  }
+}
+
+/* Mobile (767px and below) - 1 column */
+@media (max-width: 767px) {
+  .modal-dialog.subscription-modal {
+    width: calc(100% - 24px);
+    min-width: unset;
+    max-width: unset;
+    max-height: calc(100vh - 40px);
+  }
+
+  .subscription-modal .modal-header {
+    padding: 24px 20px 18px;
+  }
+
+  .subscription-modal .modal-title {
+    font-size: 1.5rem;
+  }
+
+  .subscription-modal .modal-subtitle {
+    font-size: .88rem;
+  }
+
+  .subscription-modal .modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(100vh - 140px);
+  }
+
+  .subscription-modal .pc {
+    padding: 28px 20px 24px;
+  }
+
+  .subscription-modal .pc-badge {
+    top: -12px;
+    font-size: .68rem;
+    padding: 3px 14px;
+  }
+
+  .subscription-modal .pc-name {
+    font-size: 1rem;
+  }
+
+  .subscription-modal .pc-price .amt {
+    font-size: 2.4rem;
+  }
+
+  .subscription-modal .pc-cta {
+    padding: 12px;
+    font-size: .9rem;
+  }
+}
+
+/* Very small mobile (380px and below) */
+@media (max-width: 380px) {
+  .subscription-modal .modal-title {
+    font-size: 1.35rem;
+  }
+
+  .subscription-modal .pc-name {
+    font-size: .95rem;
+  }
+
+  .subscription-modal .pc-price .amt {
+    font-size: 2.2rem;
+  }
+}

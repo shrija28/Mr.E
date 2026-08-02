@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SmartKCET Prep — KCET Syllabus Management</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .topic-badge { display:inline-block;padding:2px 8px;border-radius:8px;font-size:0.72rem;font-weight:700; }
+    .badge-1puc { background:rgba(37,99,235,0.15);color:#60a5fa; }
+    .badge-2puc { background:rgba(124,58,237,0.15);color:#a78bfa; }
+    .badge-inactive { background:rgba(107,114,128,0.15);color:var(--muted); }
+    .syllabus-table td { white-space:normal;word-break:break-word;overflow-wrap:anywhere;vertical-align:top; }
+    .syllabus-table th { white-space:nowrap; }
+    .syllabus-table { table-layout:fixed; }
+    .syllabus-table col.col-no    { width:5%; }
+    .syllabus-table col.col-subj  { width:10%; }
+    .syllabus-table col.col-puc   { width:9%; }
+    .syllabus-table col.col-ch    { width:6%; }
+    .syllabus-table col.col-name  { width:32%; }
+    .syllabus-table col.col-desc  { width:28%; }
+    .syllabus-table col.col-act   { width:10%; }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Admin Navbar -->
+  <nav class="navbar">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Admin</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/admin/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard
+      </a>
+      <a href="/admin/institutions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Institutions
+      </a>
+      <a href="/admin/upload" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload
+      </a>
+      <a href="/admin/questions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Questions
+      </a>
+      <a href="/admin/exams" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>Exams
+      </a>
+      <a href="/admin/syllabus" class="nav-pill active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>Syllabus
+      </a>
+      <a href="/admin/subscriptions" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Subscriptions
+      </a>
+      <a href="/admin/analytics" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Analytics
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="/admin/dashboard" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5"/><polyline points="12 19 5 12 12 5"/></svg>
+        Dashboard
+      </a>
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <div class="main-wrap">
+
+    <!-- Header & Add Button -->
+    <div class="section-card">
+      <div class="section-card-header">
+        <div class="section-icon" style="background:linear-gradient(135deg,rgba(124,58,237,0.2),rgba(37,99,235,0.2));">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        </div>
+        <div>
+          <h2>KCET Syllabus Management</h2>
+          <p class="section-sub">Official Karnataka PUC syllabus — 1st &amp; 2nd PUC chapters for all 4 subjects · Source: KEA / DPUE Karnataka</p>
+        </div>
+        <div style="margin-left:auto;">
+          <button class="btn-outline small" id="bulkTextbookBtn" onclick="window.location.href='/admin/textbook-upload'" style="margin-right:8px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload Textbooks
+          </button>
+          <button class="btn-primary" id="addTopicBtn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Chapter
+          </button>
+        </div>
+      </div>
+      <div class="section-body" style="padding-bottom:0;">
+        <!-- Summary tiles -->
+        <div id="countTiles" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px;">
+          <div style="text-align:center;color:var(--muted);padding:16px;">Loading…</div>
+        </div>
+        <!-- Filters -->
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;">
+          <div class="input-group" style="margin:0;">
+            <label class="input-label" for="filterSubject">Subject</label>
+            <select id="filterSubject" class="text-input">
+              <option value="">All Subjects</option>
+              <option>Biology</option><option>Chemistry</option>
+              <option>Mathematics</option><option>Physics</option>
+            </select>
+          </div>
+          <div class="input-group" style="margin:0;">
+            <label class="input-label" for="filterPUC">PUC Year</label>
+            <select id="filterPUC" class="text-input">
+              <option value="">Both PUC</option>
+              <option>1st PUC</option><option>2nd PUC</option>
+            </select>
+          </div>
+          <div class="input-group" style="margin:0;">
+            <label class="input-label" for="filterActive">Status</label>
+            <select id="filterActive" class="text-input">
+              <option value="">All</option>
+              <option value="active">Active only</option>
+              <option value="inactive">Inactive only</option>
+            </select>
+          </div>
+          <div style="margin-top:18px;">
+            <button class="btn-outline small" id="refreshBtn">Refresh</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-body" style="padding:0;">
+        <div class="table-scroll">
+          <table class="results-table syllabus-table">
+            <colgroup>
+              <col class="col-no"/><col class="col-subj"/><col class="col-puc"/>
+              <col class="col-ch"/><col class="col-name"/><col class="col-desc"/>
+              <col class="col-act"/>
+            </colgroup>
+            <thead>
+              <tr>
+                <th>#</th><th>Subject</th><th>PUC Year</th>
+                <th>Ch.</th><th>Chapter Name</th><th>Description</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="topicTableBody">
+              <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="padding:12px 20px;border-top:1px solid var(--border);">
+          <span id="tableFooter" style="font-size:0.82rem;color:var(--muted);">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add/Edit Modal -->
+  <div id="topicModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r);padding:28px;max-width:520px;width:90%;max-height:90vh;overflow-y:auto;">
+      <h3 id="modalTitle" style="margin:0 0 20px;font-size:1.1rem;">Add Chapter</h3>
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="input-group" style="margin:0;">
+          <label class="input-label" for="mSubject">Subject *</label>
+          <select id="mSubject" class="text-input">
+            <option value="">Select…</option>
+            <option>Biology</option><option>Chemistry</option>
+            <option>Mathematics</option><option>Physics</option>
+          </select>
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label class="input-label" for="mPUC">PUC Year *</label>
+          <select id="mPUC" class="text-input">
+            <option value="">Select…</option>
+            <option>1st PUC</option><option>2nd PUC</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <div class="input-group" style="margin:0;flex:1;">
+            <label class="input-label" for="mChNum">Chapter Number *</label>
+            <input type="number" id="mChNum" class="text-input" min="1" placeholder="1"/>
+          </div>
+          <div class="input-group" style="margin:0;flex:1;">
+            <label class="input-label" for="mOrder">Display Order</label>
+            <input type="number" id="mOrder" class="text-input" min="0" placeholder="0"/>
+          </div>
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label class="input-label" for="mName">Chapter Name *</label>
+          <input type="text" id="mName" class="text-input" placeholder="e.g. Laws of Motion"/>
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label class="input-label" for="mDesc">Description (optional)</label>
+          <textarea id="mDesc" class="text-input" rows="3" placeholder="Brief description of topics covered…" style="resize:vertical;"></textarea>
+        </div>
+        <div class="input-group" style="margin:0;">
+          <label class="input-label" for="mTextbook">Associated Textbook (PDF, DOCX, TXT)</label>
+          <input type="file" id="mTextbook" class="text-input" accept=".pdf,.docx,.doc,.txt"/>
+          <div id="mCurrentTextbookContainer" style="display:none;margin-top:6px;font-size:0.82rem;align-items:center;gap:8px;color:var(--muted);">
+            <span>Current: <a id="mCurrentTextbookLink" href="#" target="_blank" style="color:var(--purple-l);text-decoration:underline;"></a></span>
+            <button type="button" class="btn-outline small" id="mClearTextbookBtn" style="padding:2px 6px;font-size:0.75rem;color:var(--red-l);border-color:var(--red-l);">Clear</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input type="checkbox" id="mActive" checked style="width:16px;height:16px;cursor:pointer;"/>
+          <label for="mActive" style="font-size:0.85rem;cursor:pointer;">Active (visible to students and institutions)</label>
+        </div>
+      </div>
+      <div id="modalError" style="display:none;margin-top:12px;padding:10px 14px;background:rgba(220,38,38,0.12);color:var(--red-l);border:1px solid rgba(220,38,38,0.3);border-radius:var(--rs);font-size:0.85rem;"></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+        <button class="btn-outline small" id="modalCancelBtn">Cancel</button>
+        <button class="btn-primary small" id="modalSaveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm -->
+  <div id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:1001;align-items:center;justify-content:center;">
+    <div style="background:var(--card-bg);border:1px solid var(--border);border-radius:var(--r);padding:28px;max-width:400px;width:90%;">
+      <h3 style="margin:0 0 10px;font-size:1.05rem;">Delete Chapter?</h3>
+      <p id="deleteModalMsg" style="color:var(--muted);font-size:0.88rem;margin:0 0 20px;"></p>
+      <div style="display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn-outline small" id="deleteCancelBtn">Cancel</button>
+        <button class="btn-primary small" id="deleteConfirmBtn" style="background:var(--red);border-color:var(--red);">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    Auth.currentRole().then(function(user) {
+      if (!user || (user.role !== 'admin' && user.role !== 'platform_admin')) {
+        window.location.href = '/login';
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', function(e) {
+      e.preventDefault();
+      fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+        .finally(function() { window.location.href = '/login'; });
+    });
+
+    var allTopics = [];
+    var editingId = null;
+    var deletingId = null;
+    var clearTextbookRequested = false;
+
+    // Clear textbook handler
+    document.getElementById('mClearTextbookBtn').addEventListener('click', function() {
+      clearTextbookRequested = true;
+      document.getElementById('mCurrentTextbookContainer').style.display = 'none';
+      document.getElementById('mTextbook').value = '';
+    });
+
+    // ── Load counts ───────────────────────────────────────────────────────
+    function loadCounts() {
+      fetch('/api/admin/syllabus/counts', { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var counts = data.counts || [];
+          var bySubj = {};
+          counts.forEach(function(c) {
+            bySubj[c.subject] = (bySubj[c.subject] || 0) + c.total;
+          });
+          var subjects = ['Physics','Chemistry','Mathematics','Biology'];
+          var colors = { Physics:'rgba(8,145,178,0.15)', Chemistry:'rgba(5,150,105,0.15)', Mathematics:'rgba(124,58,237,0.15)', Biology:'rgba(217,119,6,0.15)' };
+          var textColors = { Physics:'var(--cyan-l,#22d3ee)', Chemistry:'var(--green-l)', Mathematics:'var(--purple-l,#a78bfa)', Biology:'var(--yellow-l)' };
+          document.getElementById('countTiles').innerHTML = subjects.map(function(s) {
+            return '<div style="background:' + colors[s] + ';border:1px solid var(--border);border-radius:var(--rm);padding:12px 16px;text-align:center;">' +
+              '<div style="font-size:0.78rem;color:var(--muted);margin-bottom:2px;">' + s + '</div>' +
+              '<div style="font-size:1.4rem;font-weight:700;color:' + textColors[s] + ';">' + (bySubj[s] || 0) + '</div>' +
+              '<div style="font-size:0.7rem;color:var(--muted2);">chapters</div>' +
+            '</div>';
+          }).join('');
+        })
+        .catch(function() {});
+    }
+
+    // ── Load topics ───────────────────────────────────────────────────────
+    function loadTopics() {
+      var subject = document.getElementById('filterSubject').value;
+      var puc = document.getElementById('filterPUC').value;
+      var activeFilter = document.getElementById('filterActive').value;
+
+      var url = '/api/admin/syllabus?include_inactive=true';
+      if (subject) url += '&subject=' + encodeURIComponent(subject);
+      if (puc) url += '&puc_year=' + encodeURIComponent(puc);
+
+      document.getElementById('topicTableBody').innerHTML =
+        '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">Loading…</td></tr>';
+
+      fetch(url, { credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          allTopics = data.topics || [];
+          var filtered = allTopics;
+          if (activeFilter === 'active') filtered = allTopics.filter(function(t) { return t.is_active; });
+          if (activeFilter === 'inactive') filtered = allTopics.filter(function(t) { return !t.is_active; });
+          renderTable(filtered);
+        })
+        .catch(function() {
+          document.getElementById('topicTableBody').innerHTML =
+            '<tr><td colspan="7" style="text-align:center;color:var(--red-l);padding:32px;">Failed to load topics.</td></tr>';
+        });
+    }
+
+    function renderTable(topics) {
+      var tbody = document.getElementById('topicTableBody');
+      document.getElementById('tableFooter').textContent = topics.length + ' chapters';
+
+      if (topics.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:32px;">No chapters found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = topics.map(function(t, i) {
+        var pucCls = t.puc_year === '1st PUC' ? 'badge-1puc' : 'badge-2puc';
+        var activeBadge = t.is_active
+          ? '<span style="color:var(--green-l);font-size:0.75rem;">● Active</span>'
+          : '<span class="topic-badge badge-inactive">Inactive</span>';
+
+        return '<tr style="' + (t.is_active ? '' : 'opacity:0.5;') + '">' +
+          '<td style="color:var(--muted);font-size:0.8rem;">' + (i + 1) + '</td>' +
+          '<td><span class="score-badge">' + t.subject + '</span></td>' +
+          '<td><span class="topic-badge ' + pucCls + '">' + t.puc_year + '</span></td>' +
+          '<td style="color:var(--muted);text-align:center;">' + t.chapter_number + '</td>' +
+          '<td style="font-weight:600;font-size:0.87rem;">' + escapeHtml(t.chapter_name) + '</td>' +
+          '<td style="font-size:0.8rem;color:var(--muted2);">' + 
+            escapeHtml(t.description || '—') + 
+            (t.textbook_filename ? '<div style="margin-top:8px;font-size:0.78rem;color:#a78bfa;">📖 Textbook: <a href="' + escapeHtml(t.textbook_path) + '" target="_blank" style="color:#a78bfa;text-decoration:underline;font-weight:600;">' + escapeHtml(t.textbook_filename) + '</a></div>' : '') +
+          '</td>' +
+          '<td>' +
+            activeBadge + '<br>' +
+            '<div style="display:flex;gap:6px;margin-top:6px;">' +
+              '<button class="btn-outline small" onclick="openEdit(' + t.id + ')">Edit</button>' +
+              '<button class="btn-outline small" style="color:var(--red-l);border-color:var(--red-l);" onclick="openDelete(' + t.id + ',\'' + escapeHtml(t.chapter_name) + '\')">Del</button>' +
+            '</div>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    // ── Add / Edit ────────────────────────────────────────────────────────
+    document.getElementById('addTopicBtn').addEventListener('click', function() {
+      editingId = null;
+      document.getElementById('modalTitle').textContent = 'Add Chapter';
+      document.getElementById('mSubject').value = '';
+      document.getElementById('mPUC').value = '';
+      document.getElementById('mChNum').value = '';
+      document.getElementById('mOrder').value = '0';
+      document.getElementById('mName').value = '';
+      document.getElementById('mDesc').value = '';
+      document.getElementById('mTextbook').value = '';
+      document.getElementById('mCurrentTextbookContainer').style.display = 'none';
+      clearTextbookRequested = false;
+      document.getElementById('modalError').style.display = 'none';
+      document.getElementById('topicModal').style.display = 'flex';
+    });
+
+    window.openEdit = function(id) {
+      var topic = allTopics.find(function(t) { return t.id === id; });
+      if (!topic) return;
+      editingId = id;
+      document.getElementById('modalTitle').textContent = 'Edit Chapter';
+      document.getElementById('mSubject').value = topic.subject;
+      document.getElementById('mPUC').value = topic.puc_year;
+      document.getElementById('mChNum').value = topic.chapter_number;
+      document.getElementById('mOrder').value = topic.display_order;
+      document.getElementById('mName').value = topic.chapter_name;
+      document.getElementById('mDesc').value = topic.description || '';
+      document.getElementById('mActive').checked = topic.is_active;
+      
+      document.getElementById('mTextbook').value = '';
+      if (topic.textbook_filename) {
+        document.getElementById('mCurrentTextbookLink').textContent = topic.textbook_filename;
+        document.getElementById('mCurrentTextbookLink').href = topic.textbook_path;
+        document.getElementById('mCurrentTextbookContainer').style.display = 'flex';
+      } else {
+        document.getElementById('mCurrentTextbookContainer').style.display = 'none';
+      }
+      clearTextbookRequested = false;
+      
+      document.getElementById('modalError').style.display = 'none';
+      document.getElementById('topicModal').style.display = 'flex';
+    };
+
+    document.getElementById('modalCancelBtn').addEventListener('click', function() {
+      document.getElementById('topicModal').style.display = 'none';
+    });
+
+    document.getElementById('modalSaveBtn').addEventListener('click', function() {
+      var subject = document.getElementById('mSubject').value;
+      var puc = document.getElementById('mPUC').value;
+      var chNum = parseInt(document.getElementById('mChNum').value);
+      var order = parseInt(document.getElementById('mOrder').value) || 0;
+      var name = document.getElementById('mName').value.trim();
+      var desc = document.getElementById('mDesc').value.trim();
+      var active = document.getElementById('mActive').checked;
+      var errEl = document.getElementById('modalError');
+
+      if (!subject || !puc || !name || isNaN(chNum) || chNum < 1) {
+        errEl.textContent = 'Subject, PUC Year, Chapter Number and Name are required.';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      var btn = document.getElementById('modalSaveBtn');
+      btn.disabled = true; btn.textContent = 'Saving…';
+
+      var url, method, body;
+      var fileInput = document.getElementById('mTextbook');
+      body = new FormData();
+
+      if (editingId) {
+        url = '/api/admin/syllabus/' + editingId;
+        method = 'PATCH';
+        body.append('chapter_name', name);
+        body.append('display_order', order);
+        body.append('description', desc);
+        body.append('is_active', active);
+        body.append('clear_textbook', clearTextbookRequested);
+        if (fileInput.files[0]) {
+          body.append('textbook', fileInput.files[0]);
+        }
+      } else {
+        url = '/api/admin/syllabus';
+        method = 'POST';
+        body.append('subject', subject);
+        body.append('puc_year', puc);
+        body.append('chapter_number', chNum);
+        body.append('chapter_name', name);
+        body.append('display_order', order);
+        body.append('description', desc);
+        body.append('is_active', active);
+        if (fileInput.files[0]) {
+          body.append('textbook', fileInput.files[0]);
+        }
+      }
+
+      fetch(url, { method: method, credentials: 'include', body: body })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
+        .then(function(result) {
+          btn.disabled = false; btn.textContent = 'Save';
+          if (result.ok) {
+            document.getElementById('topicModal').style.display = 'none';
+            loadTopics(); loadCounts();
+          } else {
+            var msg = (result.data && result.data.message) || 'Save failed.';
+            errEl.textContent = msg; errEl.style.display = 'block';
+          }
+        })
+        .catch(function() { btn.disabled = false; btn.textContent = 'Save'; errEl.textContent = 'Network error.'; errEl.style.display = 'block'; });
+    });
+
+    // ── Delete ────────────────────────────────────────────────────────────
+    window.openDelete = function(id, name) {
+      deletingId = id;
+      document.getElementById('deleteModalMsg').textContent = 'Are you sure you want to permanently delete "' + name + '"? This cannot be undone.';
+      document.getElementById('deleteModal').style.display = 'flex';
+    };
+
+    document.getElementById('deleteCancelBtn').addEventListener('click', function() {
+      deletingId = null;
+      document.getElementById('deleteModal').style.display = 'none';
+    });
+
+    document.getElementById('deleteConfirmBtn').addEventListener('click', function() {
+      if (!deletingId) return;
+      var id = deletingId; deletingId = null;
+      document.getElementById('deleteModal').style.display = 'none';
+      fetch('/api/admin/syllabus/' + id, { method: 'DELETE', credentials: 'include' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) { if (d.deleted) { loadTopics(); loadCounts(); } else alert('Delete failed.'); })
+        .catch(function() { alert('Network error.'); });
+    });
+
+    // ── Filters ───────────────────────────────────────────────────────────
+    ['filterSubject','filterPUC','filterActive'].forEach(function(id) {
+      document.getElementById(id).addEventListener('change', loadTopics);
+    });
+    document.getElementById('refreshBtn').addEventListener('click', function() { loadTopics(); loadCounts(); });
+
+    function escapeHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(str || ''));
+      return d.innerHTML;
+    }
+
+    loadCounts();
+    loadTopics();
+  })();
+  </script>
+</body>
+</html>

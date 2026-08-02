@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KCET Syllabus — SmartKCET Prep</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <style>
+    .subject-tab { padding:10px 20px;border-radius:var(--rs);cursor:pointer;font-size:0.88rem;font-weight:600;border:1px solid var(--border);color:var(--muted2);background:var(--s2);transition:all 0.15s;display:flex;align-items:center;gap:6px; }
+    .subject-tab.active { color:#fff;border-color:transparent; }
+    .subject-tab.Physics.active { background:linear-gradient(135deg,#0891b2,#2563eb); }
+    .subject-tab.Chemistry.active { background:linear-gradient(135deg,#059669,#0d9488); }
+    .subject-tab.Mathematics.active { background:linear-gradient(135deg,#7c3aed,#4f46e5); }
+    .subject-tab.Biology.active { background:linear-gradient(135deg,#d97706,#b45309); }
+
+    .puc-section { margin-bottom:32px; }
+    .puc-label { display:inline-block;padding:4px 14px;border-radius:20px;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px; }
+    .puc-label.puc1 { background:rgba(37,99,235,0.15);color:#60a5fa; }
+    .puc-label.puc2 { background:rgba(124,58,237,0.15);color:#a78bfa; }
+
+    .chapter-row { display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-radius:var(--rs);border:1px solid var(--border);background:var(--s2);margin-bottom:6px;transition:border-color 0.15s; }
+    .chapter-row:hover { border-color:rgba(255,255,255,0.12); }
+    .ch-index { min-width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;flex-shrink:0; }
+    .ch-info { flex:1; }
+    .ch-title { font-size:0.9rem;font-weight:600;color:var(--text);line-height:1.3; }
+    .ch-sub { font-size:0.77rem;color:var(--muted);margin-top:3px;line-height:1.4; }
+
+    .summary-bar { display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px; }
+    .summary-tile { background:var(--s2);border:1px solid var(--border);border-radius:var(--rm);padding:12px;text-align:center; }
+    .summary-tile .num { font-size:1.5rem;font-weight:700; }
+    .summary-tile .lbl { font-size:0.72rem;color:var(--muted);margin-top:2px; }
+  </style>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Navbar (role-aware: show correct links) -->
+  <nav class="navbar" id="topNav">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="nav-links" id="navLinks">
+      <a href="/syllabus" class="nav-pill active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        KCET Syllabus
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="/login" class="nav-pill" id="authBtn">Login</a>
+    </div>
+  </nav>
+
+  <main class="main-wrap">
+
+    <!-- Hero -->
+    <div style="text-align:center;padding:32px 0 24px;">
+      <h1 style="font-size:2rem;font-weight:800;margin:0 0 8px;">KCET Official Syllabus</h1>
+      <p style="color:var(--muted);font-size:0.95rem;margin:0;">Karnataka PUC 1st &amp; 2nd Year — All subjects as per KEA / DPUE Karnataka</p>
+    </div>
+
+    <!-- Summary bar -->
+    <div class="summary-bar" id="summaryBar">
+      <div class="summary-tile"><div class="num" id="sumTotal">—</div><div class="lbl">Total Chapters</div></div>
+      <div class="summary-tile"><div class="num" style="color:#60a5fa;">14+14</div><div class="lbl">Physics Chapters</div></div>
+      <div class="summary-tile"><div class="num" style="color:#34d399;">14+16</div><div class="lbl">Chemistry Chapters</div></div>
+      <div class="summary-tile"><div class="num" style="color:#a78bfa;">15+13</div><div class="lbl">Maths Chapters</div></div>
+      <div class="summary-tile"><div class="num" style="color:#fbbf24;">22+16</div><div class="lbl">Biology Chapters</div></div>
+    </div>
+
+    <!-- Subject tabs -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;">
+      <button class="subject-tab Physics active" data-subject="Physics">⚡ Physics</button>
+      <button class="subject-tab Chemistry" data-subject="Chemistry">🧪 Chemistry</button>
+      <button class="subject-tab Mathematics" data-subject="Mathematics">📐 Mathematics</button>
+      <button class="subject-tab Biology" data-subject="Biology">🌱 Biology</button>
+    </div>
+
+    <!-- Content area -->
+    <div id="syllabusContent">
+      <div style="text-align:center;color:var(--muted);padding:60px;">Loading syllabus…</div>
+    </div>
+
+  </main>
+
+  <script src="../js/auth.js"></script>
+  <script>
+  (function() {
+    'use strict';
+
+    // ── Role-aware navbar ─────────────────────────────────────────────────
+    Auth.currentRole().then(function(user) {
+      var navLinks = document.getElementById('navLinks');
+      var authBtn = document.getElementById('authBtn');
+      if (!user) return;
+      if (user.role === 'student') {
+        navLinks.innerHTML = '<a href="/dashboard" class="nav-pill">Dashboard</a>' +
+          '<a href="/exam" class="nav-pill">Exam</a>' +
+          '<a href="/syllabus" class="nav-pill active">Syllabus</a>';
+        authBtn.textContent = 'Logout';
+        authBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+            .finally(function() { window.location.href = '/login'; });
+        });
+      } else if (user.role === 'institution_admin') {
+        navLinks.innerHTML = '<a href="/institution/dashboard" class="nav-pill">Dashboard</a>' +
+          '<a href="/syllabus" class="nav-pill active">Syllabus</a>';
+        authBtn.textContent = 'Logout';
+        authBtn.addEventListener('click', function(e) {
+          e.preventDefault();
+          fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+            .finally(function() { window.location.href = '/login'; });
+        });
+      }
+    });
+
+    var syllabusCache = {};
+
+    var subjectColors = {
+      Physics:     { bg: 'rgba(8,145,178,0.1)',   text: '#22d3ee', idx: 'rgba(8,145,178,0.2)'   },
+      Chemistry:   { bg: 'rgba(5,150,105,0.1)',   text: '#34d399', idx: 'rgba(5,150,105,0.2)'   },
+      Mathematics: { bg: 'rgba(124,58,237,0.1)',  text: '#a78bfa', idx: 'rgba(124,58,237,0.2)'  },
+      Biology:     { bg: 'rgba(217,119,6,0.1)',   text: '#fbbf24', idx: 'rgba(217,119,6,0.2)'   },
+    };
+
+    function loadSubject(subject) {
+      if (syllabusCache[subject]) { renderSubject(subject, syllabusCache[subject]); return; }
+      document.getElementById('syllabusContent').innerHTML =
+        '<div style="text-align:center;color:var(--muted);padding:60px;">Loading…</div>';
+      fetch('/api/syllabus/' + encodeURIComponent(subject))
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          syllabusCache[subject] = data;
+          renderSubject(subject, data);
+          updateSummary(data.total_chapters);
+        })
+        .catch(function() {
+          document.getElementById('syllabusContent').innerHTML =
+            '<div style="text-align:center;color:var(--red-l);padding:60px;">Failed to load syllabus.</div>';
+        });
+    }
+
+    function renderSubject(subject, data) {
+      var colors = subjectColors[subject] || subjectColors.Physics;
+      var pucYears = data.puc_years || [];
+      var html = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:28px;">';
+
+      pucYears.forEach(function(puc) {
+        var isFirst = puc.puc_year === '1st PUC';
+        html += '<div>';
+        html += '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">';
+        html += '<span class="puc-label ' + (isFirst ? 'puc1' : 'puc2') + '">' + puc.puc_year + '</span>';
+        html += '<span style="font-size:0.8rem;color:var(--muted);">' + puc.total_chapters + ' chapters</span>';
+        html += '</div>';
+
+        (puc.chapters || []).forEach(function(ch) {
+          html += '<div class="chapter-row">';
+          html += '<div class="ch-index" style="background:' + colors.idx + ';color:' + colors.text + ';">' + ch.chapter_number + '</div>';
+          html += '<div class="ch-info">';
+          html += '<div class="ch-title">' + escapeHtml(ch.chapter_name) + '</div>';
+          if (ch.description) {
+            html += '<div class="ch-sub">' + escapeHtml(ch.description) + '</div>';
+          }
+          html += '</div></div>';
+        });
+
+        html += '</div>';
+      });
+
+      html += '</div>';
+      document.getElementById('syllabusContent').innerHTML = html;
+    }
+
+    function updateSummary(count) {
+      document.getElementById('sumTotal').textContent = '124';
+    }
+
+    // Tab switching
+    document.querySelectorAll('.subject-tab').forEach(function(tab) {
+      tab.addEventListener('click', function() {
+        document.querySelectorAll('.subject-tab').forEach(function(t) { t.classList.remove('active'); });
+        tab.classList.add('active');
+        loadSubject(tab.getAttribute('data-subject'));
+      });
+    });
+
+    function escapeHtml(str) {
+      var d = document.createElement('div');
+      d.appendChild(document.createTextNode(str || ''));
+      return d.innerHTML;
+    }
+
+    loadSubject('Physics');
+  })();
+  </script>
+</body>
+</html>

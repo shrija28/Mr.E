@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — SmartKCET Prep</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/subscription.css"/>
+  <link rel="stylesheet" href="../css/subscription-modal-premium.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Preload Razorpay checkout script so it's ready when user selects a paid plan -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+  <div class="bg-mesh"></div>
+
+  <!-- Dashboard Navbar -->
+  <nav class="navbar" aria-label="Main navigation">
+    <div class="nav-brand">
+      <div class="brand-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+    </div>
+    <div class="nav-links">
+      <a href="/dashboard" class="nav-pill active" aria-current="page">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="/exam" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        Exam
+      </a>
+      <!-- Personal subscription nav: hidden for institution-linked students -->
+      <a href="/subscription" class="nav-pill nav-subscription-personal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+        Subscription
+      </a>
+      <!-- Contact Us nav -->
+      <a href="/contact-us" class="nav-pill">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Contact
+      </a>
+      <!-- Institution nav: only shown for institution-linked students -->
+      <a href="/syllabus" class="nav-pill nav-institution-link" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        My Institution
+      </a>
+    </div>
+    <div class="nav-actions">
+      <a href="#" class="nav-pill" id="logoutBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Logout
+      </a>
+    </div>
+  </nav>
+
+  <!-- Subscription Banner Placeholder -->
+  <div id="subscription-banner-mount" role="region" aria-label="Subscription status"></div>
+
+  <!-- Institution Student Banner (shown only for institution_linked students) -->
+  <div id="institution-student-banner" style="display:none; background:linear-gradient(90deg,rgba(37,99,235,0.12),rgba(124,58,237,0.12)); border-bottom:1px solid rgba(124,58,237,0.2); padding:8px 24px; font-size:0.82rem; color:var(--muted);">
+    <span>🏫 <span id="institutionBannerName" style="font-weight:600;color:var(--purple-l)"></span> — Institution Student</span>
+    <span style="margin-left:16px;opacity:0.7;">Access provided by your institution. No subscription required.</span>
+  </div>
+
+  <main class="dash-main">
+    <!-- Dashboard Header -->
+    <div class="dash-hero">
+      <div>
+        <h1 class="dash-title">My <span class="hero-gradient">Dashboard</span></h1>
+        <p class="dash-sub" id="dashSubtitle">Your personal performance analytics across all subjects</p>
+      </div>
+      <div class="dash-hero-right">
+        <div class="last-updated" id="lastUpdated">Last updated: —</div>
+        <button class="btn-outline" onclick="refreshDashboard()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Student Profile Card -->
+    <div class="section-card" style="margin-bottom:20px;padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="color:var(--muted);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Student Profile</div>
+          <div style="display:flex;align-items:center;gap:16px;">
+            <div>
+              <div style="font-size:0.9rem;color:var(--muted);">Name:</div>
+              <div style="font-size:1.1rem;font-weight:600;color:var(--text);" id="studentName">—</div>
+            </div>
+            <div>
+              <div style="font-size:0.9rem;color:var(--muted);">KCET ID:</div>
+              <div style="font-size:1.1rem;font-weight:600;color:var(--purple-l);" id="studentKcetId">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- No Data State -->
+    <div class="empty-state" id="emptyState" style="display:none">
+      <div class="empty-icon">📊</div>
+      <h3>No Submissions Yet</h3>
+      <p>Complete and submit exams to see your performance analytics here.</p>
+      <div class="empty-actions">
+        <a href="/exam" class="btn-primary" id="emptyStateTakeExamBtn" data-take-exam>Take Exam →</a>
+      </div>
+    </div>
+
+    <div id="dashContent">
+      <!-- Filters -->
+      <div class="dash-filters section-card">
+        <div class="filter-row">
+          <div class="filter-group" style="display:none">
+            <label class="input-label">Student</label>
+            <select id="filterStudent" class="select-input" onchange="applyFilters()">
+              <option value="all">All Students</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="input-label">Subject</label>
+            <select id="filterSubject" class="select-input" onchange="applyFilters()">
+              <option value="all">All Subjects</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="input-label">Paper Set</label>
+            <select id="filterSet" class="select-input" onchange="applyFilters()">
+              <option value="all">All Sets</option>
+              <option value="Set A">Set A</option>
+              <option value="Set B">Set B</option>
+              <option value="Set C">Set C</option>
+              <option value="Set D">Set D</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="input-label">Status</label>
+            <select id="filterStatus" class="select-input" onchange="applyFilters()">
+              <option value="all">All</option>
+              <option value="pass">Pass</option>
+              <option value="fail">Fail</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Row -->
+      <div class="kpi-row" id="kpiRow">
+        <div class="kpi-tile">
+          <div class="kpi-tile-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg></div>
+          <div class="kpi-tile-body">
+            <div class="kpi-tile-val" id="kpiStudents">0</div>
+            <div class="kpi-tile-label">Exams Taken</div>
+          </div>
+          <div class="kpi-tile-trend up" id="kpiStudentsTrend"></div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-tile-icon blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div class="kpi-tile-body">
+            <div class="kpi-tile-val" id="kpiSubmissions">0</div>
+            <div class="kpi-tile-label">Submissions</div>
+          </div>
+          <div class="kpi-tile-trend" id="kpiSubTrend"></div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-tile-icon cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></div>
+          <div class="kpi-tile-body">
+            <div class="kpi-tile-val" id="kpiAvgScore">0%</div>
+            <div class="kpi-tile-label">Avg Score</div>
+          </div>
+          <div class="kpi-tile-trend" id="kpiScoreTrend"></div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-tile-icon green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <div class="kpi-tile-body">
+            <div class="kpi-tile-val" id="kpiPassRate">0%</div>
+            <div class="kpi-tile-label">Pass Rate</div>
+          </div>
+          <div class="kpi-tile-trend" id="kpiPassTrend"></div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-tile-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div class="kpi-tile-body">
+            <div class="kpi-tile-val" id="kpiAvgTime">0m</div>
+            <div class="kpi-tile-label">Avg Time</div>
+          </div>
+          <div class="kpi-tile-trend" id="kpiTimeTrend"></div>
+        </div>
+        <div class="kpi-tile">
+          <div class="kpi-tile-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15l-3 3h6l-3-3z"/><path d="M5 9l7-7 7 7"/><path d="M4 19h16"/></svg></div>
+          <div class="kpi-tile-body">
+            <div class="kpi-tile-val" id="kpiRankValue">—</div>
+            <div class="kpi-tile-label">Your Rank</div>
+            <div class="kpi-tile-hint" id="kpiRankHint" style="font-size:0.65rem;color:var(--muted);margin-top:2px;line-height:1.2">score at least 30% on average to enter the leaderboard</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row 1 -->
+      <div class="charts-row">
+        <div class="chart-card section-card wide">
+          <div class="chart-card-header">
+            <h3>Topic Performance</h3>
+          </div>
+          <div class="chart-wrap"><canvas id="topicChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- Charts Row 2 -->
+      <div class="charts-row" style="margin-top:20px">
+        <div class="chart-card section-card">
+          <div class="chart-card-header"><h3>Set-wise Avg Score</h3></div>
+          <div class="chart-wrap"><canvas id="setChart"></canvas></div>
+        </div>
+        <div class="chart-card section-card">
+          <div class="chart-card-header"><h3>Pass vs Fail</h3></div>
+          <div class="chart-wrap"><canvas id="passChart"></canvas></div>
+        </div>
+      </div>
+
+      <!-- AI Analysis Block -->
+      <div class="ai-block section-card" id="aiBlock">
+        <div class="ai-block-header">
+          <div class="ai-block-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 010 14.14M4.93 4.93a10 10 0 000 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07M8.46 8.46a5 5 0 000 7.07"/></svg>
+          </div>
+          <div>
+            <h2>AI Performance Analysis</h2>
+            <p class="section-sub" id="aiAnalysisFor">Analyzing all students</p>
+          </div>
+          <div class="ai-block-badge">RAG Powered</div>
+        </div>
+
+        <div class="ai-zones-grid">
+          <div class="ai-zone strong">
+            <div class="ai-zone-header">
+              <span class="zone-icon">💪</span>
+              <span>Strong Areas</span>
+              <span class="zone-count" id="strongCount">0</span>
+            </div>
+            <ul class="zone-items" id="strongItems"></ul>
+          </div>
+          <div class="ai-zone improve">
+            <div class="ai-zone-header">
+              <span class="zone-icon">📈</span>
+              <span>Can Improve</span>
+              <span class="zone-count" id="improveCount">0</span>
+            </div>
+            <ul class="zone-items" id="improveItems"></ul>
+          </div>
+          <div class="ai-zone weak">
+            <div class="ai-zone-header">
+              <span class="zone-icon">⚠️</span>
+              <span>Weak Areas</span>
+              <span class="zone-count" id="weakCount">0</span>
+            </div>
+            <ul class="zone-items" id="weakItems"></ul>
+          </div>
+        </div>
+
+        <div class="ai-recommendation-box" id="aiRecommendationBox">
+          <div class="ai-rec-header">
+            <span>🤖</span> AI Recommendation
+          </div>
+          <p id="aiRecommendationText"></p>
+        </div>
+      </div>
+
+      <!-- College Recommendations -->
+      <div class="section-card" id="collegeRecSection" style="margin-top:20px; display: none;">
+        <div class="ai-block-header" style="padding-bottom:12px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; align-items:center; gap:12px;">
+            <div class="ai-block-icon" style="font-size:1.5rem;">🎓</div>
+            <div>
+              <h2 style="font-size:1.2rem; font-weight:700; margin:0;">College Match Predictor</h2>
+              <p class="section-sub" style="margin:2px 0 0 0;" id="recSubtitle">Based on your average performance</p>
+            </div>
+          </div>
+          <div class="ai-block-badge" id="predictedRankBadge" style="background:var(--purple); color:white; font-weight:bold; font-size:0.8rem; padding:4px 12px; border-radius:20px;">Projected Rank: Calculating...</div>
+        </div>
+
+        <div style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <!-- Tabs -->
+          <div style="display: flex; gap: 8px;" id="recTabs">
+            <button class="nav-pill active" id="recTabTarget" onclick="switchRecTab('target')">🎯 Target (<span id="targetCount">0</span>)</button>
+            <button class="nav-pill" id="recTabReach" onclick="switchRecTab('reach')">🚀 Reach (<span id="reachCount">0</span>)</button>
+            <button class="nav-pill" id="recTabSafe" onclick="switchRecTab('safe')">🛡️ Safe (<span id="safeCount">0</span>)</button>
+          </div>
+          <!-- Search inside recommendations -->
+          <div class="results-search" style="margin: 0; max-width: 250px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="collegeSearchInput" class="search-input" placeholder="Search colleges..." oninput="filterRecommendations()"/>
+          </div>
+        </div>
+
+        <!-- Lock overlay card -->
+        <div id="recLockOverlay" class="ai-recommendation-box" style="margin-top: 16px; background: linear-gradient(135deg, rgba(124, 58, 237, 0.1) 0%, rgba(37, 99, 235, 0.1) 100%); border: 1px dashed var(--purple); text-align: center; padding: 24px; border-radius: var(--r); display: none;">
+          <div style="font-size: 2rem; margin-bottom: 8px;">🔒</div>
+          <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text); margin-bottom: 8px;">Unlock Smart College Recommendations</h3>
+          <p id="recLockText" style="font-size: 0.85rem; color: var(--muted); max-width: 500px; margin: 0 auto 16px auto; line-height: 1.5;">
+            Upgrade to the Pro Plan to unlock the full names, locations, and details of these matching colleges.
+          </p>
+          <a href="/subscription" class="btn-primary" style="display: inline-block; padding: 8px 24px; font-size: 0.85rem; text-decoration: none;">Upgrade to Pro →</a>
+        </div>
+
+        <div id="collegesGrid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
+          <!-- College cards will be inserted here dynamically -->
+        </div>
+      </div>
+
+      <!-- Rank Suggestion Block -->
+      <div class="section-card" id="rankSuggestionSection" style="margin-top: 20px;">
+        <div class="ai-block-header">
+            <div class="ai-block-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+            </div>
+            <div>
+                <h2>Suggestions to Reach Desired Rank</h2>
+                <p class="section-sub">Get personalized suggestions to achieve your goal</p>
+            </div>
+        </div>
+        <div style="margin-top: 16px; display: flex; gap: 16px; align-items: center;">
+            <input type="number" id="desiredRankInput" class="select-input" placeholder="Enter desired rank (e.g., 1000)">
+            <button class="btn-primary" id="getRankSuggestionsBtn">Get Suggestions</button>
+        </div>
+        <div id="rankSuggestionsResult" style="margin-top: 16px;">
+            <!-- Suggestions will be rendered here -->
+        </div>
+      </div>
+
+      <!-- Rank Booster Action Plan -->
+      <div class="section-card" id="rankBoosterSection" style="margin-top:20px;display:none;">
+        <div class="ai-block-header">
+          <div class="ai-block-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 15l-3 3h6l-3-3z"/><path d="M5 9l7-7 7 7"/><path d="M4 19h16"/>
+            </svg>
+          </div>
+          <div>
+            <h2>Rank Booster Action Plan</h2>
+            <p class="section-sub">Personalized steps to improve your KCET rank — based on your actual scores</p>
+          </div>
+        </div>
+        <div style="margin-top:14px;">
+          <div id="boosterMeta" style="font-size:0.85rem;color:var(--muted2);background:var(--s2);border:1px solid var(--border);border-radius:var(--rs);padding:10px 14px;margin-bottom:14px;"></div>
+          <ul id="boosterActionList" style="margin:0;padding:0 0 0 20px;font-size:0.88rem;color:var(--text);line-height:2;"></ul>
+          <div id="boosterLockMsg" style="display:none;margin-top:10px;font-size:0.82rem;color:var(--muted);background:rgba(124,58,237,0.07);border:1px solid rgba(124,58,237,0.2);border-radius:var(--rs);padding:10px 14px;"></div>
+        </div>
+      </div>
+
+      <!-- Student Ranking -->
+      <div class="section-card results-card" style="margin-top:20px">
+        <div class="results-header">
+          <h3>🏆 Top Students</h3>
+        </div>
+        <div class="chart-wrap" style="height:280px;padding:16px">
+          <canvas id="rankingChart"></canvas>
+        </div>
+        <div class="table-scroll">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Student</th>
+                <th>KCET ID</th>
+                <th>Score</th>
+                <th>Progress</th>
+              </tr>
+            </thead>
+            <tbody id="rankingBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Exam History Table -->
+      <div class="section-card results-card">
+        <div class="results-header">
+          <h3>Exam History</h3>
+          <div class="results-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="searchInput" class="search-input" placeholder="Search subject or set..." oninput="filterTable()"/>
+          </div>
+        </div>
+        <div class="table-scroll">
+          <table class="results-table">
+            <thead>
+              <tr>
+                <th onclick="sortTable('subject')">Subject <span class="sort-icon">↕</span></th>
+                <th onclick="sortTable('set')">Set <span class="sort-icon">↕</span></th>
+                <th onclick="sortTable('score')">Score <span class="sort-icon">↕</span></th>
+                <th onclick="sortTable('time')">Time <span class="sort-icon">↕</span></th>
+                <th onclick="sortTable('status')">Status <span class="sort-icon">↕</span></th>
+                <th onclick="sortTable('submitted_at')">Date <span class="sort-icon">↕</span></th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+        <div class="table-footer" id="tableFooter"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Student Detail Drawer -->
+  <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()" style="display:none"></div>
+  <div class="detail-drawer" id="detailDrawer">
+    <div class="drawer-header">
+      <div>
+        <h3 id="drawerName">Student Name</h3>
+        <p class="drawer-meta" id="drawerMeta"></p>
+      </div>
+      <button class="drawer-close" onclick="closeDrawer()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+  </div>
+
+  <!-- Subscription Selection Modal (REQ-1.3, 6.1) — 4-PLAN VERSION -->
+  <!-- Sourced from frontend/html/subscription_modal.html — kept in sync with that partial. -->
+  <div id="subscriptionModal" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="modalTitle" aria-describedby="modalSubtitle" aria-modal="true" aria-hidden="true">
+    <div class="modal-dialog subscription-modal">
+      <div class="modal-header">
+        <div class="modal-header-content">
+          <h2 id="modalTitle" class="modal-title">Choose Your <span class="grad">Plan</span></h2>
+          <p id="modalSubtitle" class="modal-subtitle">Select the plan that best fits your exam preparation needs</p>
+        </div>
+        <button class="modal-close" aria-label="Close plan selection dialog" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="modal-plan-grid">
+          <!-- Free Plan Card -->
+          <div class="pc" data-plan="free">
+            <div class="pc-name">Free</div>
+            <div class="pc-tagline">Start your KCET journey for free</div>
+            <div class="pc-price"><span class="sym">₹</span><span class="amt">0</span><span class="per">/mo</span></div>
+            <div class="pc-nosave"></div>
+            <ul class="pc-feats">
+              <li class="yes"><span class="ic">✅</span><span>3–5 mock tests</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Limited question bank access</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Basic score analytics</span></li>
+              <li class="no"><span class="ic">❌</span><span>Unlimited mock tests</span></li>
+              <li class="no"><span class="ic">❌</span><span>Full topic analytics</span></li>
+              <li class="no"><span class="ic">❌</span><span>AI recommendations</span></li>
+              <li class="no"><span class="ic">❌</span><span>Weak-topic analysis</span></li>
+            </ul>
+            <button class="pc-cta outline" type="button" data-action="select-free">Start Free</button>
+          </div>
+          
+          <!-- 7-Day Premium Trial Card -->
+          <div class="pc" data-plan="trial">
+            <div class="pc-badge pc-trial-badge">Most Popular</div>
+            <div class="pc-name">7-Day Premium Trial</div>
+            <div class="pc-tagline">7 days of full premium access — ₹99</div>
+            <div class="pc-price"><span class="sym">₹</span><span class="amt">99</span></div>
+            <div class="pc-nosave"></div>
+            <ul class="pc-feats">
+              <li class="yes"><span class="ic">✅</span><span>Unlimited mock tests</span></li>
+              <li class="yes"><span class="ic">✅</span><span>KCET premium question bank</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Topic-wise analytics</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Weak-topic analysis</span></li>
+              <li class="yes"><span class="ic">✅</span><span>AI recommendations</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Performance reports</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Leaderboard ranking</span></li>
+            </ul>
+            <button class="pc-cta trial" type="button" data-action="select-trial" data-plan-id="">Start 7-Day Trial — ₹99</button>
+          </div>
+          
+          <!-- Pro Monthly Plan Card -->
+          <div class="pc featured" data-plan="monthly">
+            <div class="pc-badge">⭐ Best Value</div>
+            <div class="pc-name">Pro Monthly</div>
+            <div class="pc-tagline">Full premium access, billed monthly</div>
+            <div class="pc-price"><span class="sym">₹</span><span class="amt">349</span><span class="per">/month</span></div>
+            <div class="pc-nosave"></div>
+            <ul class="pc-feats">
+              <li class="yes"><span class="ic">✅</span><span>Unlimited mock tests</span></li>
+              <li class="yes"><span class="ic">✅</span><span>KCET premium question bank</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Topic-wise analytics</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Weak-topic analysis</span></li>
+              <li class="yes"><span class="ic">✅</span><span>AI recommendations</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Performance reports</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Leaderboard ranking + medals</span></li>
+            </ul>
+            <button class="pc-cta primary" type="button" data-action="select-monthly" data-plan-id="">Subscribe Monthly</button>
+          </div>
+          
+          <!-- Pro Yearly Plan Card -->
+          <div class="pc" data-plan="yearly">
+            <div class="pc-name">Pro Yearly</div>
+            <div class="pc-tagline">Best value — save ₹1189 vs monthly</div>
+            <div class="pc-price"><span class="sym">₹</span><span class="amt">2,999</span><span class="per">/year</span></div>
+            <div class="pc-save">Save ₹1,189/year</div>
+            <ul class="pc-feats">
+              <li class="yes"><span class="ic">✅</span><span>Everything in Pro Monthly</span></li>
+              <li class="yes"><span class="ic">✅</span><span>12 months full access</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Unlimited mock tests</span></li>
+              <li class="yes"><span class="ic">✅</span><span>KCET premium question bank</span></li>
+              <li class="yes"><span class="ic">✅</span><span>AI recommendations</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Advanced performance reports</span></li>
+              <li class="yes"><span class="ic">✅</span><span>Priority feature access</span></li>
+            </ul>
+            <button class="pc-cta primary" type="button" data-action="select-yearly" data-plan-id="">Subscribe Yearly</button>
+          </div>
+        </div>
+        
+        <!-- Error Message Area -->
+        <div class="modal-error" id="modalError" role="alert" aria-live="polite" style="display: none;">
+          <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <div class="error-content">
+            <p class="error-message" id="errorMessage"></p>
+            <button class="btn-retry" type="button" style="display: none;" aria-label="Retry the previous action">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              Retry
+            </button>
+          </div>
+        </div>
+        
+        <!-- Loading Spinner -->
+        <div class="modal-loading" id="modalLoading" style="display: none;" role="status" aria-live="polite">
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Processing your selection...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script src="../js/router.js"></script>
+  <script src="../js/error-handler.js"></script>
+  <script src="../js/focus-trap.js"></script>
+  <script src="../js/subscription.js"></script>
+  <script src="../js/subscription-banner.js"></script>
+  <script src="../js/subscription-modal.js"></script>
+  <script src="../js/plan-comparison.js"></script>
+  <script src="../js/upgrade-prompt.js"></script>
+  <script src="../js/dashboard.js"></script>
+  <script>
+  // Activate the client-side router so in-app <a href> clicks honour
+  // role-based access control and unauthenticated users are bounced to
+  // /login (REQ-15.1, 15.5–15.8, 15.11).
+  if (typeof Router !== 'undefined' && Router.init) { Router.init(); }
+
+  document.getElementById('logoutBtn').addEventListener('click', function(e) {
+    e.preventDefault();
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' })
+      .finally(function() { window.location.href = '/login'; });
+  });
+
+  // ── Institution vs Personal student experience ───────────────────────────
+  (function() {
+    // Read identity from /api/auth/me to determine student_subtype
+    Auth.currentRole().then(function(user) {
+      if (!user || user.role !== 'student') return;
+
+      var isInstitutionLinked = user.student_subtype === 'institution_linked';
+
+      if (isInstitutionLinked) {
+        // Institution students should never be on this page — redirect
+        window.location.replace('/student/institution/dashboard');
+        return;
+      }
+
+      // ── Personal student: show subscription nav, hide institution nav ───
+      document.querySelectorAll('.nav-subscription-personal').forEach(function(el) {
+        el.style.display = '';
+      });
+      document.querySelectorAll('.nav-institution-link').forEach(function(el) {
+        el.style.display = 'none';
+      });
+      // Hide institution banner (not relevant for personal students)
+      var instBanner = document.getElementById('institution-student-banner');
+      if (instBanner) instBanner.style.display = 'none';
+    });
+  })();
+  </script>
+
+</body>
+</html>

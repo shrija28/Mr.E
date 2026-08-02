@@ -1,0 +1,464 @@
+{
+  "export_date": "2026-06-19T10:11:49.153806",
+  "summary": {
+    "total_institutions": 3,
+    "total_users": 21,
+    "admin_count": 1,
+    "direct_students": 5,
+    "institution_students": 15,
+    "total_subscriptions": 8,
+    "total_invitations": 0,
+    "subscription_status_breakdown": {
+      "active": 3,
+      "trial": 5
+    }
+  },
+  "institutions": [
+    {
+      "id": "d5ad8e81a3ee4c43b3a38da1fef050ee",
+      "name": "KCET Academy",
+      "code": "KCET_AC_001",
+      "contact_phone": "+91-90000-00000",
+      "subscription_status": "active",
+      "registered_at": "2026-06-18 17:13:53.453256",
+      "students": [
+        {
+          "id": "d11e46a903bb4f85ab8bc2837c8d737e",
+          "email": "inst1_student1@smartkcet.test",
+          "kcet_student_id": "KCET006",
+          "display_name": "KCET Academy - Student 1",
+          "created_at": "2026-06-18 17:13:55.291800"
+        },
+        {
+          "id": "13e43903ac0d4674a64338e30c56ecdd",
+          "email": "inst1_student2@smartkcet.test",
+          "kcet_student_id": "KCET007",
+          "display_name": "KCET Academy - Student 2",
+          "created_at": "2026-06-18 17:13:55.593392"
+        },
+        {
+          "id": "1661b0b708404d76a6458eeb47e0e4f7",
+          "email": "inst1_student3@smartkcet.test",
+          "kcet_student_id": "KCET008",
+          "display_name": "KCET Academy - Student 3",
+          "created_at": "2026-06-18 17:13:55.891372"
+        },
+        {
+          "id": "b44331fdeffd415b81258b81c42adad9",
+          "email": "inst1_student4@smartkcet.test",
+          "kcet_student_id": "KCET009",
+          "display_name": "KCET Academy - Student 4",
+          "created_at": "2026-06-18 17:13:56.189445"
+        },
+        {
+          "id": "969410aa2ab640d1bbb4189ecebd7cb1",
+          "email": "inst1_student5@smartkcet.test",
+          "kcet_student_id": "KCET010",
+          "display_name": "KCET Academy - Student 5",
+          "created_at": "2026-06-18 17:13:56.486740"
+        }
+      ]
+    },
+    {
+      "id": "46e520573e484d2cb288f34b2ff9004a",
+      "name": "Engineering Coaching Centre",
+      "code": "ENG_CC_001",
+      "contact_phone": "+91-90000-00001",
+      "subscription_status": "active",
+      "registered_at": "2026-06-18 17:13:53.454598",
+      "students": [
+        {
+          "id": "d31da9946fca4763a5aeb5fd0d57227e",
+          "email": "inst2_student1@smartkcet.test",
+          "kcet_student_id": "KCET011",
+          "display_name": "Engineering Coaching Centre - Student 1",
+          "created_at": "2026-06-18 17:13:56.785739"
+        },
+        {
+          "id": "5c72acdaf0dd4cf2a797bf81b9731e86",
+          "email": "inst2_student2@smartkcet.test",
+          "kcet_student_id": "KCET012",
+          "display_name": "Engineering Coaching Centre - Student 2",
+          "created_at": "2026-06-18 17:13:57.084208"
+        },
+        {
+          "id": "bb28732b64b143308cffc22c39a449f7",
+          "email": "inst2_student3@smartkcet.test",
+          "kcet_student_id": "KCET013",
+          "display_name": "Engineering Coaching Centre - Student 3",
+          "created_at": "2026-06-18 17:13:57.378089"
+        },
+        {
+          "id": "e26a467af6814c12a51807a92752ff98",
+          "email": "inst2_student4@smartkcet.test",
+          "kcet_student_id": "KCET014",
+          "display_name": "Engineering Coaching Centre - Student 4",
+          "created_at": "2026-06-18 17:13:57.672310"
+        },
+        {
+          "id": "89999ad26a2f48d3b2c57a4dd5b0bcdb",
+          "email": "inst2_student5@smartkcet.test",
+          "kcet_student_id": "KCET015",
+          "display_name": "Engineering Coaching Centre - Student 5",
+          "created_at": "2026-06-18 17:13:57.964355"
+        }
+      ]
+    },
+    {
+      "id": "c208c126a189476eacb0dc57148c1494",
+      "name": "NEET Plus Institute",
+      "code": "NEET_INST_001",
+      "contact_phone": "+91-90000-00002",
+      "subscription_status": "active",
+      "registered_at": "2026-06-18 17:13:53.455271",
+      "students": [
+        {
+          "id": "324c4beef2f64a7c8d5a3d9d67bef914",
+          "email": "inst3_student1@smartkcet.test",
+          "kcet_student_id": "KCET016",
+          "display_name": "NEET Plus Institute - Student 1",
+          "created_at": "2026-06-18 17:13:58.260520"
+        },
+        {
+          "id": "2b0e5b88fd70496d84d7fb3c0fee187d",
+          "email": "inst3_student2@smartkcet.test",
+          "kcet_student_id": "KCET017",
+          "display_name": "NEET Plus Institute - Student 2",
+          "created_at": "2026-06-18 17:13:58.562725"
+        },
+        {
+          "id": "8ce85c240d2d41c6b72561ed1756f67b",
+          "email": "inst3_student3@smartkcet.test",
+          "kcet_student_id": "KCET018",
+          "display_name": "NEET Plus Institute - Student 3",
+          "created_at": "2026-06-18 17:13:58.874295"
+        },
+        {
+          "id": "1f29bfe573774f4daef515b96accb637",
+          "email": "inst3_student4@smartkcet.test",
+          "kcet_student_id": "KCET019",
+          "display_name": "NEET Plus Institute - Student 4",
+          "created_at": "2026-06-18 17:13:59.180026"
+        },
+        {
+          "id": "affaa49d2a244167b5925d09c3c7d001",
+          "email": "inst3_student5@smartkcet.test",
+          "kcet_student_id": "KCET020",
+          "display_name": "NEET Plus Institute - Student 5",
+          "created_at": "2026-06-18 17:13:59.506373"
+        }
+      ]
+    }
+  ],
+  "students": [
+    {
+      "id": "d9681588d1ad4886b1bbe0bb0dd7cbdb",
+      "email": "admin@smartkcet.com",
+      "kcet_student_id": null,
+      "display_name": "Administrator",
+      "role": "platform_admin",
+      "student_subtype": null,
+      "institution_id": null,
+      "created_at": "2026-06-18 17:13:53"
+    },
+    {
+      "id": "32160db8606c4fc78a5fab822970dc88",
+      "email": "student1@smartkcet.test",
+      "kcet_student_id": "KCET001",
+      "display_name": "Direct Student 1",
+      "role": "student",
+      "student_subtype": "direct_subscriber",
+      "institution_id": null,
+      "created_at": "2026-06-18 17:13:53.760871"
+    },
+    {
+      "id": "6e15c5c6d2eb4e09b751565e40262a6c",
+      "email": "student2@smartkcet.test",
+      "kcet_student_id": "KCET002",
+      "display_name": "Direct Student 2",
+      "role": "student",
+      "student_subtype": "direct_subscriber",
+      "institution_id": null,
+      "created_at": "2026-06-18 17:13:54.059315"
+    },
+    {
+      "id": "3a0097d866d54e50a4b8092eb93e2300",
+      "email": "student3@smartkcet.test",
+      "kcet_student_id": "KCET003",
+      "display_name": "Direct Student 3",
+      "role": "student",
+      "student_subtype": "direct_subscriber",
+      "institution_id": null,
+      "created_at": "2026-06-18 17:13:54.353500"
+    },
+    {
+      "id": "f150145ed20b40fd9221754a87a8880b",
+      "email": "student4@smartkcet.test",
+      "kcet_student_id": "KCET004",
+      "display_name": "Direct Student 4",
+      "role": "student",
+      "student_subtype": "direct_subscriber",
+      "institution_id": null,
+      "created_at": "2026-06-18 17:13:54.662153"
+    },
+    {
+      "id": "bedd7a23ed6c4c488d56eda4454e7d35",
+      "email": "student5@smartkcet.test",
+      "kcet_student_id": "KCET005",
+      "display_name": "Direct Student 5",
+      "role": "student",
+      "student_subtype": "direct_subscriber",
+      "institution_id": null,
+      "created_at": "2026-06-18 17:13:54.964756"
+    },
+    {
+      "id": "d11e46a903bb4f85ab8bc2837c8d737e",
+      "email": "inst1_student1@smartkcet.test",
+      "kcet_student_id": "KCET006",
+      "display_name": "KCET Academy - Student 1",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "d5ad8e81a3ee4c43b3a38da1fef050ee",
+      "created_at": "2026-06-18 17:13:55.291800"
+    },
+    {
+      "id": "13e43903ac0d4674a64338e30c56ecdd",
+      "email": "inst1_student2@smartkcet.test",
+      "kcet_student_id": "KCET007",
+      "display_name": "KCET Academy - Student 2",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "d5ad8e81a3ee4c43b3a38da1fef050ee",
+      "created_at": "2026-06-18 17:13:55.593392"
+    },
+    {
+      "id": "1661b0b708404d76a6458eeb47e0e4f7",
+      "email": "inst1_student3@smartkcet.test",
+      "kcet_student_id": "KCET008",
+      "display_name": "KCET Academy - Student 3",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "d5ad8e81a3ee4c43b3a38da1fef050ee",
+      "created_at": "2026-06-18 17:13:55.891372"
+    },
+    {
+      "id": "b44331fdeffd415b81258b81c42adad9",
+      "email": "inst1_student4@smartkcet.test",
+      "kcet_student_id": "KCET009",
+      "display_name": "KCET Academy - Student 4",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "d5ad8e81a3ee4c43b3a38da1fef050ee",
+      "created_at": "2026-06-18 17:13:56.189445"
+    },
+    {
+      "id": "969410aa2ab640d1bbb4189ecebd7cb1",
+      "email": "inst1_student5@smartkcet.test",
+      "kcet_student_id": "KCET010",
+      "display_name": "KCET Academy - Student 5",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "d5ad8e81a3ee4c43b3a38da1fef050ee",
+      "created_at": "2026-06-18 17:13:56.486740"
+    },
+    {
+      "id": "d31da9946fca4763a5aeb5fd0d57227e",
+      "email": "inst2_student1@smartkcet.test",
+      "kcet_student_id": "KCET011",
+      "display_name": "Engineering Coaching Centre - Student 1",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "46e520573e484d2cb288f34b2ff9004a",
+      "created_at": "2026-06-18 17:13:56.785739"
+    },
+    {
+      "id": "5c72acdaf0dd4cf2a797bf81b9731e86",
+      "email": "inst2_student2@smartkcet.test",
+      "kcet_student_id": "KCET012",
+      "display_name": "Engineering Coaching Centre - Student 2",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "46e520573e484d2cb288f34b2ff9004a",
+      "created_at": "2026-06-18 17:13:57.084208"
+    },
+    {
+      "id": "bb28732b64b143308cffc22c39a449f7",
+      "email": "inst2_student3@smartkcet.test",
+      "kcet_student_id": "KCET013",
+      "display_name": "Engineering Coaching Centre - Student 3",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "46e520573e484d2cb288f34b2ff9004a",
+      "created_at": "2026-06-18 17:13:57.378089"
+    },
+    {
+      "id": "e26a467af6814c12a51807a92752ff98",
+      "email": "inst2_student4@smartkcet.test",
+      "kcet_student_id": "KCET014",
+      "display_name": "Engineering Coaching Centre - Student 4",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "46e520573e484d2cb288f34b2ff9004a",
+      "created_at": "2026-06-18 17:13:57.672310"
+    },
+    {
+      "id": "89999ad26a2f48d3b2c57a4dd5b0bcdb",
+      "email": "inst2_student5@smartkcet.test",
+      "kcet_student_id": "KCET015",
+      "display_name": "Engineering Coaching Centre - Student 5",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "46e520573e484d2cb288f34b2ff9004a",
+      "created_at": "2026-06-18 17:13:57.964355"
+    },
+    {
+      "id": "324c4beef2f64a7c8d5a3d9d67bef914",
+      "email": "inst3_student1@smartkcet.test",
+      "kcet_student_id": "KCET016",
+      "display_name": "NEET Plus Institute - Student 1",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "c208c126a189476eacb0dc57148c1494",
+      "created_at": "2026-06-18 17:13:58.260520"
+    },
+    {
+      "id": "2b0e5b88fd70496d84d7fb3c0fee187d",
+      "email": "inst3_student2@smartkcet.test",
+      "kcet_student_id": "KCET017",
+      "display_name": "NEET Plus Institute - Student 2",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "c208c126a189476eacb0dc57148c1494",
+      "created_at": "2026-06-18 17:13:58.562725"
+    },
+    {
+      "id": "8ce85c240d2d41c6b72561ed1756f67b",
+      "email": "inst3_student3@smartkcet.test",
+      "kcet_student_id": "KCET018",
+      "display_name": "NEET Plus Institute - Student 3",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "c208c126a189476eacb0dc57148c1494",
+      "created_at": "2026-06-18 17:13:58.874295"
+    },
+    {
+      "id": "1f29bfe573774f4daef515b96accb637",
+      "email": "inst3_student4@smartkcet.test",
+      "kcet_student_id": "KCET019",
+      "display_name": "NEET Plus Institute - Student 4",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "c208c126a189476eacb0dc57148c1494",
+      "created_at": "2026-06-18 17:13:59.180026"
+    },
+    {
+      "id": "affaa49d2a244167b5925d09c3c7d001",
+      "email": "inst3_student5@smartkcet.test",
+      "kcet_student_id": "KCET020",
+      "display_name": "NEET Plus Institute - Student 5",
+      "role": "student",
+      "student_subtype": "institution_linked",
+      "institution_id": "c208c126a189476eacb0dc57148c1494",
+      "created_at": "2026-06-18 17:13:59.506373"
+    }
+  ],
+  "subscriptions": [
+    {
+      "id": "b05960bcee6d4fb8b6143a9d1101c3f1",
+      "user_id": "32160db8606c4fc78a5fab822970dc88",
+      "user_email": "student1@smartkcet.test",
+      "institution_id": null,
+      "institution_name": null,
+      "plan_id": "0ca9951550014b2fbb50faf127fcaab7",
+      "status": "trial",
+      "start_date": "2026-06-18 17:13:59.517323",
+      "next_renewal_date": "2026-06-25 17:13:59.517333",
+      "created_at": "2026-06-18 17:13:59.517345"
+    },
+    {
+      "id": "ea9b728b32134c30b50d6bdb73fc1aef",
+      "user_id": "6e15c5c6d2eb4e09b751565e40262a6c",
+      "user_email": "student2@smartkcet.test",
+      "institution_id": null,
+      "institution_name": null,
+      "plan_id": "0ca9951550014b2fbb50faf127fcaab7",
+      "status": "trial",
+      "start_date": "2026-06-18 17:13:59.518093",
+      "next_renewal_date": "2026-06-25 17:13:59.518100",
+      "created_at": "2026-06-18 17:13:59.518107"
+    },
+    {
+      "id": "6fe00b6b1b014282a5900449110362a7",
+      "user_id": "3a0097d866d54e50a4b8092eb93e2300",
+      "user_email": "student3@smartkcet.test",
+      "institution_id": null,
+      "institution_name": null,
+      "plan_id": "0ca9951550014b2fbb50faf127fcaab7",
+      "status": "trial",
+      "start_date": "2026-06-18 17:13:59.518594",
+      "next_renewal_date": "2026-06-25 17:13:59.518600",
+      "created_at": "2026-06-18 17:13:59.518605"
+    },
+    {
+      "id": "9f76481f57b444e1b1455429e1ed61c7",
+      "user_id": "f150145ed20b40fd9221754a87a8880b",
+      "user_email": "student4@smartkcet.test",
+      "institution_id": null,
+      "institution_name": null,
+      "plan_id": "0ca9951550014b2fbb50faf127fcaab7",
+      "status": "trial",
+      "start_date": "2026-06-18 17:13:59.519160",
+      "next_renewal_date": "2026-06-25 17:13:59.519185",
+      "created_at": "2026-06-18 17:13:59.519192"
+    },
+    {
+      "id": "280086e9cefe4957b903ef4c5631c88f",
+      "user_id": "bedd7a23ed6c4c488d56eda4454e7d35",
+      "user_email": "student5@smartkcet.test",
+      "institution_id": null,
+      "institution_name": null,
+      "plan_id": "0ca9951550014b2fbb50faf127fcaab7",
+      "status": "trial",
+      "start_date": "2026-06-18 17:13:59.519786",
+      "next_renewal_date": "2026-06-25 17:13:59.519793",
+      "created_at": "2026-06-18 17:13:59.519801"
+    },
+    {
+      "id": "0dfe42f8e471426681c921bbae7cff6c",
+      "user_id": null,
+      "user_email": null,
+      "institution_id": "d5ad8e81a3ee4c43b3a38da1fef050ee",
+      "institution_name": "KCET Academy",
+      "plan_id": "ca29d3ba44584703998d27adf13ec829",
+      "status": "active",
+      "start_date": "2026-06-18 17:13:59.528862",
+      "next_renewal_date": "2026-07-18 17:13:59.528862",
+      "created_at": "2026-06-18 17:13:59.528862"
+    },
+    {
+      "id": "ce10e1a9a06f4196bb606722e8588ccc",
+      "user_id": null,
+      "user_email": null,
+      "institution_id": "46e520573e484d2cb288f34b2ff9004a",
+      "institution_name": "Engineering Coaching Centre",
+      "plan_id": "ca29d3ba44584703998d27adf13ec829",
+      "status": "active",
+      "start_date": "2026-06-18 17:13:59.530580",
+      "next_renewal_date": "2026-07-18 17:13:59.530580",
+      "created_at": "2026-06-18 17:13:59.530580"
+    },
+    {
+      "id": "a51eda1a10694c9c9e95f4c3e035898d",
+      "user_id": null,
+      "user_email": null,
+      "institution_id": "c208c126a189476eacb0dc57148c1494",
+      "institution_name": "NEET Plus Institute",
+      "plan_id": "ca29d3ba44584703998d27adf13ec829",
+      "status": "active",
+      "start_date": "2026-06-18 17:13:59.531816",
+      "next_renewal_date": "2026-07-18 17:13:59.531816",
+      "created_at": "2026-06-18 17:13:59.531816"
+    }
+  ],
+  "invitations": []
+}

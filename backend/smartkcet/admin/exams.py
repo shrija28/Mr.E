@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import logging
 import random
+import time
 import uuid
 from typing import Any, Optional
 
@@ -378,44 +379,24 @@ def _create_exam_from_textbook(
         len(chapter_texts), len(chapters_with_textbooks), subject_name,
     )
 
-    # ── Step 3: split chapters across 4 sets so each set covers different topics
-    # Distribute chapters round-robin across sets so each set gets diverse coverage
-    set_texts: dict[str, list[tuple[str, str]]] = {label: [] for label in SET_LABELS}
-    for idx, chap in enumerate(chapter_texts):
-        label = SET_LABELS[idx % len(SET_LABELS)]
-        set_texts[label].append(chap)
-
-    # If we have fewer than 4 chapters, give all content to every set
-    if len(chapter_texts) < 4:
-        for label in SET_LABELS:
-            set_texts[label] = chapter_texts
-
     # ── Step 4: generate 20 KCET MCQs per set via Groq
     generated_questions: list[dict] = []
     used_questions: set[str] = set()
     batch_id = uuid.uuid4()
     generation_errors: list[str] = []
 
-    for label in SET_LABELS:
-        chapters_for_set = set_texts[label]
-        if not chapters_for_set:
-            # Fallback: use all chapters
-            chapters_for_set = chapter_texts
-
-        # Build a rich context string from this set's chapters
-        # Limit per-chapter text to ~3000 chars to keep prompt reasonable
-        context_parts = []
-        for ch_name, ch_text in chapters_for_set:
-            chunk = ch_text[:3000] if len(ch_text) > 3000 else ch_text
+    # Calculate equal chunks for all chapters to build fair context
+    context_parts = []
+    if chapter_texts:
+        chars_per_chapter = 3500 // len(chapter_texts)
+        for ch_name, ch_text in chapter_texts:
+            chunk = ch_text[:chars_per_chapter] if len(ch_text) > chars_per_chapter else ch_text
             context_parts.append(f"=== Chapter: {ch_name} ===\n{chunk}")
 
-        # If the total context is very large, trim it
-        context_str = "\n\n".join(context_parts)
-        if len(context_str) > 9000:
-            context_str = context_str[:9000]
+    context_str = "\n\n".join(context_parts)
+    chapter_names = [c[0] for c in chapter_texts]
 
-        chapter_names = [c[0] for c in chapters_for_set]
-
+    for label in SET_LABELS:
         try:
             set_qs = generate_kcet_mcqs_from_textbook(
                 context_chunks=[context_str],
@@ -428,8 +409,9 @@ def _create_exam_from_textbook(
             generated_questions.extend(set_qs)
             logger.info(
                 "Set %s: generated %d KCET questions from %d chapters",
-                label, len(set_qs), len(chapters_for_set),
+                label, len(set_qs), len(chapter_texts),
             )
+            
         except GroqAPIKeyError as e:
             return JSONResponse(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -465,6 +447,7 @@ def _create_exam_from_textbook(
             question_text=q_dict.get("q", "").strip(),
             options=opts,
             correct_option=str(q_dict.get("ans", 0)),
+            explanation=q_dict.get("exp", ""),
             topic=q_dict.get("topic", "General"),
             generation_batch_id=batch_id,
             institution_id=None,

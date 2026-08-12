@@ -216,7 +216,7 @@ class InstitutionService:
             institution = Institution(
                 name=data.name,
                 contact_phone=data.contact_phone,
-                subscription_status="inactive",
+                subscription_status="active",
                 registered_at=now,
                 institution_code=self._generate_institution_code(data.name),
             )

@@ -42,6 +42,28 @@ def preprocess_for_ocr(img: Image.Image) -> Image.Image:
         return img
 
 
+def _process_groq_vision(img_str: str, page_num: int) -> str:
+    from ..rag.groq_client import get_groq_client
+    try:
+        client = get_groq_client()
+        completion = client.chat.completions.create(
+            model="llama-3.2-90b-vision-preview",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Extract all the text from this image accurately. Do not add any extra commentary or markdown formatting, just the extracted text. IMPORTANT: Do NOT extract or include any questions that rely on diagrams, figures, or images to be solved. Do NOT extract any irrelevant questions. Only extract proper academic questions related to the chapter."},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}
+                    ]
+                }
+            ],
+            temperature=0.0,
+        )
+        return completion.choices[0].message.content or ""
+    except Exception as groq_exc:
+        logger.warning(f"Groq Vision failed on page {page_num+1}: {groq_exc}")
+        return ""
+
 def extract_text_from_pdf(file_bytes: bytes) -> str:
     """Extract text from a PDF; fall back to OCR for pages with little text."""
 
@@ -51,70 +73,86 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
         len(doc),
         doc.metadata.get("title", ""),
     )
-    pages: List[str] = []
-    for page_num, page in enumerate(doc):
-        text = page.get_text().strip()
-        if len(text) > 50:
-            logger.debug(
-                "Page %d: extracted %d chars via text layer (direct extraction)",
-                page_num + 1,
-                len(text),
-            )
-            pages.append(text)
-            continue
+    
+    import concurrent.futures
+    import base64
+    
+    pages_texts = ["" for _ in range(len(doc))]
+    futures = []
 
-        # Text layer is empty or too short — attempt OCR fallback
-        # But first, keep any short text we did find
-        if text:
-            logger.info(
-                "Page %d: text layer has only %d chars (below 50-char threshold), "
-                "keeping it and also attempting OCR",
-                page_num + 1,
-                len(text),
-            )
-            pages.append(text)
-        else:
-            logger.info(
-                "Page %d: text layer is empty, attempting OCR fallback",
-                page_num + 1,
-            )
-        try:
-            pix = page.get_pixmap(dpi=300)
-            img = Image.open(io.BytesIO(pix.tobytes("png")))
-            img = preprocess_for_ocr(img)
-            try:
-                ocr_text = pytesseract.image_to_string(
-                    img, lang="eng", config="--psm 6 --oem 3"
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        for page_num, page in enumerate(doc):
+            text = page.get_text().strip()
+            if len(text) > 50:
+                logger.debug(
+                    "Page %d: extracted %d chars via text layer (direct extraction)",
+                    page_num + 1,
+                    len(text),
                 )
+                pages_texts[page_num] = text
+                continue
+
+            # Text layer is empty or too short — attempt OCR fallback
+            base_text = text if text else ""
+            if text:
+                logger.info(
+                    "Page %d: text layer has only %d chars (below 50-char threshold), "
+                    "keeping it and also attempting OCR",
+                    page_num + 1,
+                    len(text),
+                )
+            else:
+                logger.info(
+                    "Page %d: text layer is empty, attempting OCR fallback",
+                    page_num + 1,
+                )
+                
+            try:
+                pix = page.get_pixmap(dpi=300)
+                img = Image.open(io.BytesIO(pix.tobytes("png")))
+                img = preprocess_for_ocr(img)
+                
+                buffered = io.BytesIO()
+                img.save(buffered, format="JPEG")
+                img_str = base64.b64encode(buffered.getvalue()).decode()
+                
+                # Submit API call to thread pool
+                future = executor.submit(_process_groq_vision, img_str, page_num)
+                futures.append((page_num, base_text, future))
+                
+            except Exception as exc:
+                logger.warning(
+                    "Page %d: pixmap/OCR pipeline failed: %s",
+                    page_num + 1,
+                    exc,
+                )
+                pages_texts[page_num] = base_text
+
+        # Wait for all futures
+        for page_num, base_text, future in futures:
+            try:
+                ocr_text = future.result()
                 if ocr_text.strip():
                     logger.info(
-                        "Page %d: OCR produced %d chars",
+                        "Page %d: Groq Vision OCR produced %d chars",
                         page_num + 1,
                         len(ocr_text.strip()),
                     )
-                    pages.append(ocr_text)
+                    pages_texts[page_num] = base_text + "\n" + ocr_text if base_text else ocr_text
                 else:
                     logger.warning(
-                        "Page %d: OCR returned empty text (truly unreadable page)",
+                        "Page %d: Groq Vision OCR returned empty text (truly unreadable page)",
                         page_num + 1,
                     )
-            except Exception as ocr_exc:
-                logger.warning(
-                    "Page %d: OCR failed: %s (tesseract may not be installed or configured)",
-                    page_num + 1,
-                    ocr_exc,
-                )
-        except Exception as exc:
-            logger.warning(
-                "Page %d: pixmap/OCR pipeline failed: %s",
-                page_num + 1,
-                exc,
-            )
+                    pages_texts[page_num] = base_text
+            except Exception as e:
+                logger.error("Page %d OCR Future failed: %s", page_num + 1, e)
+                pages_texts[page_num] = base_text
 
-    total_text = "\n".join(pages)
+    total_text = "\n".join(t for t in pages_texts if t.strip())
     logger.info(
         "PDF extraction complete: %d page(s) yielded text, total %d chars",
-        len(pages),
+        len([t for t in pages_texts if t.strip()]),
         len(total_text),
     )
     return total_text

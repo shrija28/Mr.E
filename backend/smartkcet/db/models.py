@@ -27,6 +27,7 @@ from sqlalchemy import (
     Integer,
     PrimaryKeyConstraint,
     String,
+    Text,
     UniqueConstraint,
     Uuid,
     func,
@@ -56,6 +57,17 @@ class Subject(str, enum.Enum):
     Physics = "Physics"
     Chemistry = "Chemistry"
     Mathematics = "Mathematics"
+
+    @classmethod
+    def _missing_(cls, value: object) -> "Subject | None":
+        if isinstance(value, str):
+            val_lower = value.lower()
+            if val_lower in ("maths", "math"):
+                return cls.Mathematics
+            for member in cls:
+                if member.value.lower() == val_lower:
+                    return member
+        return super()._missing_(value)
 
 
 _SUBJECT_VALUES = ", ".join(f"'{s.value}'" for s in Subject)
@@ -148,6 +160,7 @@ class Question(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     subject: Mapped[str] = mapped_column(String(32), nullable=False)
+    explanation: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     question_text: Mapped[str] = mapped_column(String, nullable=False)
     # List of 4 strings.
     options: Mapped[Any] = mapped_column(JSON, nullable=False)

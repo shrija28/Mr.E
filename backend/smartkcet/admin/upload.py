@@ -184,6 +184,7 @@ def _store_mcqs_in_db(
             generation_batch_id=batch_id,
             institution_id=None,  # platform-wide
             source_type=source_type,
+            explanation=mcq.get("exp", ""),
         )
         db.add(row)
         stored += 1

@@ -466,13 +466,13 @@ class SubscriptionService:
                 )
 
             return EffectiveSubscriptionStatus(
-                has_subscription=inst_sub is not None,
-                status=inst_sub.status if inst_sub else None,
+                has_subscription=True,
+                status="active",
                 plan_type=inst_plan.plan_type if inst_plan else "institution",
-                plan_name=inst_plan.name if inst_plan else None,
-                billing_period=inst_plan.billing_period if inst_plan else None,
+                plan_name=inst_plan.name if inst_plan else "Institution Pro",
+                billing_period=inst_plan.billing_period if inst_plan else "monthly",
                 is_trial=False,
-                is_active=inst_sub is not None and inst_sub.status in ["trial", "active", "grace_period"],
+                is_active=True,
                 trial_attempts_remaining=None,
                 start_date=inst_sub.start_date if inst_sub else None,
                 current_period_start=inst_sub.current_period_start if inst_sub else None,

@@ -25,6 +25,7 @@ from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
+import uuid
 
 from ..db.models import Exam, ExamSet, ExamSetQuestion, Question, Subject
 from ..db.session import get_async_session as get_session
@@ -143,7 +144,11 @@ def list_published_exams(
     #                        NOT platform-wide, NOT other institutions
     if student_subtype == "institution_linked" and student_institution_id is not None:
         # Institution student: ONLY see exams belonging to their institution
-        stmt = stmt.where(Exam.institution_id == student_institution_id)
+        try:
+            inst_uuid = uuid.UUID(student_institution_id)
+        except ValueError:
+            inst_uuid = student_institution_id
+        stmt = stmt.where(Exam.institution_id == inst_uuid)
     else:
         # Personal student (direct_subscriber or no subtype): platform-wide only
         stmt = stmt.where(Exam.institution_id.is_(None))

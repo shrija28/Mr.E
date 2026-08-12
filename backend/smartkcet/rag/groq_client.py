@@ -186,16 +186,6 @@ def create_chat_completion_with_fallback(client: Groq, **kwargs) -> Any:
             )
             
             if is_rate_limit:
-                # Switch to fallback model if we're currently on the primary model
-                if kwargs["model"] == primary_model:
-                    logger.warning(
-                        f"Rate limit hit for primary model {primary_model}. "
-                        f"Switching to fallback model {fallback_model}..."
-                    )
-                    kwargs["model"] = fallback_model
-                    time.sleep(1.0)
-                    continue
-                
                 # If we have retries left, wait and retry
                 if attempt < max_retries:
                     sleep_time = base_delay * (2 ** attempt)
@@ -260,9 +250,9 @@ def generate_mcq_set(
     )
 
     prompt = f"""You are creating a 20-question MCQ exam paper (Set {set_label}) for: {subject}.
-This is a Karnataka Common Entrance Test (KCET) level exam.
+This is a standard entrance exam level paper (like Karnataka Common Entrance Test / KCET).
 
-Below is the actual content from uploaded question papers. Use ONLY these topics:
+Below is the actual content from uploaded materials. Use ONLY these topics:
 ---
 {context}
 ---
@@ -270,39 +260,44 @@ Below is the actual content from uploaded question papers. Use ONLY these topics
 Questions already used in other sets (DO NOT repeat these):
 {used_str}
 
-STRICT KCET EXAM RULES:
-1. NO TRIVIAL/FACTUAL DEFINITIONS: Do NOT ask simple fact-retrieval questions (e.g. 'What is the main objective of...', 'Who discovered...', 'Define the term...').
-2. HIGH-QUALITY PROBLEMS: Every question must be a problem-solving, calculation, application-based, or rigorous conceptual deduction question.
+STRICT EXAM RULES:
+1. NO TRIVIAL/FACTUAL DEFINITIONS: Do NOT ask simple fact-retrieval questions.
+2. ENTRANCE EXAM LEVEL: Every question must be a problem-solving, calculation, application-based, or rigorous conceptual deduction question that matches the difficulty of a standard competitive entrance exam.
 3. SUBJECT-SPECIFIC STANDARDS:
-   - Mathematics: Focus on calculation-heavy problems (e.g., calculus/derivatives/integrals, limits, matrix order/determinant properties, vector dot/cross products, trigonometry simplifications, relations/functions/mappings). Use mathematical equations and variables in the question stem.
-   - Physics: Formulate numerical problems applying physics formulas (e.g., electrostatics, circuit dynamics, mechanics, thermodynamics, wave optics). 
-   - Chemistry: Include stoichiometry calculations, organic reactions (reagents, products), physical chemistry numericals (kinetics, chemical equilibrium), electronic configurations.
-   - Biology: Focus on deep understanding, genetic crosses (Mendelian ratios), physiological mechanisms, cellular stages.
-4. STYLE & CONCISENESS: Keep the question stem brief, precise, and containing clear mathematical/scientific conditions.
-5. MATHEMATICAL EXAMPLES (Use this style for Mathematics):
-   - Example 1: "If Set A has 4 elements and set B has 5 elements, then the number of injective mappings that can be defined from A to B is:" Options: ["144", "72", "60", "120"], Answer: 3
-   - Example 2: "The value of sin^-1(cos(53*pi/5)) is:" Options: ["3*pi/5", "-3*pi/5", "pi/10", "-pi/10"], Answer: 3
-   - Example 3: "If A is any square matrix of order 3x3, then |3A| is equal to:" Options: ["3|A|", "1/3|A|", "27|A|", "9|A|"], Answer: 2
-   - Example 4: "If y = e^(sin^-1(t^2-1)) and x = e^(sec^-1(1/(t^2-1))), then dy/dx is equal to:" Options: ["x/y", "-y/x", "y/x", "-x/y"], Answer: 1
-   - Example 5: "The length of latus rectum of the parabola 4y^2 + 3x + 3y + 1 = 0 is:" Options: ["4/3", "7", "12", "3/4"], Answer: 3
-   - Example 6: "If xy = e^(x-y), then dy/dx is equal to:" Options: ["log(x)/log(x-y)", "e^x/x(x-y)", "log(x)/(1+log(x))^2", "1/y - 1/(x-y)"], Answer: 2
+   - Mathematics: Focus on calculation-heavy problems. Use mathematical equations and variables in the question stem.
+   - Physics: Formulate numerical problems applying physics formulas.
+   - Chemistry: Include stoichiometry, organic reactions, physical chemistry numericals, etc.
+   - Biology: Focus on deep understanding, mechanisms, genetics.
+4. DISTRACTOR QUALITY & COMPLEXITY (CRITICAL):
+   - Questions must require multiple steps to solve or combine at least two concepts.
+   - The options (distractors) must be HIGHLY plausible. Use common student calculation errors, sign errors, and misconceptions as the incorrect options. Do NOT use obviously wrong, silly, or random options.
+5. STYLE & CONCISENESS: Keep the question stem brief, precise, and contain clear scientific conditions. Do not use generic AI introductory phrases.
+6. TOPIC COVERAGE: Ensure your questions cover all the main topics and concepts present in the provided source content above.
 
 RULES:
-- Generate EXACTLY 20 MCQ questions
-- Each question must have exactly 4 options
-- Base questions ONLY on topics from the source content above
-- Do NOT repeat any question from the used list
-- ans must be the integer index of the correct option (0, 1, 2, or 3)
-- Each question is worth 1 mark
+- Generate EXACTLY 20 MCQ questions.
+- Each question must have exactly 4 options.
+- Base questions ONLY on topics from the source content above.
+- Do NOT repeat any question from the used list.
+- ans must be the integer index of the correct option (0, 1, 2, or 3).
+- Each question is worth 1 mark.
+- EXPLICIT BAN: Neither the question text nor the options may contain the terms 'kcet', 'dig', 'fig', or 'diagram' (case-insensitive). Do not use these words anywhere. Do not include figure references like "in the given figure" or "as shown in fig".
+- STRICT META-TEXT BAN: DO NOT start or include phrases like "In this chapter", "Chapter no.", "From the text", "As discussed", "According to the passage", or ANY reference to the source material. ABSOLUTELY NO RANDOM WORDS OR FILLER TEXT. The question must be 100% self-contained as if it appeared in a standalone competitive exam.
+- PURE EXTRACTION & RELEVANCE: PURELY EXTRACT the contents from the input data provided. DO NOT make up questions that aren't grounded in the data. Keep all questions strictly relevant to the subject.
+- COMPLETENESS: ALL QUESTIONS AND OPTIONS MUST BE FULLY COMPLETED. DO NOT GENERATE RANDOM AND INCOMPLETE QUESTIONS. Do not generate incomplete sentences.
 
 Output ONLY a valid JSON array of exactly 20 items. Each item:
-{{"q":"question text","type":"MCQ","topic":"topic name","opts":["option A","option B","option C","option D"],"ans":0,"marks":1}}"""
+{{"q":"question text","type":"MCQ","topic":"topic name","opts":["option A","option B","option C","option D"],"ans":0,"marks":1,"exp":"Detailed step-by-step explanation of the correct answer."}}"""
 
     try:
         client = get_groq_client()
+        system_prompt = "You are an elite academic evaluator. You follow all instructions strictly. You NEVER use introductory phrases or refer to the source text. You ensure every question is 100% complete and self-contained."
         resp = create_chat_completion_with_fallback(
             client=client,
-            messages=[{"role": "user", "content": prompt}],
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
             temperature=0.4,
             max_tokens=4096,
         )
@@ -377,9 +372,9 @@ def generate_kcet_mcqs_from_textbook(
     chunks = list(context_chunks)
     # The caller already passes one big context string; join them just in case
     context = "\n\n".join(chunks)
-    # Trim if needed to keep within token limits
-    if len(context) > 14000:
-        context = context[:14000]
+    # Trim if needed to keep within token limits (4000 chars ~ 1000-1500 tokens)
+    if len(context) > 4000:
+        context = context[:4000]
 
     used_str = (
         "\n".join(f"- {q}" for q in list(used_questions)[:30])
@@ -391,53 +386,58 @@ def generate_kcet_mcqs_from_textbook(
     if chapter_names:
         chapters_str = f"\nChapters covered: {', '.join(chapter_names)}\n"
 
-    prompt = f"""You are an expert KCET (Karnataka Common Entrance Test) question paper setter for {subject}.
+    prompt = f"""You are an expert entrance exam question paper setter for {subject}.
 {chapters_str}
-Use ONLY the following textbook content to create exactly {questions_needed} KCET-level MCQ questions:
+Use ONLY the following source content to create exactly {questions_needed} standard entrance-level MCQ questions:
 
---- TEXTBOOK CONTENT START ---
+--- SOURCE CONTENT START ---
 {context}
---- TEXTBOOK CONTENT END ---
+--- SOURCE CONTENT END ---
 
 Questions already used in other sets (DO NOT repeat any of these):
 {used_str}
 
-STRICT KCET EXAM RULES:
-1. NO TRIVIAL/FACTUAL DEFINITIONS: Do NOT ask simple fact-retrieval questions (e.g. 'What is the main objective of...', 'Who discovered...', 'Define the term...').
-2. HIGH-QUALITY PROBLEMS: Every question must be a problem-solving, calculation, application-based, or rigorous conceptual deduction question.
+STRICT EXAM RULES:
+1. NO TRIVIAL/FACTUAL DEFINITIONS: Do NOT ask simple fact-retrieval questions.
+2. ENTRANCE EXAM LEVEL: Every question must be a problem-solving, calculation, application-based, or rigorous conceptual deduction question that matches the difficulty of a standard competitive entrance exam.
 3. SUBJECT-SPECIFIC STANDARDS:
-   - Mathematics: Focus on calculation-heavy problems (e.g., calculus/derivatives/integrals, limits, matrix order/determinant properties, vector dot/cross products, trigonometry simplifications, relations/functions/mappings). Use mathematical equations and variables in the question stem.
-   - Physics: Formulate numerical problems applying physics formulas (e.g., electrostatics, circuit dynamics, mechanics, thermodynamics, wave optics). 
-   - Chemistry: Include stoichiometry calculations, organic reactions (reagents, products), physical chemistry numericals (kinetics, chemical equilibrium), electronic configurations.
-   - Biology: Focus on deep understanding, genetic crosses (Mendelian ratios), physiological mechanisms, cellular stages.
-4. STYLE & CONCISENESS: Keep the question stem brief, precise, and containing clear mathematical/scientific conditions.
-5. MATHEMATICAL EXAMPLES (Use this style for Mathematics):
-   - Example 1: "If Set A has 4 elements and set B has 5 elements, then the number of injective mappings that can be defined from A to B is:" Options: ["144", "72", "60", "120"], Answer: 3
-   - Example 2: "The value of sin^-1(cos(53*pi/5)) is:" Options: ["3*pi/5", "-3*pi/5", "pi/10", "-pi/10"], Answer: 3
-   - Example 3: "If A is any square matrix of order 3x3, then |3A| is equal to:" Options: ["3|A|", "1/3|A|", "27|A|", "9|A|"], Answer: 2
-   - Example 4: "If y = e^(sin^-1(t^2-1)) and x = e^(sec^-1(1/(t^2-1))), then dy/dx is equal to:" Options: ["x/y", "-y/x", "y/x", "-x/y"], Answer: 1
-   - Example 5: "The length of latus rectum of the parabola 4y^2 + 3x + 3y + 1 = 0 is:" Options: ["4/3", "7", "12", "3/4"], Answer: 3
-   - Example 6: "If xy = e^(x-y), then dy/dx is equal to:" Options: ["log(x)/log(x-y)", "e^x/x(x-y)", "log(x)/(1+log(x))^2", "1/y - 1/(x-y)"], Answer: 2
+   - Mathematics: Focus on calculation-heavy problems. Use mathematical equations and variables in the question stem.
+   - Physics: Formulate numerical problems applying physics formulas.
+   - Chemistry: Include stoichiometry, organic reactions, physical chemistry numericals, etc.
+   - Biology: Focus on deep understanding, mechanisms, genetics.
+4. DISTRACTOR QUALITY & COMPLEXITY (CRITICAL):
+   - Questions must require multiple steps to solve or combine at least two concepts.
+   - The options (distractors) must be HIGHLY plausible. Use common student calculation errors, sign errors, and misconceptions as the incorrect options. Do NOT use obviously wrong, silly, or random options.
+5. STYLE & CONCISENESS: Keep the question stem brief, precise, and contain clear scientific conditions. Do not use generic AI introductory phrases. Ensure professional exam tone.
+6. TOPIC COVERAGE: Ensure your questions comprehensively cover all the main topics and concepts present in the provided source content above.
 
 STRICT OUTPUT RULES:
-- Generate EXACTLY {questions_needed} multiple choice questions — no more, no less
-- Every question MUST have EXACTLY 4 options (A, B, C, D)
-- Base EVERY question STRICTLY on the textbook content provided above — do NOT invent facts
-- ans must be the 0-based index of the CORRECT option (0=A, 1=B, 2=C, 3=D)
-- Each question is worth 1 mark (KCET standard)
-- Do NOT repeat any question from the "already used" list
+- Generate EXACTLY {questions_needed} multiple choice questions — no more, no less.
+- Every question MUST have EXACTLY 4 options (A, B, C, D).
+- Base EVERY question STRICTLY on the source content provided above — do NOT invent random facts or go out of syllabus.
+- ans must be the 0-based index of the CORRECT option (0=A, 1=B, 2=C, 3=D).
+- Each question is worth 1 mark.
+- Do NOT repeat any question from the "already used" list.
+- EXPLICIT BAN: Neither the question text nor the options may contain the terms 'kcet', 'dig', 'fig', or 'diagram' (case-insensitive). Do not use these words anywhere. Do not include figure references like "in the given figure" or "as shown in fig".
+- STRICT META-TEXT BAN: DO NOT start or include phrases like "In this chapter", "Chapter no.", "From the text", "As discussed", "According to the passage", or ANY reference to the source material. ABSOLUTELY NO RANDOM WORDS OR FILLER TEXT. The question must be 100% self-contained as if it appeared in a standalone competitive exam.
+- PURE EXTRACTION & RELEVANCE: PURELY EXTRACT the contents from the input data provided. DO NOT make up questions that aren't grounded in the data. Keep all questions strictly relevant to the subject.
+- COMPLETENESS: ALL QUESTIONS AND OPTIONS MUST BE FULLY COMPLETED. DO NOT GENERATE RANDOM AND INCOMPLETE QUESTIONS. Do not generate incomplete sentences.
 
 Output ONLY a valid JSON array of exactly {questions_needed} objects. No markdown, no explanation, ONLY the JSON array.
 Each object MUST follow this exact format:
-{{"q":"question text","type":"MCQ","topic":"specific topic/chapter name","opts":["option A","option B","option C","option D"],"ans":0,"marks":1}}"""
+{{"q":"question text","type":"MCQ","topic":"specific topic/chapter name","opts":["option A","option B","option C","option D"],"ans":0,"marks":1,"exp":"Detailed step-by-step explanation of the correct answer."}}"""
 
     try:
         client = get_groq_client()
+        system_prompt = "You are an elite academic evaluator. You follow all instructions strictly. You NEVER use introductory phrases or refer to the source text. You ensure every question is 100% complete and self-contained."
         resp = create_chat_completion_with_fallback(
             client=client,
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.4,
-            max_tokens=6000,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.6,
+            max_tokens=2500,
         )
         questions = parse_llm_json(resp.choices[0].message.content)
     except GroqAPIKeyError:

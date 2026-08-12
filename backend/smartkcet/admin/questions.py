@@ -109,6 +109,8 @@ def _serialise_question(row: Question) -> dict[str, Any]:
         "options": row.options,
         "correct_option": row.correct_option,
         "topic": row.topic,
+        "explanation": row.explanation,
+        "source_type": row.source_type,
         "generation_batch_id": str(row.generation_batch_id),
         # ISO-8601 with naive UTC timestamps (matches what the ORM stores).
         "created_at": created_at.isoformat() if created_at is not None else None,

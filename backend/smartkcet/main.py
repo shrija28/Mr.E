@@ -120,32 +120,35 @@ from fastapi.responses import JSONResponse, RedirectResponse  # noqa: E402
 from starlette.middleware.base import BaseHTTPMiddleware  # noqa: E402
 
 
-class NoCacheHTMLMiddleware(BaseHTTPMiddleware):
-    """Add Cache-Control: no-cache to HTML and JS responses so browsers
-    always fetch the latest version during development."""
+from starlette.datastructures import MutableHeaders
 
-    async def dispatch(self, request, call_next):
-        import asyncio
-        # Ensure we're in an async context
-        try:
-            response = await call_next(request)
-            content_type = response.headers.get("content-type", "")
-            path = request.url.path or ""
-            is_js = path.startswith("/js/") or path.endswith(".js")
-            if "text/html" in content_type or is_js:
-                response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-                response.headers["Pragma"] = "no-cache"
-                response.headers["Expires"] = "0"
-            return response
-        except RuntimeError as e:
-            # Fallback for sync context
-            import logging
-            logging.getLogger("smartkcet.main").warning(f"Middleware error: {e}")
-            return await call_next(request)
+class APINoCacheMiddleware:
+    """Pure ASGI middleware to add Cache-Control headers without triggering anyio event loop bugs."""
+    def __init__(self, app):
+        self.app = app
 
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            return await self.app(scope, receive, send)
 
-# Temporarily disabled due to async event loop issue
-# app.add_middleware(NoCacheHTMLMiddleware)
+        path = scope.get("path", "")
+        # Apply no-cache to API responses and HTML/JS files
+        needs_cache_control = path.startswith("/api/") or path.endswith(".html") or path.endswith(".js") or path.startswith("/html/") or path.startswith("/js/")
+
+        if not needs_cache_control:
+            return await self.app(scope, receive, send)
+
+        async def send_wrapper(message):
+            if message["type"] == "http.response.start":
+                headers = MutableHeaders(scope=message)
+                headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+                headers["Pragma"] = "no-cache"
+                headers["Expires"] = "0"
+            await send(message)
+
+        await self.app(scope, receive, send_wrapper)
+
+app.add_middleware(APINoCacheMiddleware)
 
 
 @app.exception_handler(StarletteHTTPException)

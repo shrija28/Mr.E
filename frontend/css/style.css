@@ -416,8 +416,8 @@ button { font-family: inherit; }
 .chart-card.wide { }
 .chart-card-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px 0; }
 .chart-card-header h3 { font-size: 0.9rem; font-weight: 700; }
-.chart-wrap { padding: 16px 20px 20px; position: relative; height: 220px; }
-.chart-wrap canvas { max-height: 100%; }
+.chart-wrap { padding: 16px 20px 20px; position: relative; height: 260px; width: 100%; }
+.chart-wrap canvas { width: 100% !important; height: 100% !important; display: block; }
 
 /* AI Block */
 .ai-block { margin-top: 24px; }

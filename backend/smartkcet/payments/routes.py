@@ -207,17 +207,11 @@ async def create_order(
         # Check if already UUID (DO NOT parse twice!)
         if isinstance(body.plan_id, uuid.UUID):
             plan_id = body.plan_id
-            print(f"✅ plan_id is already UUID: {plan_id}")
             logger.info(f"[create-order] plan_id already UUID: {plan_id}")
         else:
-            print(f"Attempting UUID parse of: {body.plan_id}")
             plan_id = uuid.UUID(str(body.plan_id))
-            print(f"✅ UUID parse SUCCESS: {plan_id}")
             logger.info(f"[create-order] Parsed plan_id UUID: {plan_id}")
     except (ValueError, AttributeError) as e:
-        print(f"❌ UUID PARSE FAILED!")
-        print(f"Exception: {e}")
-        print(f"Exception type: {type(e)}")
         logger.error(f"[create-order] UUID parsing failed: {e}")
         logger.error(f"[create-order] Attempted to parse: {body.plan_id}")
         raise HTTPException(

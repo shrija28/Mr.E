@@ -190,6 +190,16 @@ function destroyCharts() {
 function renderCharts() {
   destroyCharts();
   const subs = filteredSubs;
+  
+  // Hide or show chart wrappers based on data availability
+  ['scoreDistChart', 'subjectChart', 'passChart'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      const wrap = el.closest('.chart-wrap');
+      if (wrap) wrap.style.display = subs.length ? 'block' : 'none';
+    }
+  });
+
   if (!subs.length) return;
 
   // Score Distribution Histogram
@@ -281,6 +291,9 @@ function renderLeaderboard() {
   if (charts.leaderboard) { try { charts.leaderboard.destroy(); } catch {} }
 
   const chartEntries = entries.slice(0, 10); // Show top 10 in chart
+  const chartWrapper = document.getElementById('leaderboardChart')?.closest('.chart-wrap');
+  if (chartWrapper) chartWrapper.style.display = chartEntries.length > 0 ? 'block' : 'none';
+
   if (chartEntries.length > 0) {
     charts.leaderboard = new Chart(document.getElementById('leaderboardChart'), {
       type: 'bar',

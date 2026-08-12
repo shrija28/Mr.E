@@ -114,6 +114,10 @@
 
     <!-- Left: Question Navigator -->
     <aside class="exam-sidebar">
+      <!-- Anti-Cheating: Proctoring Camera Feed -->
+      <div id="proctorContainer" style="margin-bottom: 15px; border-radius: 8px; overflow: hidden; background: #000; border: 1px solid var(--border); aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center;">
+        <video id="proctorVideo" autoplay muted playsinline style="width: 100%; height: 100%; object-fit: cover; display: block; transform: scaleX(-1);"></video>
+      </div>
       <div class="sidebar-student-info" id="sidebarStudentInfo"></div>
       <div class="sidebar-section-title">Question Navigator</div>
       <div class="q-grid" id="qGrid"></div>

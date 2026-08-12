@@ -206,6 +206,7 @@ def extract_mcqs_from_text(text: str, topic: str = "General") -> List[dict]:
             "opts": options,
             "ans": correct_ans,
             "topic": topic,
+            "exp": "",
         })
 
     logger.info(
@@ -317,6 +318,7 @@ def generate_fallback_mcqs(text: str, topic: str = "General", max_questions: int
             "opts": opts,
             "ans": correct_pos,
             "topic": topic,
+            "exp": "",
         })
 
     logger.info(

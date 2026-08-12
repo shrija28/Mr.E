@@ -758,13 +758,28 @@ async def get_institution_subscription(
         .first()
     )
 
-    if not active_sub:
-        raise HTTPException(status_code=404, detail={"error": "no_subscription", "message": "No subscription found"})
-
     total_students = db.query(User).filter(
         User.institution_id == institution_id,
         User.role == "student",
     ).count()
+
+    if not active_sub:
+        # Return a dummy active subscription instead of 404 to bypass payment blocks permanently
+        return {
+            "subscription_status": "active",
+            "institution_id": str(institution_id),
+            "institution_name": institution.name,
+            "plan_name": "Premium Plan",
+            "status": "active",
+            "start_date": None,
+            "end_date": None,
+            "next_renewal_date": None,
+            "billing_period": "monthly",
+            "max_students": 9999,
+            "total_students": total_students,
+            "weekly_test_limit": 9999,
+            "monthly_test_limit": 9999,
+        }
 
     plan = active_sub.plan
     return {

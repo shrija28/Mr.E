@@ -276,6 +276,7 @@ def get_submission(
                 "topic": question.topic or "General",
                 "given": given,
                 "status": given_status,
+                "exp": question.explanation or "",
             }
         )
 

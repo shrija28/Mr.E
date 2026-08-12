@@ -166,7 +166,7 @@ function localAnalyze(questions, answers) {
     earned += e;
     topicScores[topic].earned += e;
     typeScores[type].earned += e;
-    questionResults.push({ q: q.q, type, topic, given, correctAns: q.ans, earned: e, marks: m, status });
+    questionResults.push({ q: q.q, type, topic, given, correctAns: q.ans, earned: e, marks: m, status, opts: q.opts, exp: q.exp });
   });
   const pct = Math.round((earned / total) * 100);
   const strong = [], canImprove = [], weak = [];

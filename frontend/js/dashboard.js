@@ -596,6 +596,16 @@ function destroyCharts() { Object.values(charts).forEach(c => { try { c.destroy(
 function renderCharts() {
   destroyCharts();
   const subs = filteredSubs;
+  
+  // Hide or show chart wrappers based on data availability
+  ['topicChart', 'setChart', 'passChart'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      const wrap = el.closest('.chart-wrap');
+      if (wrap) wrap.style.display = subs.length ? 'block' : 'none';
+    }
+  });
+
   if (!subs.length) return;
 
   // Topic Radar — built from topic_breakdown if available, else from subject scores
@@ -749,14 +759,18 @@ window.sortTable = key => { if (sortKey === key) sortDir *= -1; else { sortKey =
 // ── Rankings (Top 3 only for student dashboard) ──────────────────────────────
 function renderRankings() {
   const medals = ['🥇', '🥈', '🥉'];
+  const chartWrapper = document.getElementById('rankingChart')?.closest('.chart-wrap');
 
   // Use leaderboard API data for top 3
   if (!leaderboardData || !leaderboardData.top_3 || leaderboardData.top_3.length === 0) {
     document.getElementById('rankingBody').innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">No ranking data available yet</td></tr>';
     // Hide ranking chart when no data
+    if (chartWrapper) chartWrapper.style.display = 'none';
     if (charts.ranking) { try { charts.ranking.destroy(); } catch {} }
     return;
   }
+
+  if (chartWrapper) chartWrapper.style.display = 'block';
 
   const top3 = leaderboardData.top_3;
 
@@ -836,8 +850,9 @@ window.openDrawer = async (submissionId) => {
             <span class="ans-status-icon">${icons[r.status] || '⬜'}</span>
             <div class="ans-content">
               <div class="ans-q-text">Q${r.order_index != null ? r.order_index + 1 : i + 1}. ${r.q}</div>
-              <div class="ans-given">Your answer: <strong>${r.given !== undefined && r.given !== null && r.given !== '' ? r.given : 'Not answered'}</strong></div>
-              ${r.status !== 'correct' ? `<div class="ans-correct-text">✓ Correct: ${r.correctAns}</div>` : ''}
+              <div class="ans-given">Your answer: <strong>${r.given !== undefined && r.given !== null && r.given !== '' ? (r.opts ? r.opts[parseInt(r.given)] : r.given) : 'Not answered'}</strong></div>
+              ${r.status !== 'correct' ? `<div class="ans-correct-text">✓ Correct: ${r.opts ? r.opts[parseInt(r.correctAns)] : r.correctAns}</div>` : ''}
+              ${r.exp ? `<div class="ans-exp" style="margin-top:6px;font-size:13px;color:var(--text-color, #333);"><strong>Explanation:</strong> ${r.exp}</div>` : ''}
               <div class="ans-meta">${r.topic}</div>
             </div>
           </div>`).join('')}

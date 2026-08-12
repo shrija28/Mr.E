@@ -76,7 +76,7 @@
         <div class="section-icon purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
         <div><h2 style="margin-bottom:2px">Score Trend</h2><p class="section-sub">Your recent exam scores</p></div>
       </div>
-      <div class="chart-wrap" style="height:200px;padding:16px 20px"><canvas id="trendChart"></canvas></div>
+      <div class="chart-wrap" style="height:200px;padding:16px 20px;display:none;" id="trendChartWrap"><canvas id="trendChart"></canvas></div>
     </div>
 
     <!-- Subject-wise performance chart -->
@@ -200,6 +200,7 @@
       // Score trend
       var recent = subs.slice(0, 15).reverse();
       if (recent.length) {
+        document.getElementById('trendChartWrap').style.display = 'block';
         trendChart = new Chart(document.getElementById('trendChart'), {
           type: 'line',
           data: { labels: recent.map(function(s,i){return 'E'+(i+1);}),

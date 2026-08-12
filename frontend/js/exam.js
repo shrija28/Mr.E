@@ -683,6 +683,45 @@ window.beginExam = async () => {
     return;
   }
 
+  // Anti-Cheating: Request Camera and Microphone
+  if (beginBtn) {
+    beginBtn.disabled = true;
+    beginBtn.classList.add('is-loading');
+    const originalText = beginBtn.textContent;
+    beginBtn.textContent = 'Requesting Camera...';
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    ES.proctorStream = stream;
+    const video = document.getElementById('proctorVideo');
+    if (video) video.srcObject = stream;
+    
+    // Monitor if permissions are revoked or device disconnected mid-exam
+    stream.getTracks().forEach(track => {
+      track.addEventListener('ended', () => {
+        if (document.getElementById('examLayout').style.display === 'grid') {
+          alert("⚠️ Anti-Cheating Alert: Camera or Microphone disconnected. Your exam is being submitted automatically.");
+          window.submitPaper();
+        }
+      });
+    });
+  } catch (err) {
+    if (beginBtn) {
+      beginBtn.disabled = false;
+      beginBtn.classList.remove('is-loading');
+      beginBtn.textContent = 'Start Exam';
+    }
+    alert("⚠️ Camera and Microphone access is required to take this exam. Please allow permissions in your browser and try again.");
+    return;
+  }
+
+  if (beginBtn) {
+    beginBtn.disabled = false;
+    beginBtn.classList.remove('is-loading');
+    beginBtn.textContent = 'Start Exam';
+  }
+
   ES.student = { name, roll };
   ES.startTime = Date.now();
 
@@ -697,7 +736,52 @@ window.beginExam = async () => {
   buildQGrid();
   renderQ(0);
   startCountdown();
+  setupAntiCheating();
 };
+
+// ── Anti-Cheating Controls ───────────────────────────────────────────────────
+function setupAntiCheating() {
+  const cheatHandler = (e) => {
+    // Only trigger if exam is active
+    if (document.getElementById('examLayout').style.display !== 'grid') return;
+    
+    // Ignore visibilitychange if the document became visible (e.g., initial load)
+    if (e.type === 'visibilitychange' && document.visibilityState === 'visible') return;
+
+    let reason = "Suspicious activity detected.";
+    if (e.type === 'blur' || e.type === 'visibilitychange') {
+      reason = "Tab switching, minimizing, or split-screen is not allowed.";
+    } else if (e.type === 'copy' || e.type === 'contextmenu') {
+      reason = "Copying questions is not allowed.";
+    }
+
+    e.preventDefault();
+    alert("⚠️ Anti-Cheating Alert: " + reason + " Your exam is being submitted automatically.");
+    
+    // Trigger auto-submit
+    window.submitPaper();
+  };
+
+  // Detect minimizing, tab switching, or losing focus (split screen)
+  window.addEventListener('blur', cheatHandler);
+  document.addEventListener('visibilitychange', cheatHandler);
+  
+  // Prevent and detect copying
+  document.addEventListener('copy', cheatHandler);
+  document.addEventListener('contextmenu', (e) => {
+    if (document.getElementById('examLayout').style.display === 'grid') {
+      e.preventDefault();
+      cheatHandler(e);
+    }
+  });
+
+  // Prevent text selection
+  document.addEventListener('selectstart', (e) => {
+    if (document.getElementById('examLayout').style.display === 'grid') {
+      e.preventDefault();
+    }
+  });
+}
 
 // ── 60-Minute Countdown Timer (REQ-9.6) ──────────────────────────────────────
 function startCountdown() {
@@ -1165,6 +1249,12 @@ window.submitPaper = async () => {
   clearInterval(ES.timerRef);
   document.getElementById('submitOverlay').style.display = 'none';
   document.getElementById('analyzingOverlay').style.display = 'flex';
+  
+  // Stop the camera and microphone to release resources
+  if (ES.proctorStream) {
+    ES.proctorStream.getTracks().forEach(track => track.stop());
+    ES.proctorStream = null;
+  }
 
   const analyzeSteps = [
     'Processing answers...',
@@ -1182,12 +1272,8 @@ window.submitPaper = async () => {
   // Build the answers map with string keys matching question indices
   const answersMap = {};
   for (const [key, value] of Object.entries(ES.answers)) {
-    // Convert MCQ numeric index to letter (A, B, C, D) for the backend
-    if (typeof value === 'number') {
-      answersMap[String(key)] = ['A', 'B', 'C', 'D'][value] || String(value);
-    } else {
-      answersMap[String(key)] = String(value);
-    }
+    // Send stringified numeric index to match backend's correct_option
+    answersMap[String(key)] = String(value);
   }
 
   const timeTakenSec = Math.floor((Date.now() - ES.startTime) / 1000);

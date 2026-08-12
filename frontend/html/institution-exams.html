@@ -137,10 +137,11 @@
                 <th>Created</th>
                 <th>Sets</th>
                 <th>Status</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="examsTableBody">
-              <tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px;">Loading…</td></tr>
+              <tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px;">Loading…</td></tr>
             </tbody>
           </table>
         </div>
@@ -356,7 +357,7 @@
       var countEl = document.getElementById('examCount');
 
       if (exams.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:32px;">No exams created yet. Upload question papers first, then create an exam.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:32px;">No exams created yet. Upload question papers first, then create an exam.</td></tr>';
         countEl.textContent = '0 exams';
         return;
       }
@@ -368,6 +369,8 @@
         var createdDate = exam.created_at ? new Date(exam.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
         var statusClass = exam.is_published ? 'score-high' : '';
         var statusText = exam.is_published ? 'Published' : 'Draft';
+        var toggleLabel = exam.is_published ? 'Unpublish' : 'Publish';
+        var toggleClass = exam.is_published ? 'btn-danger-outline' : 'btn-institution-outline';
 
         return '<tr>' +
           '<td>' + escapeHtml(examName) + '</td>' +
@@ -375,8 +378,18 @@
           '<td>' + createdDate + '</td>' +
           '<td>' + (exam.set_count || 4) + ' sets</td>' +
           '<td><span class="score-badge ' + statusClass + '">' + statusText + '</span></td>' +
+          '<td><button class="' + toggleClass + '" data-exam-id="' + exam.exam_id + '" data-publish="' + (!exam.is_published) + '" style="padding:4px 8px;font-size:0.8rem;">' + toggleLabel + '</button></td>' +
           '</tr>';
       }).join('');
+
+      // Attach toggle handlers
+      tbody.querySelectorAll('button[data-exam-id]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var examId = btn.getAttribute('data-exam-id');
+          var publish = btn.getAttribute('data-publish') === 'true';
+          togglePublish(examId, publish);
+        });
+      });
     }
 
     // ── Create exam ──────────────────────────────────────────────────────
@@ -430,6 +443,34 @@
             showMessage(msgEl, 'Network error. Please try again.', 'error');
           });
       });
+    });
+
+    // ── Publish / Unpublish toggle ───────────────────────────────────────
+    function togglePublish(examId, publish) {
+      checkSubscriptionAndShowModal().then(function(allowed) {
+        if (!allowed) return;
+
+        fetch('/api/institution/content/exams/' + examId, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ is_published: publish }),
+        })
+          .then(function (res) { return res.json().then(function (data) { return { ok: res.ok, status: res.status, data: data }; }); })
+          .then(function (result) {
+            if (result.ok) {
+              loadExams();
+            } else if (result.status === 403) {
+              alert((result.data && result.data.message) || 'Subscription inactive. Please renew to publish exams.');
+            } else {
+              alert((result.data && result.data.message) || 'Failed to update publish status.');
+            }
+          })
+          .catch(function () {
+            alert('Network error. Please try again.');
+          });
+      });
+    }
 
     // ── Helpers ──────────────────────────────────────────────────────────
     function showMessage(el, text, type) {

@@ -136,6 +136,7 @@ def _question_row_to_dict(row: Question, set_label: str, index: int) -> dict:
         "opts": row.options if isinstance(row.options, list) else [],
         "ans": int(row.correct_option) if row.correct_option.isdigit() else 0,
         "marks": 1,
+        "exp": row.explanation or "",
     }
 
 

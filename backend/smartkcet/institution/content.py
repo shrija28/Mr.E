@@ -26,6 +26,7 @@ import logging
 import random
 import uuid
 from typing import Annotated, Any, List, Optional
+from pydantic import BaseModel
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, UploadFile, status
 from fastapi.responses import JSONResponse
@@ -175,10 +176,8 @@ def _institution_id(payload: dict) -> uuid.UUID:
 
 
 def check_subscription_active(db: Session, institution_id: uuid.UUID) -> bool:
-    return db.query(Subscription).filter(
-        Subscription.institution_id == institution_id,
-        Subscription.status.in_(["trial", "active", "overdue", "grace_period"]),
-    ).first() is not None
+    # Bypass subscription check globally for institution uploads
+    return True
 
 
 def _validation_error(message: str, field: Optional[str] = None) -> JSONResponse:
@@ -275,6 +274,7 @@ def _store_mcqs_in_db(
             topic=topic if isinstance(topic, str) else "General",
             generation_batch_id=batch_id,
             institution_id=institution_id,
+            explanation=mcq.get("exp", ""),
         )
         db.add(row)
         stored += 1
@@ -296,6 +296,7 @@ def _serialise_question(row: Question) -> dict[str, Any]:
         "options": row.options,
         "correct_option": row.correct_option,
         "topic": row.topic,
+        "explanation": row.explanation,
         "created_at": row.created_at.isoformat() if row.created_at else None,
     }
 
@@ -741,17 +742,18 @@ def create_institution_exam(
         )
     ).scalar_one())
 
-    if available < QUESTIONS_PER_EXAM:
+    # We need at least 4 questions to create 4 sets (A, B, C, D)
+    if available < 4:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
                 "error": "insufficient_questions",
                 "subject": selected.value,
                 "count": available,
-                "required": QUESTIONS_PER_EXAM,
+                "required": 4,
                 "message": (
                     f"Not enough questions in institution's {selected.value} bank. "
-                    f"Found {available}, need at least {QUESTIONS_PER_EXAM}. "
+                    f"Found {available}, need at least 4. "
                     f"Please upload more question papers first."
                 ),
             },
@@ -765,21 +767,30 @@ def create_institution_exam(
     ).all()
     all_ids: list[uuid.UUID] = [row[0] for row in id_rows]
 
-    if len(all_ids) < QUESTIONS_PER_EXAM:
+    # Dynamic scaling based on availability (up to QUESTIONS_PER_EXAM)
+    exam_size = min(len(all_ids), QUESTIONS_PER_EXAM)
+    
+    # Ensure the exam size is perfectly divisible by the number of sets (4)
+    num_sets = len(SET_LABELS)
+    exam_size = exam_size - (exam_size % num_sets)
+    questions_per_set = exam_size // num_sets
+
+    if exam_size < 4:
         return JSONResponse(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             content={
                 "error": "insufficient_questions",
                 "subject": selected.value,
                 "count": len(all_ids),
-                "required": QUESTIONS_PER_EXAM,
+                "required": 4,
+                "message": "Not enough unique questions to form 4 sets."
             },
         )
 
-    drawn = random.sample(all_ids, QUESTIONS_PER_EXAM)
+    drawn = random.sample(all_ids, exam_size)
     partitions = [
-        drawn[i * QUESTIONS_PER_SET : (i + 1) * QUESTIONS_PER_SET]
-        for i in range(len(SET_LABELS))
+        drawn[i * questions_per_set : (i + 1) * questions_per_set]
+        for i in range(num_sets)
     ]
 
     exam = Exam(
@@ -880,17 +891,20 @@ def list_institution_exams(
 # PATCH /content/exams/{exam_id}  (publish / unpublish)
 # ---------------------------------------------------------------------------
 
+class PublishExamRequest(BaseModel):
+    is_published: bool
+
 @router.patch("/content/exams/{exam_id}")
 def patch_institution_exam(
+    payload_body: PublishExamRequest,
     exam_id: uuid.UUID = Path(...),
-    is_published: Optional[bool] = None,
     payload: Annotated[dict, Depends(require_institution_admin)] = None,
     session: Session = Depends(get_session),
 ) -> Any:
     """Publish or unpublish an institution exam."""
     inst_id = _institution_id(payload)
 
-    if is_published is None:
+    if payload_body.is_published is None:
         return _validation_error("is_published is required", field="is_published")
 
     exam = session.get(Exam, exam_id)
@@ -900,8 +914,8 @@ def patch_institution_exam(
             content={"error": "not_found", "exam_id": str(exam_id)},
         )
 
-    if exam.is_published != is_published:
-        exam.is_published = is_published
+    if exam.is_published != payload_body.is_published:
+        exam.is_published = payload_body.is_published
         try:
             session.commit()
         except SQLAlchemyError as exc:

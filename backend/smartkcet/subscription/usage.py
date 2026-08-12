@@ -98,6 +98,14 @@ class UsageTracker:
                     quota_type=None,
                     resets_at=None,
                 )
+            # Bypass quota checks for institution students
+            return UsageCheckResult(
+                can_start=True,
+                reason=None,
+                remaining_attempts=None,
+                quota_type="unlimited",
+                resets_at=None,
+            )
             
             # Get institution subscription
             inst_subscription = (

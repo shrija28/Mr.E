@@ -240,14 +240,17 @@ function escapeHtmlExam(str) {
 
     // Populate topbar info
     document.getElementById('topbarSet').textContent = `Set ${ES.setLabel}`;
-    document.getElementById('topbarDiff').textContent = examData.difficulty
-      ? examData.difficulty.charAt(0).toUpperCase() + examData.difficulty.slice(1)
-      : 'Medium';
+    if (document.getElementById('topbarDiff')) {
+      document.getElementById('topbarDiff').style.display = 'none';
+    }
     document.getElementById('topbarSubject').textContent = ES.subject;
 
     // Update exam info box in entry modal
     document.getElementById('infoSubject').textContent = ES.subject;
-    document.getElementById('infoDiff').textContent = examData.difficulty || 'Medium';
+    if (document.getElementById('infoDiff')) {
+      const parentRow = document.getElementById('infoDiff').closest('.info-row');
+      if (parentRow) parentRow.style.display = 'none';
+    }
     document.getElementById('infoQCount').textContent = ES.questions.length;
 
   } catch (e) {

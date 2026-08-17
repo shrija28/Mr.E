@@ -395,21 +395,6 @@ def login(
             },
         )
 
-    # Handle platform_admin or admin user logging in via main login endpoint
-    admin_creds = load_admin_credentials()
-    if (user and user.role in ("admin", "platform_admin")) or (admin_creds and normalised_email == admin_creds.email):
-        target_hash = (user.password_hash if user else None) or (admin_creds.password_hash if admin_creds else None)
-        if target_hash and verify_password(payload.password, target_hash):
-            admin_email = user.email if user else (admin_creds.email if admin_creds else normalised_email)
-            token, _jti, _iat, _exp = issue_token(sub=admin_email, role="platform_admin")
-            _set_session_cookie(response, token, max_age=ADMIN_TOKEN_TTL_SEC)
-            return {
-                "role": "platform_admin",
-                "email": admin_email,
-                "redirect": "/admin/upload",
-            }
-        return _generic_auth_failure()
-
     # Unregistered email or non-student user
     if user is None or user.role != "student":
         return _generic_auth_failure()
@@ -522,41 +507,68 @@ def login(
 
 
 @router.post("/admin/login")
-async def admin_login(payload: LoginRequest, response: Response) -> Any:
+async def admin_login(
+    payload: LoginRequest,
+    response: Response,
+    session: Session = Depends(get_session),
+) -> Any:
     """Admin login.  REQ-3.2 / Property 7 — no token of any kind on failure.
 
-    The handler resolves the configured admin credentials, runs a
-    constant-time email compare and a bcrypt password verify.  The
-    ``issue_token(...)`` call site lives at the bottom of the function
-    inside an ``if both_match:`` gate.  There is no fallback path that
-    issues *any* token when either field is wrong.
+    The handler resolves the configured admin credentials from environment or database,
+    runs a constant-time email compare and a bcrypt password verify.
+    The ``issue_token(...)`` call site lives at the bottom of the function.
     """
 
-    # Compute "both fields match" up-front so the issuance call is a
-    # single boolean check.
-    creds = load_admin_credentials()
-    email_str = payload.email if isinstance(payload.email, str) else ""
+    email_str = payload.email.strip().lower() if isinstance(payload.email, str) else ""
     password_str = payload.password if isinstance(payload.password, str) else ""
 
-    email_match = (
-        creds is not None
-        and hmac.compare_digest(email_str.strip().lower(), creds.email)
-    )
-    password_match = (
-        creds is not None
-        and bool(password_str)
-        and verify_password(password_str, creds.password_hash)
-    )
+    if not email_str or not password_str:
+        return _generic_auth_failure()
 
-    if not (email_match and password_match):
+    # 1. Check env-configured admin credentials
+    creds = load_admin_credentials()
+    authenticated = False
+    admin_email = email_str
+
+    if creds and hmac.compare_digest(email_str, creds.email):
+        if verify_password(password_str, creds.password_hash):
+            authenticated = True
+            admin_email = creds.email
+
+    # 2. If env check didn't match, check database for platform_admin user
+    if not authenticated:
+        try:
+            db_user = session.execute(
+                select(User).where(
+                    User.email == email_str,
+                    User.role.in_(["platform_admin", "admin"]),
+                )
+            ).scalar_one_or_none()
+            if db_user and verify_password(password_str, db_user.password_hash):
+                authenticated = True
+                admin_email = db_user.email
+        except OperationalError:
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={
+                    "error": "service_unavailable",
+                    "message": "Database temporarily unavailable. Please try again later.",
+                },
+            )
+
+    if not authenticated:
         # No Set-Cookie header is written.  No token is issued.  The
         # response body is identical to the student-login generic failure.
         return _generic_auth_failure()
 
     # Single issuance site, gated on full credential match.
-    token, _jti, _iat, _exp = issue_token(sub=creds.email, role="platform_admin")
+    token, _jti, _iat, _exp = issue_token(sub=admin_email, role="platform_admin")
     _set_session_cookie(response, token, max_age=ADMIN_TOKEN_TTL_SEC)
-    return {"role": "platform_admin", "email": creds.email}
+    return {
+        "role": "platform_admin",
+        "email": admin_email,
+        "redirect": "/admin/upload",
+    }
 
 
 # ---------------------------------------------------------------------------

@@ -63,6 +63,7 @@ def run_migrations_offline() -> None:
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
         render_as_batch=url is not None and url.startswith("sqlite"),
+        version_num_dim=64,
     )
 
     with context.begin_transaction():
@@ -85,6 +86,7 @@ def run_migrations_online() -> None:
             # Defence in depth: enable batch mode so future ALTERs work on
             # SQLite without rewriting every migration manually.
             render_as_batch=connection.dialect.name == "sqlite",
+            version_num_dim=64,
         )
 
         with context.begin_transaction():

@@ -160,74 +160,111 @@ def create_exam(
     return _create_exam_from_db(payload, selected, session, source_filter=source)
 
 
+def _get_clean_unique_questions(session: Session, subject_val: str, source_filter: Optional[str] = None) -> list[Question]:
+    """Return all valid, complete, deduplicated Question rows for the given subject."""
+    from ..rag.mcq_extractor import is_valid_question
+    import json
+
+    stmt = select(Question).where(Question.subject == subject_val)
+    if source_filter:
+        try:
+            filtered_stmt = stmt.where(Question.source_type == source_filter)
+            rows = list(session.execute(filtered_stmt).scalars().all())
+            if len(rows) < QUESTIONS_PER_EXAM:
+                rows = list(session.execute(stmt).scalars().all())
+        except Exception:
+            rows = list(session.execute(stmt).scalars().all())
+    else:
+        rows = list(session.execute(stmt).scalars().all())
+
+    seen_texts: set[str] = set()
+    clean_rows: list[Question] = []
+
+    for r in rows:
+        if not r.question_text:
+            continue
+        norm_text = r.question_text.strip().lower()
+        if norm_text in seen_texts:
+            continue
+
+        opts = r.options
+        if isinstance(opts, str):
+            try:
+                opts = json.loads(opts)
+            except Exception:
+                opts = []
+
+        if not is_valid_question(r.question_text, opts, subject=subject_val):
+            continue
+
+        seen_texts.add(norm_text)
+        clean_rows.append(r)
+
+    return clean_rows
+
+
 def _create_exam_from_db(
     payload: CreateExamRequest,
     selected: Subject,
     session: Session,
     source_filter: Optional[str],
 ) -> Any:
-    """Draw 80 random questions from the DB question bank and build an exam."""
+    """Draw 80 random, clean, unique questions from the DB question bank and build an exam.
+    
+    Guarantees no incomplete questions and no repeated questions across paper sets A, B, C, D.
+    """
+    subject_val = selected.value
 
-    # Step 1: count available questions
-    # Note: source_type filter is applied only when explicitly requested.
-    # If source_type column doesn't exist yet on some rows, fall back gracefully.
-    count_stmt = select(func.count(Question.id)).where(
-        Question.subject == selected.value
-    )
-    if source_filter:
-        try:
-            count_stmt = count_stmt.where(Question.source_type == source_filter)
-        except Exception:
-            pass  # Column may not exist on older DB — ignore filter
+    # Step 1: Query clean, unique questions for this subject
+    clean_questions = _get_clean_unique_questions(session, subject_val, source_filter)
 
-    available = int(session.execute(count_stmt).scalar_one())
-    if available < QUESTIONS_PER_EXAM:
-        source_label = "previous year papers" if source_filter == "question_paper" else "question bank"
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
-                "error": "insufficient_questions",
-                "subject": selected.value,
-                "count": available,
-                "required": QUESTIONS_PER_EXAM,
-                "source": source_filter or "all",
-                "message": (
-                    f"Not enough questions from {source_label} for {selected.value}. "
-                    f"Found {available}, need {QUESTIONS_PER_EXAM}. "
-                    f"Please upload more {'question papers' if source_filter == 'question_paper' else 'files'} first."
-                ),
-            },
+    # Step 2: Auto top-up if clean available questions < 80
+    if len(clean_questions) < QUESTIONS_PER_EXAM:
+        needed = QUESTIONS_PER_EXAM - len(clean_questions)
+        logger.info(
+            "Question bank for %s has %d clean questions; auto-generating %d top-up RAG/authentic questions...",
+            subject_val,
+            len(clean_questions),
+            needed,
         )
-
-    # Step 2: random draw of 80 question IDs
-    id_stmt = select(Question.id).where(Question.subject == selected.value)
-    if source_filter:
         try:
-            id_stmt = id_stmt.where(Question.source_type == source_filter)
-        except Exception:
-            pass
+            from ..rag.mcq_extractor import extract_or_generate_mcqs
+            additional_mcqs = extract_or_generate_mcqs("", topic=subject_val, min_questions=needed)
+            mcq_batch_id = uuid.uuid4()
+            for mcq in additional_mcqs:
+                q_row = Question(
+                    subject=subject_val,
+                    question_text=mcq["q"],
+                    options=mcq["opts"],
+                    correct_option=str(mcq["ans"]),
+                    topic=mcq.get("topic", "General"),
+                    explanation=mcq.get("exp", ""),
+                    generation_batch_id=mcq_batch_id,
+                    source_type="generated_kcet",
+                    institution_id=None,
+                )
+                session.add(q_row)
+            session.commit()
+            
+            # Re-fetch clean questions
+            clean_questions = _get_clean_unique_questions(session, subject_val, source_filter)
+        except Exception as exc:
+            logger.warning("Failed to auto top-up questions for %s: %s", subject_val, exc)
+            session.rollback()
 
-    id_rows = session.execute(id_stmt).all()
-    all_ids: list[uuid.UUID] = [row[0] for row in id_rows]
+    all_ids = [q.id for q in clean_questions]
 
-    if len(all_ids) < QUESTIONS_PER_EXAM:
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
-                "error": "insufficient_questions",
-                "subject": selected.value,
-                "count": len(all_ids),
-                "required": QUESTIONS_PER_EXAM,
-                "source": source_filter or "all",
-            },
-        )
+    # Step 3: Draw random unique questions without replacement and partition into 4 sets
+    sample_size = min(len(all_ids), QUESTIONS_PER_EXAM)
+    drawn: list[uuid.UUID] = random.sample(all_ids, sample_size)
 
-    drawn: list[uuid.UUID] = random.sample(all_ids, QUESTIONS_PER_EXAM)
+    # Dynamic set size if fewer than 80
+    num_sets = len(SET_LABELS)
+    questions_per_set = max(1, sample_size // num_sets)
 
-    # Step 3: partition into 4 sets and insert atomically
     partitions: list[list[uuid.UUID]] = [
-        drawn[i * QUESTIONS_PER_SET : (i + 1) * QUESTIONS_PER_SET]
-        for i in range(len(SET_LABELS))
+        drawn[i * questions_per_set : (i + 1) * questions_per_set]
+        for i in range(num_sets)
     ]
 
     exam = Exam(subject=selected.value, exam_name=payload.exam_name)

@@ -265,7 +265,7 @@ STRICT EXAM RULES:
 2. ENTRANCE EXAM LEVEL: Every question must be a problem-solving, calculation, application-based, or rigorous conceptual deduction question that matches the difficulty of a standard competitive entrance exam.
 3. SUBJECT-SPECIFIC STANDARDS:
    - Mathematics: Focus on calculation-heavy problems. Use mathematical equations and variables in the question stem.
-   - Physics: Formulate numerical problems applying physics formulas.
+   - Physics: Formulate numerical problems applying physics formulas (kinematics, electricity, circuits, work-energy, optics, electrostatics, modern physics, etc.). Include specific numerical values, units (m/s, N, J, V, A, Hz, kg, etc.), and step-by-step calculations. At least 60% of Physics questions MUST be numerical calculation problems.
    - Chemistry: Include stoichiometry, organic reactions, physical chemistry numericals, etc.
    - Biology: Focus on deep understanding, mechanisms, genetics.
 4. DISTRACTOR QUALITY & COMPLEXITY (CRITICAL):
@@ -281,7 +281,7 @@ RULES:
 - Do NOT repeat any question from the used list.
 - ans must be the integer index of the correct option (0, 1, 2, or 3).
 - Each question is worth 1 mark.
-- EXPLICIT BAN: Neither the question text nor the options may contain the terms 'kcet', 'dig', 'fig', or 'diagram' (case-insensitive). Do not use these words anywhere. Do not include figure references like "in the given figure" or "as shown in fig".
+- EXPLICIT BAN: Neither the question text nor the options may contain the terms 'kcet', 'dig', 'fig', 'diagram', 'byju', 'byju\\'s', 'byjus', 'vedantu', 'unacademy', 'allen', 'aakash', 'doubtnut', or 'physicswallah' (case-insensitive). Do not use these words anywhere. Do not include figure references like "in the given figure" or "as shown in fig".
 - STRICT META-TEXT BAN: DO NOT start or include phrases like "In this chapter", "Chapter no.", "From the text", "As discussed", "According to the passage", or ANY reference to the source material. ABSOLUTELY NO RANDOM WORDS OR FILLER TEXT. The question must be 100% self-contained as if it appeared in a standalone competitive exam.
 - PURE EXTRACTION & RELEVANCE: PURELY EXTRACT the contents from the input data provided. DO NOT make up questions that aren't grounded in the data. Keep all questions strictly relevant to the subject.
 - COMPLETENESS: ALL QUESTIONS AND OPTIONS MUST BE FULLY COMPLETED. DO NOT GENERATE RANDOM AND INCOMPLETE QUESTIONS. Do not generate incomplete sentences.
@@ -402,7 +402,7 @@ STRICT EXAM RULES:
 2. ENTRANCE EXAM LEVEL: Every question must be a problem-solving, calculation, application-based, or rigorous conceptual deduction question that matches the difficulty of a standard competitive entrance exam.
 3. SUBJECT-SPECIFIC STANDARDS:
    - Mathematics: Focus on calculation-heavy problems. Use mathematical equations and variables in the question stem.
-   - Physics: Formulate numerical problems applying physics formulas.
+   - Physics: Formulate numerical problems applying physics formulas (kinematics, electricity, circuits, work-energy, optics, electrostatics, modern physics, etc.). Include specific numerical values, units (m/s, N, J, V, A, Hz, kg, etc.), and step-by-step calculations. At least 60% of Physics questions MUST be numerical calculation problems.
    - Chemistry: Include stoichiometry, organic reactions, physical chemistry numericals, etc.
    - Biology: Focus on deep understanding, mechanisms, genetics.
 4. DISTRACTOR QUALITY & COMPLEXITY (CRITICAL):
@@ -418,7 +418,7 @@ STRICT OUTPUT RULES:
 - ans must be the 0-based index of the CORRECT option (0=A, 1=B, 2=C, 3=D).
 - Each question is worth 1 mark.
 - Do NOT repeat any question from the "already used" list.
-- EXPLICIT BAN: Neither the question text nor the options may contain the terms 'kcet', 'dig', 'fig', or 'diagram' (case-insensitive). Do not use these words anywhere. Do not include figure references like "in the given figure" or "as shown in fig".
+- EXPLICIT BAN: Neither the question text nor the options may contain the terms 'kcet', 'dig', 'fig', 'diagram', 'byju', 'byju\\'s', 'byjus', 'vedantu', 'unacademy', 'allen', 'aakash', 'doubtnut', or 'physicswallah' (case-insensitive). Do not use these words anywhere. Do not include figure references like "in the given figure" or "as shown in fig".
 - STRICT META-TEXT BAN: DO NOT start or include phrases like "In this chapter", "Chapter no.", "From the text", "As discussed", "According to the passage", or ANY reference to the source material. ABSOLUTELY NO RANDOM WORDS OR FILLER TEXT. The question must be 100% self-contained as if it appeared in a standalone competitive exam.
 - PURE EXTRACTION & RELEVANCE: PURELY EXTRACT the contents from the input data provided. DO NOT make up questions that aren't grounded in the data. Keep all questions strictly relevant to the subject.
 - COMPLETENESS: ALL QUESTIONS AND OPTIONS MUST BE FULLY COMPLETED. DO NOT GENERATE RANDOM AND INCOMPLETE QUESTIONS. Do not generate incomplete sentences.

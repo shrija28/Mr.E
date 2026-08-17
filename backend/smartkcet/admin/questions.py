@@ -62,7 +62,8 @@ router = APIRouter()
 # REQ-6.1 — fixed page size.  Defined as a module-level constant so the
 # smoke test and any future admin UI can import the same value rather
 # than duplicating the magic number.
-PAGE_SIZE = 50
+PAGE_SIZE = 100
+MAX_PAGE_SIZE = 200
 
 # REQ-6.4 — "insufficient questions" threshold.  Exposed in the counts
 # response so the frontend never has to hardcode this number.
@@ -227,7 +228,7 @@ def list_questions(
                 "page_size must be >= 1",
                 field="page_size",
             )
-        page_size = min(parsed, PAGE_SIZE)
+        page_size = min(parsed, MAX_PAGE_SIZE)
 
     # Build the base SELECT — platform-wide questions only (institution_id IS NULL).
     # Institution-uploaded questions are scoped to their institution and must

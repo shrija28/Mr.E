@@ -47,7 +47,7 @@ def _process_groq_vision(img_str: str, page_num: int) -> str:
     try:
         client = get_groq_client()
         completion = client.chat.completions.create(
-            model="llama-3.2-90b-vision-preview",
+            model="llama-3.2-11b-vision-instruct",
             messages=[
                 {
                     "role": "user",

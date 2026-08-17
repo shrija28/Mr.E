@@ -257,12 +257,13 @@ def get_submission(
     ).all()
     questions: list[dict[str, Any]] = []
     answers = submission.answers if isinstance(submission.answers, dict) else {}
+    from ..submissions.scoring import _is_correct_answer
     for question, order_index in question_rows:
         index_str = str(order_index)
         given = answers.get(index_str)
-        if given is None or given == "":
+        if given is None or str(given).strip() == "":
             given_status = "unanswered"
-        elif str(given) == str(question.correct_option):
+        elif _is_correct_answer(given, question.correct_option, question.options):
             given_status = "correct"
         else:
             given_status = "wrong"

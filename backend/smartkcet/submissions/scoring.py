@@ -91,6 +91,56 @@ def _normalised_marks(value: Any) -> int:
     return 1
 
 
+def _is_correct_answer(given: Any, ans: Any, opts: Any = None) -> bool:
+    """Robustly check if student's given answer matches the correct option."""
+    if given is None or str(given).strip() == "":
+        return False
+
+    given_str = str(given).strip()
+    ans_str = str(ans).strip() if ans is not None else ""
+
+    # 1. Direct string/numeric match
+    if given_str.lower() == ans_str.lower():
+        return True
+
+    # 2. Letter mapping ("A"/"a" -> "0", "B"/"b" -> "1", etc.)
+    letter_map = {
+        "a": "0", "b": "1", "c": "2", "d": "3",
+        "0": "0", "1": "1", "2": "2", "3": "3"
+    }
+    given_norm = letter_map.get(given_str.lower(), given_str.lower())
+    ans_norm = letter_map.get(ans_str.lower(), ans_str.lower())
+
+    if given_norm == ans_norm:
+        return True
+
+    # 3. Option text matching if options list is provided
+    if opts and isinstance(opts, (list, tuple)):
+        try:
+            g_idx = int(given_norm)
+            if 0 <= g_idx < len(opts):
+                if str(opts[g_idx]).strip().lower() == ans_str.lower():
+                    return True
+        except (ValueError, TypeError):
+            pass
+
+        try:
+            a_idx = int(ans_norm)
+            if 0 <= a_idx < len(opts):
+                if str(opts[a_idx]).strip().lower() == given_str.lower():
+                    return True
+        except (ValueError, TypeError):
+            pass
+
+        for idx, opt in enumerate(opts):
+            opt_clean = str(opt).strip().lower()
+            if opt_clean == ans_str.lower():
+                if str(idx) == given_norm:
+                    return True
+
+    return False
+
+
 def score_submission(
     questions: Iterable[Mapping[str, Any]],
     answers: Mapping[str, Any],
@@ -120,14 +170,10 @@ def score_submission(
 
         given = answers.get(str(i))
 
-        # Classification rules carried over from legacy /analyze:
-        #   - given is None / "" → unanswered (0 marks)
-        #   - str(given) == str(q.ans) → correct (full marks)
-        #   - else → wrong (0 marks)
         question_earned = 0
-        if given is None or given == "":
+        if given is None or str(given).strip() == "":
             status = "unanswered"
-        elif str(given) == str(q.get("ans")):
+        elif _is_correct_answer(given, q.get("ans"), q.get("opts")):
             question_earned = marks
             status = "correct"
         else:

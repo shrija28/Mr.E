@@ -63,12 +63,4 @@ The frontend is a static web application. Open `frontend/html/index.html` in a b
 - `POST /generate` - Generate question papers
 - `GET /dashboard` - Get performance metrics
 
-## Technologies
 
-- **Backend**: FastAPI, Groq AI, FAISS, Sentence Transformers
-- **Frontend**: HTML5, CSS3, Vanilla JavaScript
-- **Data Processing**: OpenCV, PyTesseract, python-docx, PyMuPDF
-
-## License
-
-MIT

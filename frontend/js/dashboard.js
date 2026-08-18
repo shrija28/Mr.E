@@ -537,7 +537,104 @@ function populateSubjectFilter() {
   });
 }
 
-window.applyFilters = () => {
+// ── Pro Access Check & Tier Gating ──────────────────────────────────────────
+async function checkProAccess() {
+  try {
+    if (typeof Subscription !== 'undefined' && Subscription.getStatus) {
+      const sub = await Subscription.getStatus();
+      if (!sub) return false;
+      
+      const planType = (sub.plan_type || '').toLowerCase();
+      const planName = (sub.plan_name || '').toLowerCase();
+      const status = (sub.status || '').toLowerCase();
+
+      const isActive = sub.is_active || ['active', 'trial', 'grace_period'].includes(status);
+      if (!isActive) return false;
+
+      if (planType === 'pro' || planType === 'trial' || planType === 'institution' || sub.quota_type === 'unlimited') {
+        return true;
+      }
+      if (planName.includes('pro') || planName.includes('trial') || planName.includes('99')) {
+        return true;
+      }
+    }
+  } catch (e) {
+    console.warn('checkProAccess error:', e);
+  }
+  return false;
+}
+
+function applyTierAccessControl(isPro) {
+  const aiBlock = document.getElementById('aiBlock');
+  const collegeRec = document.getElementById('collegeRecSection');
+  const rankSuggestion = document.getElementById('rankSuggestionSection');
+  const rankBooster = document.getElementById('rankBoosterSection');
+  const topStudentsCard = document.getElementById('rankingBody')?.closest('.results-card');
+  const chartsRows = document.querySelectorAll('.charts-row');
+
+  if (isPro) {
+    if (aiBlock) aiBlock.style.display = 'block';
+    if (collegeRec) collegeRec.style.display = 'block';
+    if (rankSuggestion) rankSuggestion.style.display = 'block';
+    if (rankBooster) rankBooster.style.display = 'block';
+    if (topStudentsCard) topStudentsCard.style.display = 'block';
+    chartsRows.forEach(row => row.style.display = 'grid');
+
+    const promoBanner = document.getElementById('freeUserProPromo');
+    if (promoBanner) promoBanner.style.display = 'none';
+
+    const rankVal = document.getElementById('kpiRankValue');
+    if (rankVal && leaderboardData && typeof leaderboardData.my_rank === 'number') {
+      rankVal.textContent = `#${leaderboardData.my_rank}`;
+    }
+  } else {
+    // Free user — hide AI Analysis, College Match Predictor, Rank Suggestions, Rank Booster, and Top Students
+    if (aiBlock) aiBlock.style.display = 'none';
+    if (collegeRec) collegeRec.style.display = 'none';
+    if (rankSuggestion) rankSuggestion.style.display = 'none';
+    if (rankBooster) rankBooster.style.display = 'none';
+    if (topStudentsCard) topStudentsCard.style.display = 'none';
+    chartsRows.forEach(row => row.style.display = 'none');
+
+    // Update Rank KPI tile
+    const rankVal = document.getElementById('kpiRankValue');
+    const rankHint = document.getElementById('kpiRankHint');
+    if (rankVal) rankVal.textContent = '🔒 Pro';
+    if (rankHint) rankHint.textContent = 'Upgrade to Pro (₹99/wk) to enter rankings';
+
+    // Render Pro Upgrade Banner
+    let promoBanner = document.getElementById('freeUserProPromo');
+    if (!promoBanner) {
+      promoBanner = document.createElement('div');
+      promoBanner.id = 'freeUserProPromo';
+      promoBanner.className = 'section-card';
+      promoBanner.style.cssText = 'margin-top:20px;padding:24px;background:linear-gradient(135deg, rgba(124,58,237,0.12), rgba(99,102,241,0.12));border:1px dashed var(--purple);border-radius:var(--r);text-align:center;';
+      promoBanner.innerHTML = `
+        <div style="font-size:2rem;margin-bottom:8px;">🔒</div>
+        <h3 style="font-size:1.15rem;font-weight:800;color:var(--text);margin-bottom:6px;">Unlock Pro Features &amp; AI Analytics</h3>
+        <p style="font-size:0.88rem;color:var(--muted);max-width:560px;margin:0 auto 16px auto;line-height:1.5;">
+          You are currently viewing the Free dashboard (Score, Correct/Wrong count &amp; Total Time). Upgrade to the <strong>Pro Plan (₹99/week)</strong> to unlock AI Performance Analysis, College Match Predictor, Rank Booster Action Plan, and Leaderboard Rankings!
+        </p>
+        <button class="btn-primary" onclick="if(typeof SubscriptionModal!=='undefined'){SubscriptionModal.show();}else{window.location.href='/subscription';}" style="padding:10px 24px;font-size:0.9rem;border-radius:10px;font-weight:700;cursor:pointer;">
+          ⭐ Upgrade to Pro (₹99/week) →
+        </button>
+      `;
+      const dashContent = document.getElementById('dashContent');
+      if (dashContent) {
+        const kpiRow = document.getElementById('kpiRow');
+        if (kpiRow && kpiRow.nextSibling) {
+          dashContent.insertBefore(promoBanner, kpiRow.nextSibling);
+        } else {
+          dashContent.appendChild(promoBanner);
+        }
+      }
+    } else {
+      promoBanner.style.display = 'block';
+    }
+  }
+}
+
+window.applyFilters = async () => {
   const subject = document.getElementById('filterSubject')?.value || 'all';
   const set = document.getElementById('filterSet')?.value || 'all';
   const status = document.getElementById('filterStatus')?.value || 'all';
@@ -556,6 +653,10 @@ window.applyFilters = () => {
   renderRecommendations();
   renderRankings();
   renderTable();
+
+  // Tier access control check
+  const isPro = await checkProAccess();
+  applyTierAccessControl(isPro);
 };
 
 window.refreshDashboard = () => { destroyCharts(); initDashboard(); };
@@ -837,26 +938,53 @@ window.openDrawer = async (submissionId) => {
     const m = Math.floor(s.time_taken_sec / 60), sec = s.time_taken_sec % 60;
     const icons = { correct: '✅', wrong: '❌', partial: '🟡', unanswered: '⬜' };
 
+    const isPro = await checkProAccess();
+    const isPremium = isPro || s.is_premium_subscriber === true;
+
+    const qList = s.questions || [];
+    const correctCount = qList.filter(q => q.status === 'correct').length;
+    const wrongCount = qList.filter(q => q.status === 'wrong').length;
+
+    let reviewContentHtml = '';
+    if (isPremium) {
+      reviewContentHtml = `
+        <div class="answer-review-list">
+          ${qList.map((r, i) => {
+            const timeTag = r.time_taken_sec != null ? ` <span style="font-size:11px;font-weight:700;color:var(--purple-l,#a78bfa);background:rgba(124,58,237,0.12);padding:2px 8px;border-radius:10px;margin-left:6px;">⏱ ${r.time_taken_sec}s taken</span>` : '';
+            const givenText = r.given !== undefined && r.given !== null && r.given !== '' ? (r.opts ? r.opts[parseInt(r.given)] : r.given) : 'Not answered';
+            const correctText = r.correctAns !== undefined && r.correctAns !== null ? (r.opts ? r.opts[parseInt(r.correctAns)] : r.correctAns) : null;
+            return `
+              <div class="answer-row ${r.status}">
+                <span class="ans-status-icon">${icons[r.status] || '⬜'}</span>
+                <div class="ans-content">
+                  <div class="ans-q-text">Q${r.order_index != null ? r.order_index + 1 : i + 1}. ${r.q} ${timeTag}</div>
+                  <div class="ans-given">Your answer: <strong>${givenText}</strong></div>
+                  ${r.status !== 'correct' && correctText ? `<div class="ans-correct-text">✓ Correct: ${correctText}</div>` : ''}
+                  ${r.exp ? `<div class="ans-exp" style="margin-top:6px;font-size:13px;color:var(--text-color, #333);"><strong>Explanation:</strong> ${r.exp}</div>` : ''}
+                  <div class="ans-meta">${r.topic || ''}</div>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>`;
+    } else {
+      reviewContentHtml = `
+        <div style="background:linear-gradient(135deg, rgba(124,58,237,0.15), rgba(99,102,241,0.15));border:1px solid rgba(124,58,237,0.35);border-radius:14px;padding:22px;text-align:center;margin-bottom:20px;">
+          <div style="font-size:1.8rem;margin-bottom:6px;">🔒 Pro Plan Feature</div>
+          <h4 style="margin:0 0 6px;font-size:1.1rem;font-weight:800;color:var(--text);">Detailed Question Breakdown &amp; Time Spent Per Question</h4>
+          <p style="font-size:0.85rem;color:var(--muted);margin:0 0 16px;">Exact per-question time analysis, question-by-question explanations, and step-by-step corrections are reserved for Pro subscribers (₹99/week).</p>
+          <button class="btn-primary" onclick="if(window.SubscriptionModal){SubscriptionModal.show();}else{window.location.href='/subscription';}" style="padding:10px 22px;font-size:0.92rem;border-radius:10px;font-weight:800;cursor:pointer;">⭐ Upgrade to Pro (₹99/week)</button>
+        </div>`;
+    }
+
     document.getElementById('drawerBody').innerHTML = `
       <div class="drawer-kpi-row">
         <div class="drawer-kpi"><div class="drawer-kpi-val">${Math.round(s.score_pct)}%</div><div class="drawer-kpi-label">Score</div></div>
-        <div class="drawer-kpi"><div class="drawer-kpi-val">${m}m ${sec}s</div><div class="drawer-kpi-label">Time</div></div>
-        <div class="drawer-kpi"><div class="drawer-kpi-val">${s.pass_flag ? '✅ Pass' : '❌ Fail'}</div><div class="drawer-kpi-label">Status</div></div>
+        <div class="drawer-kpi"><div class="drawer-kpi-val" style="color:var(--green-l)">${correctCount}</div><div class="drawer-kpi-label">Correct</div></div>
+        <div class="drawer-kpi"><div class="drawer-kpi-val" style="color:var(--red-l)">${wrongCount}</div><div class="drawer-kpi-label">Wrong</div></div>
+        <div class="drawer-kpi"><div class="drawer-kpi-val">${m}m ${sec}s</div><div class="drawer-kpi-label">Entire Test Time</div></div>
       </div>
-      <div class="drawer-section-title">Answer Review (${s.questions?.length || 0} questions)</div>
-      <div class="answer-review-list">
-        ${(s.questions || []).map((r, i) => `
-          <div class="answer-row ${r.status}">
-            <span class="ans-status-icon">${icons[r.status] || '⬜'}</span>
-            <div class="ans-content">
-              <div class="ans-q-text">Q${r.order_index != null ? r.order_index + 1 : i + 1}. ${r.q}</div>
-              <div class="ans-given">Your answer: <strong>${r.given !== undefined && r.given !== null && r.given !== '' ? (r.opts ? r.opts[parseInt(r.given)] : r.given) : 'Not answered'}</strong></div>
-              ${r.status !== 'correct' ? `<div class="ans-correct-text">✓ Correct: ${r.opts ? r.opts[parseInt(r.correctAns)] : r.correctAns}</div>` : ''}
-              ${r.exp ? `<div class="ans-exp" style="margin-top:6px;font-size:13px;color:var(--text-color, #333);"><strong>Explanation:</strong> ${r.exp}</div>` : ''}
-              <div class="ans-meta">${r.topic}</div>
-            </div>
-          </div>`).join('')}
-      </div>`;
+      <div class="drawer-section-title">Test Summary (${qList.length} questions)</div>
+      ${reviewContentHtml}`;
 
     document.getElementById('drawerOverlay').style.display = 'block';
     document.getElementById('detailDrawer').classList.add('open');

@@ -257,10 +257,25 @@ def get_submission(
     ).all()
     questions: list[dict[str, Any]] = []
     answers = submission.answers if isinstance(submission.answers, dict) else {}
+    from ..db.subscription_models import Subscription
     from ..submissions.scoring import _is_correct_answer
+
+    sub = session.query(Subscription).options(joinedload(Subscription.plan)).filter(
+        Subscription.user_id == user.id,
+        Subscription.status.in_(["active", "trial", "grace_period"])
+    ).first()
+    is_institution = (getattr(user, "student_subtype", "") == "institution_linked") or (getattr(user, "institution_id", None) is not None)
+    is_premium = is_institution or (sub is not None and sub.plan is not None and sub.plan.name.lower() != "free")
+
+    q_times = answers.get("__question_times__", {}) if isinstance(answers, dict) else {}
+
     for question, order_index in question_rows:
         index_str = str(order_index)
         given = answers.get(index_str)
+        q_time = q_times.get(index_str) if isinstance(q_times, dict) else None
+        if q_time is None and isinstance(q_times, dict):
+            q_time = q_times.get(int(order_index))
+
         if given is None or str(given).strip() == "":
             given_status = "unanswered"
         elif _is_correct_answer(given, question.correct_option, question.options):
@@ -273,11 +288,12 @@ def get_submission(
                 "id": str(question.id),
                 "q": question.question_text,
                 "opts": question.options,
-                "correctAns": question.correct_option,
+                "correctAns": question.correct_option if is_premium else None,
                 "topic": question.topic or "General",
                 "given": given,
                 "status": given_status,
-                "exp": question.explanation or "",
+                "exp": (question.explanation or "") if is_premium else None,
+                "time_taken_sec": q_time,
             }
         )
 
@@ -297,6 +313,7 @@ def get_submission(
         ),
         "status": submission.status,
         "pass_flag": float(submission.score_pct) >= 50.0,
+        "is_premium_subscriber": is_premium,
         "answers": submission.answers,
         "questions": questions,
     }

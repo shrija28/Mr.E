@@ -311,9 +311,17 @@
 }
 
 .subscription-modal .pc-cta.outline {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text);
+  background: rgba(124, 58, 237, 0.15);
+  border: 1.5px solid rgba(167, 139, 250, 0.5);
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+.subscription-modal .pc-cta.outline:hover {
+  background: rgba(124, 58, 237, 0.28);
+  border-color: rgba(167, 139, 250, 0.85);
+  box-shadow: 0 0 14px rgba(167, 139, 250, 0.35);
+  color: #ffffff !important;
 }
 
 .subscription-modal .pc-cta.current {

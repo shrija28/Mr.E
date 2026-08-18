@@ -6,6 +6,7 @@
   <title>SmartKCET Prep — Institution Plans</title>
   <link rel="stylesheet" href="../css/style.css"/>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="/js/subscription-modal.js"></script>
   <style>
     /* ── Page base ── */
     body { min-height:100vh; }
@@ -202,10 +203,9 @@
         tagline: 'Great for growing institutions',
         features: [
           { yes:true,  text:'Up to 100 students' },
-          { yes:true,  text:'Institution question bank' },
-          { yes:true,  text:'Chapter-wise exams' },
+          { yes:true,  text:'Institution uploads' },
           { yes:true,  text:'Analytics' },
-          { yes:true,  text:'Limited admin KCET bank access' },
+          { yes:true,  text:'Suggestions and guidance' },
         ],
         cta: 'Choose Basic', ctaType: 'secondary', featured: false,
       },
@@ -215,11 +215,9 @@
         tagline: 'Best for large institutions',
         features: [
           { yes:true,  text:'Unlimited students' },
-          { yes:true,  text:'Full Admin KCET question bank' },
-          { yes:true,  text:'AI analytics' },
-          { yes:true,  text:'Advanced reports' },
-          { yes:true,  text:'Institution branding' },
-          { yes:true,  text:'Priority support' },
+          { yes:true,  text:'Taken time for each question' },
+          { yes:true,  text:'Unlimited test generation' },
+          { yes:true,  text:'Unlimited test could be taken in a day' },
         ],
         cta: 'Choose Premium', ctaType: 'primary', featured: true, badge: '⭐ Most Popular',
       },
@@ -382,17 +380,35 @@
         var d = await r.json();
         if (!r.ok) { showStatus(d.message || 'Failed to create order.', false); btn.disabled=false; btn.textContent='Pay Now →'; return; }
 
-        if (d._mock) {
-          showStatus('⚙️ Dev mode — simulating payment success…', true);
-          await fetch('/api/payments/verify', {
-            method:'POST', headers:{'Content-Type':'application/json'}, credentials:'include',
-            body: JSON.stringify({ razorpay_order_id:d.order_id, razorpay_payment_id:'pay_mock_'+Date.now(), razorpay_signature:'mock_sig', plan_id:selectedPlan.id }),
-          });
-          // Redirect to subscription page with success flag
-          setTimeout(function() { 
-            closePayModal(); 
-            window.location.href='/institution/subscription?payment=success&plan=' + encodeURIComponent(selectedPlan.name); 
-          }, 1500);
+        if (d._mock && typeof SubscriptionModal !== 'undefined' && typeof SubscriptionModal._showMockCheckoutPopup === 'function') {
+          closePayModal();
+          SubscriptionModal._showMockCheckoutPopup(
+            selectedPlan,
+            d.order_id,
+            async function (paymentId, signature) {
+              var vr = await fetch('/api/payments/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({
+                  razorpay_order_id: d.order_id,
+                  razorpay_payment_id: paymentId,
+                  razorpay_signature: signature,
+                  plan_id: selectedPlan.id,
+                }),
+              });
+              var vd = await vr.json();
+              if (vr.ok && vd.verified) {
+                alert('✅ Payment successful! Activating your plan…');
+                window.location.href = '/institution/subscription?payment=success&plan=' + encodeURIComponent(selectedPlan.name) + '&ts=' + Date.now();
+              } else {
+                alert('⚠️ Verification failed: ' + (vd.message || 'Payment signature invalid.'));
+              }
+            },
+            function () {
+              console.log('Payment cancelled by user');
+            }
+          );
           return;
         }
 

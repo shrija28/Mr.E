@@ -654,11 +654,10 @@ async def get_institution_dashboard(
             monthly_test_limit = active_sub.plan.max_test_attempts_per_period
             next_renewal_date = active_sub.next_renewal_date.isoformat() if active_sub.next_renewal_date else None
 
-        # Recent submissions (last 10 from institution students, exclude admins)
-        student_ids = [
+        # Get all user IDs linked to this institution (students and admins)
+        all_user_ids = [
             row[0] for row in db.query(User.id).filter(
-                User.institution_id == institution_id,
-                User.role == "student",
+                User.institution_id == institution_id
             ).all()
         ]
 
@@ -666,48 +665,71 @@ async def get_institution_dashboard(
         tests_this_week = 0
         tests_this_month = 0
 
-        if student_ids:
-            from datetime import datetime, timedelta
-            now = datetime.utcnow()
-            week_ago = now - timedelta(days=7)
-            month_ago = now - timedelta(days=30)
+        from datetime import datetime, timedelta
+        now = datetime.utcnow()
+        week_ago = now - timedelta(days=7)
+        month_ago = now - timedelta(days=30)
 
+        # 1. Exams created by this institution in week/month
+        exams_created_week = db.query(Exam).filter(
+            Exam.institution_id == institution_id,
+            Exam.created_at >= week_ago
+        ).count()
+
+        exams_created_month = db.query(Exam).filter(
+            Exam.institution_id == institution_id,
+            Exam.created_at >= month_ago
+        ).count()
+
+        # 2. Submissions / Tests taken by students in institution
+        test_attempts_week = 0
+        test_attempts_month = 0
+
+        if all_user_ids:
             try:
                 subs = (
                     db.query(Submission)
-                    .filter(Submission.student_id.in_(student_ids))
+                    .filter(Submission.user_id.in_(all_user_ids))
                     .order_by(desc(Submission.submitted_at))
                     .limit(10)
                     .all()
                 )
                 for s in subs:
-                    student = db.query(User).filter(User.id == s.student_id).first()
+                    student = db.query(User).filter(User.id == s.user_id).first()
+                    exam_set = db.query(ExamSet).filter(ExamSet.id == s.exam_set_id).first()
+                    exam = db.query(Exam).filter(Exam.id == exam_set.exam_id).first() if exam_set else None
+                    subject_name = exam.subject if (exam and exam.subject) else "KCET Prep"
+
                     recent_submissions.append({
-                        "student_name": student.display_name if student else "Unknown",
-                        "subject": s.subject or "—",
+                        "student_name": student.display_name if (student and student.display_name) else (student.email if student else "Student"),
+                        "subject": subject_name,
                         "score": round(s.score_pct, 1) if s.score_pct is not None else None,
                         "submitted_at": s.submitted_at.isoformat() if s.submitted_at else None,
                         "time_taken_sec": s.time_taken_sec,
                     })
 
-                tests_this_week = (
+                test_attempts_week = (
                     db.query(Submission)
                     .filter(
-                        Submission.student_id.in_(student_ids),
+                        Submission.user_id.in_(all_user_ids),
                         Submission.submitted_at >= week_ago,
                     )
                     .count()
                 )
-                tests_this_month = (
+                test_attempts_month = (
                     db.query(Submission)
                     .filter(
-                        Submission.student_id.in_(student_ids),
+                        Submission.user_id.in_(all_user_ids),
                         Submission.submitted_at >= month_ago,
                     )
                     .count()
                 )
-            except Exception:
-                pass  # Submissions table may not exist yet
+            except Exception as exc:
+                import logging
+                logging.getLogger("smartkcet.institution").error(f"Error fetching dashboard submissions: {exc}", exc_info=True)
+
+        tests_this_week = test_attempts_week + exams_created_week
+        tests_this_month = test_attempts_month + exams_created_month
 
         return {
             "institution_id": str(institution_id),

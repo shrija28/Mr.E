@@ -339,7 +339,8 @@
               <h2 style="font-size:0.88rem;margin-bottom:2px">Available Exams</h2>
               <p class="section-sub">Institution &amp; platform exams</p>
             </div>
-            <span id="examCountBadge" style="margin-left:auto;font-size:0.72rem;color:var(--muted);background:var(--s3);border-radius:10px;padding:2px 8px">0</span>
+            <span id="examCountBadge" style="margin-left:auto;font-size:0.72rem;color:var(--muted);background:var(--s3);border-radius:10px;padding:2px 8px;margin-right:8px">0</span>
+            <a href="/student/institution/exams" style="font-size:0.72rem;color:var(--purple-l);text-decoration:none">View all →</a>
           </div>
           <div class="section-body" style="padding:16px 20px">
             <ul class="inst-exam-list" id="examList">
@@ -406,12 +407,8 @@
           </div>
           <div class="section-body" style="display:flex;flex-direction:column;gap:10px">
             <a href="/student/institution/exams" class="qa-btn primary">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-              Start Practice Exam
-            </a>
-            <a href="/student/institution/exams" class="qa-btn outline">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/></svg>
-              View Assigned Exams
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+              View My Exams
             </a>
             <a href="/student/institution/performance" class="qa-btn outline">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
@@ -503,17 +500,12 @@
     document.getElementById('dashSub').textContent = instName + ' — Exam Platform';
 
     var pill = document.getElementById('accessStatus');
-    var active = ['active','trial','grace_period'].includes(p.access_status);
-    pill.textContent = active ? '✅ Access Active' : '⚠️ Access Inactive';
-    pill.className = 'inst-access-status ' + (active ? 'active' : 'inactive');
+    if (pill) pill.style.display = 'none';
 
     var cards = [
       { label: 'Your Name',       val: p.display_name,    mono: false },
       { label: 'KCET Student ID', val: p.kcet_student_id || '—', mono: true },
       { label: 'Institution',     val: instName,          mono: false },
-      { label: 'Access Status',   val: cap(p.access_status), mono: false },
-      { label: 'Plan',            val: p.plan_name || 'Institution Plan', mono: false },
-      { label: 'Renews',          val: p.next_renewal_date ? new Date(p.next_renewal_date).toLocaleDateString() : '—', mono: false },
     ];
     document.getElementById('profileGrid').innerHTML = cards.map(function(c) {
       return '<div class="profile-card">' +
@@ -534,14 +526,11 @@
       var tag = e.is_institution_exam
         ? '<span class="inst-exam-tag institution">Institution</span>'
         : '<span class="inst-exam-tag platform">Platform</span>';
-      // Link to exams listing page (student picks set there)
-      var firstSetId = e.sets && e.sets[0] ? e.sets[0].exam_set_id : null;
-      var startUrl = firstSetId ? '/exam?set=' + encodeURIComponent(firstSetId) : '/student/institution/exams';
       return '<li class="inst-exam-row">' +
         '<span class="inst-exam-subject">' + esc(e._subj) + (e.exam_name ? ' — ' + esc(e.exam_name) : '') + '</span>' +
         tag +
         '<span class="inst-exam-sets">' + (e.set_count || 0) + ' sets</span>' +
-        '<a href="' + startUrl + '" class="inst-start-btn">Start →</a>' +
+        '<a href="/student/institution/exams" class="inst-start-btn">View Exams →</a>' +
         '</li>';
     }).join('');
   }

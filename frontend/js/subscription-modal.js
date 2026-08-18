@@ -1772,6 +1772,11 @@ var SubscriptionModal = (function () {
     selectMonthly: selectMonthly,
     selectYearly: selectYearly,
     shouldShow: shouldShow,
+    _showMockCheckoutPopup: function (plan, orderId, onVerified, onCancel) {
+      _injectMockRazorpayStyles();
+      _showMockCheckoutPopup(plan, orderId, onVerified, onCancel);
+    },
+    _injectMockRazorpayStyles: _injectMockRazorpayStyles,
   };
 })();
 

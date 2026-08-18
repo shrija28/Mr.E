@@ -119,12 +119,12 @@
   gap: 6px;
   margin-left: 10px;
   padding: 4px 12px;
-  background: var(--inst-accent-soft);
-  border: 1px solid var(--inst-accent-border);
+  background: rgba(139, 92, 246, 0.3) !important;
+  border: 1.5px solid #a78bfa !important;
   border-radius: 20px;
-  color: var(--inst-accent-light);
-  font-size: 0.72rem;
-  font-weight: 700;
+  color: #ffffff !important;
+  font-size: 0.75rem;
+  font-weight: 800;
   letter-spacing: 0.6px;
   text-transform: uppercase;
   white-space: nowrap;
@@ -135,43 +135,58 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--inst-accent-light);
-  box-shadow: 0 0 8px var(--inst-accent-light);
+  background: #ffffff;
+  box-shadow: 0 0 8px #ffffff;
 }
 
 /* ── Institution Nav Links ─────────────────────────────────────────────────
    Links: Dashboard, Upload, Questions, Exams, Students, Analytics,
-   Subscription. Hover and active states use the purple accent.
+   Subscription. High-contrast pure white text for maximum readability.
    ───────────────────────────────────────────────────────────────────────── */
+.institution-nav .nav-pill,
+.institution-pill {
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #f1f5f9 !important;
+  transition: all 0.2s ease;
+}
+
+.institution-nav .nav-pill svg,
+.institution-pill svg {
+  color: #cbd5e1 !important;
+}
+
 .institution-nav .nav-pill:hover,
 .institution-pill:hover {
-  color: var(--text);
-  background: var(--inst-accent-soft);
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+.institution-nav .nav-pill:hover svg,
+.institution-pill:hover svg {
+  color: #ffffff !important;
 }
 
 .institution-nav .nav-pill.active,
 .institution-pill.active {
-  color: var(--inst-accent-light);
-  background: var(--inst-accent-soft);
-  border: 1px solid var(--inst-accent-border);
+  color: #ffffff !important;
+  background: #7c3aed !important;
+  border: 1px solid #9333ea !important;
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.5);
+  font-weight: 800;
 }
 
 .institution-nav .nav-pill.active svg,
 .institution-pill.active svg {
-  color: var(--inst-accent-light);
+  color: #ffffff !important;
 }
 
 /* Tighter spacing because there are 7 links — ensure they fit comfortably */
 .institution-nav .nav-links,
 .institution-nav-links {
-  gap: 2px;
+  gap: 4px;
   flex-wrap: wrap;
-}
-
-.institution-nav .nav-pill,
-.institution-pill {
-  padding: 6px 12px;
-  font-size: 0.82rem;
 }
 
 /* ── Institution Page Wrapper / Headings ───────────────────────────────────

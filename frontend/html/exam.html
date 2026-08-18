@@ -72,18 +72,29 @@
       <div class="entry-modal-top">
         <div class="entry-icon">🎓</div>
         <h2>Ready to Begin?</h2>
-        <p>Enter your details to start the exam</p>
+        <p>Verify your details to start the exam</p>
       </div>
       <div class="entry-form">
-        <div class="form-row">
-          <label class="input-label">Full Name</label>
-          <input type="text" id="studentName" class="text-input" placeholder="Enter your full name"/>
+        <!-- Hidden inputs auto-populated by session -->
+        <input type="hidden" id="studentName" />
+        <input type="hidden" id="studentRoll" />
+
+        <div class="candidate-profile-box" style="background:var(--s2);border:1px solid var(--border);border-radius:var(--r);padding:14px 16px;margin-bottom:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:0.88rem;">
+            <span style="color:var(--muted)">👤 Student Name:</span>
+            <span id="displayCandidateName" style="font-weight:700;color:var(--text)">Loading…</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:0.88rem;">
+            <span style="color:var(--muted)">🆔 Student ID:</span>
+            <span id="displayCandidateRoll" style="font-weight:700;color:var(--purple-l);font-family:monospace">Loading…</span>
+          </div>
+          <div id="instNameRow" style="display:none;justify-content:space-between;align-items:center;padding:6px 0 4px;font-size:0.88rem;border-top:1px solid var(--border);margin-top:6px;">
+            <span style="color:var(--muted)">🏫 Institution:</span>
+            <span id="displayInstName" style="font-weight:700;color:var(--cyan-l)">—</span>
+          </div>
         </div>
-        <div class="form-row">
-          <label class="input-label">Roll Number / Student ID</label>
-          <input type="text" id="studentRoll" class="text-input" placeholder="e.g. CS2024001"/>
-        </div>
-        <div class="form-row">
+
+        <div class="form-row" style="display:none">
           <label class="input-label">Select Paper Set</label>
           <div class="set-selector">
             <button class="set-sel-btn active" data-set="0" onclick="pickSet(0)">Set A</button>

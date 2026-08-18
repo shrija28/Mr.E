@@ -179,6 +179,10 @@ class SubscriptionAccessControl:
                 reason="User not found",
             )
         
+        is_institution = (getattr(user, "student_subtype", "") == "institution_linked") or (getattr(user, "institution_id", None) is not None)
+        if is_institution:
+            return AccessCheckResult(access=AccessLevel.GRANTED, reason=None)
+
         # Get active subscription
         subscription = (
             self.db.query(Subscription)
@@ -196,26 +200,17 @@ class SubscriptionAccessControl:
                 upgrade_url="/api/subscription/select",
             )
         
-        # Free Trial: basic analytics only
-        if subscription.status == "trial":
-            return AccessCheckResult(
-                access=AccessLevel.UPGRADE_REQUIRED,
-                reason="Full analytics require Pro subscription. Upgrade to access topic breakdowns, AI recommendations, and performance trends.",
-                upgrade_url="/api/subscription/upgrade",
-            )
-        
-        # Pro subscription: full analytics
         plan = (
             self.db.query(SubscriptionPlan)
             .filter(SubscriptionPlan.id == subscription.plan_id)
             .first()
         )
+
+        if plan and plan.name.lower() != "free":
+            return AccessCheckResult(access=AccessLevel.GRANTED, reason=None)
         
-        if plan and plan.plan_type == "individual" and subscription.status in ["active", "grace_period"]:
-            return AccessCheckResult(
-                access=AccessLevel.GRANTED,
-                reason=None,
-            )
+        if subscription.status in ["active", "trial", "grace_period"]:
+            return AccessCheckResult(access=AccessLevel.GRANTED, reason=None)
         
         # Default: basic analytics only
         return AccessCheckResult(
@@ -379,16 +374,13 @@ class SubscriptionAccessControl:
             # Pro subscription: return full analytics
             return analytics_data
         
-        # Free Trial: return only basic score display
-        return {
-            "score_pct": analytics_data.get("score_pct"),
-            "pass_flag": analytics_data.get("pass_flag"),
-            "submitted_at": analytics_data.get("submitted_at"),
-            "subject": analytics_data.get("subject"),
-            "upgrade_required": True,
-            "upgrade_url": access_result.upgrade_url,
-            "upgrade_message": access_result.reason,
-        }
+        # Free Trial: return analytics data with is_premium_subscriber = False
+        res = dict(analytics_data)
+        res["is_premium_subscriber"] = False
+        res["upgrade_required"] = True
+        res["upgrade_url"] = access_result.upgrade_url
+        res["upgrade_message"] = access_result.reason
+        return res
     
     def filter_leaderboard_data(self, leaderboard_data: dict, user_id: UUID) -> dict:
         """Filter leaderboard data based on subscription tier.

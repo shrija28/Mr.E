@@ -253,20 +253,69 @@ function escapeHtmlExam(str) {
     }
     document.getElementById('infoQCount').textContent = ES.questions.length;
 
+    // Show the entry overlay for student to confirm start
+    document.getElementById('entryOverlay').style.display = 'flex';
+
+    // Auto-populate logged-in candidate profile & institution details
+    await loadCandidateProfile();
+
+    // REQ-5.7 / 5.8 / 5.9 — populate the remaining-attempts indicator now that
+    // the exam metadata is loaded (subject, set) and the entry form is visible.
+    updateRemainingAttemptsDisplay();
   } catch (e) {
     console.error('Failed to load exam:', e);
     showToast('⚠️ Network error loading exam. Please try again.');
     setTimeout(() => { window.location.href = dashboardUrl(); }, 2000);
     return;
   }
-
-  // Show the entry overlay for student to confirm start
-  document.getElementById('entryOverlay').style.display = 'flex';
-
-  // REQ-5.7 / 5.8 / 5.9 — populate the remaining-attempts indicator now that
-  // the exam metadata is loaded (subject, set) and the entry form is visible.
-  updateRemainingAttemptsDisplay();
 })();
+
+// ── Candidate Profile Auto-population ───────────────────────────────────────
+async function loadCandidateProfile() {
+  try {
+    let user = null;
+    if (typeof Auth !== 'undefined' && Auth.currentRole) {
+      user = await Auth.currentRole();
+    }
+    
+    if (user) {
+      const name = user.display_name || user.name || user.sub || 'Student';
+      const roll = user.kcet_student_id || user.sub || 'KCET0001';
+
+      const nameInput = document.getElementById('studentName');
+      const rollInput = document.getElementById('studentRoll');
+      if (nameInput) nameInput.value = name;
+      if (rollInput) rollInput.value = roll;
+
+      const dispName = document.getElementById('displayCandidateName');
+      const dispRoll = document.getElementById('displayCandidateRoll');
+      if (dispName) dispName.textContent = name;
+      if (dispRoll) dispRoll.textContent = roll;
+
+      // Check institution info
+      let instName = user.institution_name;
+      if (!instName && user.student_subtype === 'institution_linked') {
+        try {
+          const res = await fetch('/api/institution/student/me', { credentials: 'include' });
+          if (res.ok) {
+            const instData = await res.json();
+            instName = instData.institution_name;
+          }
+        } catch (e) {}
+      }
+
+      if (instName) {
+        ES.institutionName = instName;
+        const instRow = document.getElementById('instNameRow');
+        const instDisp = document.getElementById('displayInstName');
+        if (instDisp) instDisp.textContent = instName;
+        if (instRow) instRow.style.display = 'flex';
+      }
+    }
+  } catch (e) {
+    console.warn('loadCandidateProfile failed:', e);
+  }
+}
 
 // ── Render previous result view (REQ-9.7) ────────────────────────────────────
 function renderPreviousResult(submission) {
@@ -469,7 +518,8 @@ async function updateRemainingAttemptsDisplay() {
     if (typeof data.monthly_tests_remaining === 'number') {
       bits.push('Monthly: ' + data.monthly_tests_remaining + ' remaining');
     }
-    label = bits.length ? '🏫 ' + bits.join(', ') : '🏫 Institution access';
+    const instName = data.institution_name || (typeof ES !== 'undefined' && ES.institutionName) || 'Institution';
+    label = bits.length ? '🏫 ' + instName + ' (' + bits.join(', ') + ')' : '🏫 ' + instName + ' Access';
   } else if (planType === 'trial' || data.status === 'trial') {
     // REQ-5.7 — Free Trial shows X of 5 remaining
     if (typeof data.remaining_attempts === 'number'
@@ -654,10 +704,15 @@ if (typeof document !== 'undefined') {
 }
 
 window.beginExam = async () => {
-  const name = document.getElementById('studentName').value.trim();
-  const roll = document.getElementById('studentRoll').value.trim();
-  if (!name) { showToast('⚠️ Please enter your name'); return; }
-  if (!roll) { showToast('⚠️ Please enter your roll number'); return; }
+  let name = document.getElementById('studentName')?.value?.trim();
+  let roll = document.getElementById('studentRoll')?.value?.trim();
+
+  if (!name || !roll) {
+    await loadCandidateProfile();
+    name = document.getElementById('studentName')?.value?.trim() || 'Student';
+    roll = document.getElementById('studentRoll')?.value?.trim() || 'KCET0001';
+  }
+
   if (!ES.questions || ES.questions.length === 0) {
     showToast('⚠️ No exam loaded. Please try again.');
     setTimeout(() => { window.location.href = dashboardUrl(); }, 2000);
@@ -838,6 +893,14 @@ function updateQGrid() {
 
 // ── Question Rendering ───────────────────────────────────────────────────────
 function renderQ(idx) {
+  if (!ES.qTimes) ES.qTimes = {};
+  if (ES.qStartTime && ES.lastQIdx !== undefined) {
+    const elapsed = Math.max(1, Math.round((Date.now() - ES.qStartTime) / 1000));
+    ES.qTimes[ES.lastQIdx] = (ES.qTimes[ES.lastQIdx] || 0) + elapsed;
+  }
+  ES.qStartTime = Date.now();
+  ES.lastQIdx = idx;
+
   ES.current = idx;
   const q = ES.questions[idx];
   const total = ES.questions.length;
@@ -1251,26 +1314,23 @@ SubmissionQueue.init();
 window.submitPaper = async () => {
   clearInterval(ES.timerRef);
   document.getElementById('submitOverlay').style.display = 'none';
-  document.getElementById('analyzingOverlay').style.display = 'flex';
+  const analyzingOverlay = document.getElementById('analyzingOverlay');
+  if (analyzingOverlay) analyzingOverlay.style.display = 'flex';
   
   // Stop the camera and microphone to release resources
   if (ES.proctorStream) {
-    ES.proctorStream.getTracks().forEach(track => track.stop());
+    try {
+      ES.proctorStream.getTracks().forEach(track => track.stop());
+    } catch (e) {
+      console.warn('Error stopping proctor tracks:', e);
+    }
     ES.proctorStream = null;
   }
 
-  const analyzeSteps = [
-    'Processing answers...',
-    'Scoring your responses...',
-    'Computing topic breakdown...',
-    'Generating performance insights...',
-    'Finalizing submission...'
-  ];
-  for (let i = 0; i < analyzeSteps.length; i++) {
-    await delay(400);
-    document.getElementById('analyzeBarFill').style.width = ((i + 1) / analyzeSteps.length * 100) + '%';
-    document.getElementById('analyzeLabel').textContent = analyzeSteps[i];
-  }
+  const analyzeBarFill = document.getElementById('analyzeBarFill');
+  const analyzeLabel = document.getElementById('analyzeLabel');
+  if (analyzeBarFill) analyzeBarFill.style.width = '40%';
+  if (analyzeLabel) analyzeLabel.textContent = 'Scoring your responses...';
 
   // Build the answers map with string keys matching question indices
   const answersMap = {};
@@ -1279,16 +1339,26 @@ window.submitPaper = async () => {
     answersMap[String(key)] = String(value);
   }
 
-  const timeTakenSec = Math.floor((Date.now() - ES.startTime) / 1000);
+  if (!ES.qTimes) ES.qTimes = {};
+  if (ES.qStartTime && ES.lastQIdx !== undefined) {
+    const elapsed = Math.max(1, Math.round((Date.now() - ES.qStartTime) / 1000));
+    ES.qTimes[ES.lastQIdx] = (ES.qTimes[ES.lastQIdx] || 0) + elapsed;
+  }
+
+  const timeTakenSec = ES.elapsed || (ES.startTime ? Math.max(1, Math.floor((Date.now() - ES.startTime) / 1000)) : 0);
 
   const payload = {
     exam_set_id: ES.examSetId,
     answers: answersMap,
     time_taken_sec: timeTakenSec,
-    idempotency_key: ES.idempotencyKey
+    idempotency_key: ES.idempotencyKey,
+    question_times: ES.qTimes
   };
 
   try {
+    if (analyzeBarFill) analyzeBarFill.style.width = '70%';
+    if (analyzeLabel) analyzeLabel.textContent = 'Finalizing submission...';
+
     const res = await fetch('/api/student/submit', {
       method: 'POST',
       credentials: 'include',
@@ -1298,7 +1368,7 @@ window.submitPaper = async () => {
 
     if (res.status === 401) {
       showToast('⚠️ Session expired. Please log in again.');
-      setTimeout(() => { window.location.href = '/login'; }, 2000);
+      setTimeout(() => { window.location.href = '/login'; }, 1500);
       return;
     }
 
@@ -1312,12 +1382,16 @@ window.submitPaper = async () => {
       throw new Error(errData.message || `Client error: ${res.status}`);
     }
 
-    // Success — redirect to the correct dashboard (REQ-9.5)
-    window.location.href = dashboardUrl();
+    if (analyzeBarFill) analyzeBarFill.style.width = '100%';
+    if (analyzeLabel) analyzeLabel.textContent = 'Submission complete!';
+
+    // Redirect to the correct dashboard (REQ-9.5)
+    const targetUrl = await getDashboardUrl();
+    window.location.href = targetUrl;
 
   } catch (e) {
     console.error('Submission failed:', e);
-    document.getElementById('analyzingOverlay').style.display = 'none';
+    if (analyzingOverlay) analyzingOverlay.style.display = 'none';
 
     if (e && e.serverError) {
       // 5xx error — queue the submission for retry (REQ-14.6)
@@ -1337,3 +1411,4 @@ window.submitPaper = async () => {
     startCountdown();
   }
 };
+

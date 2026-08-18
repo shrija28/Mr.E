@@ -281,11 +281,8 @@ def seed_subscription_plans(session: Optional[Session] = None) -> int:
                 feature_flags={
                     "student_limit": 100,
                     "institution_uploads": True,
-                    "institution_question_bank": True,
-                    "chapter_wise_exams": True,
                     "analytics": True,
-                    "kcet_question_bank_access": "limited",
-                    "admin_kcet_bank_access": "limited",
+                    "suggestions_and_guidance": True,
                 },
                 is_active=True,
             ),

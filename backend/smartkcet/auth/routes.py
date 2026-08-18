@@ -769,6 +769,11 @@ def me(
             # Always use DB values — these are the ground truth
             result["student_subtype"] = user.student_subtype
             result["institution_id"] = str(user.institution_id) if user.institution_id else None
+            if user.institution_id:
+                from ..db.subscription_models import Institution
+                inst = session.get(Institution, user.institution_id)
+                if inst:
+                    result["institution_name"] = inst.name
 
     # For institution_admin, include display name
     if role == "institution_admin":

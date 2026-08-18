@@ -150,6 +150,7 @@ class SubmitRequest(BaseModel):
     answers: Optional[dict[str, Any]] = None
     time_taken_sec: Optional[int] = None
     idempotency_key: Optional[str] = None
+    question_times: Optional[dict[str, Any]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -270,11 +271,14 @@ def submit(
         )
 
     score = score_submission(questions, payload.answers)
+    answers_data = dict(payload.answers) if payload.answers else {}
+    if payload.question_times:
+        answers_data["__question_times__"] = payload.question_times
 
     submission = Submission(
         user_id=user.id,
         exam_set_id=exam_set_id,
-        answers=payload.answers,
+        answers=answers_data,
         score_pct=float(score["percentage"]),
         topic_breakdown=score["topic_breakdown"],
         time_taken_sec=int(payload.time_taken_sec),

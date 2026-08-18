@@ -43,11 +43,11 @@ button { font-family: inherit; }
 }
 .brand-icon svg { width: 100%; height: 100%; color: white; }
 .brand-icon.small { width: 28px; height: 28px; border-radius: 7px; padding: 6px; }
-.brand-name { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.3px; }
+.brand-name { color: #ffffff !important; font-size: 1.15rem; font-weight: 800; letter-spacing: -0.3px; }
 .brand-ai {
-  background: linear-gradient(135deg, var(--purple-l), var(--cyan-l));
+  background: linear-gradient(135deg, #c084fc, #38bdf8);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  font-size: 0.75rem; font-weight: 900; letter-spacing: 2px; margin-left: 2px;
+  font-size: 1.15rem; font-weight: 900; letter-spacing: 0.5px; margin-left: 1px;
 }
 .nav-center, .nav-links { display: flex; gap: 4px; }
 .nav-pill {

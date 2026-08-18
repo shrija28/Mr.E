@@ -8,7 +8,7 @@
    Visual theme:
    - Accent color: #8b5cf6 (purple)
    - "Institution Portal" badge in the nav brand
-   - Consistent layout with the rest of SmartKCET Prep
+   - Consistent layout with the rest of Mr.E
 
    Requirements: 3.2, 3.3, 3.4, 3.8
 
@@ -21,7 +21,7 @@
            <svg ...></svg>
          </div>
          <span class="brand-name">
-           SmartKCET<span class="brand-ai institution-brand-ai">Institution</span>
+           Mr.E<span class="brand-ai institution-brand-ai">Institution</span>
          </span>
          <span class="nav-institution-badge">Institution Portal</span>
        </div>
@@ -96,13 +96,17 @@
   box-shadow: 0 0 20px var(--inst-accent-glow);
 }
 
-/* Brand suffix — change "Prep" / "Admin" gradient to all-purple */
+.institution-nav .brand-name {
+  color: #ffffff !important;
+}
+
+/* Brand suffix — bright vibrant gradient */
 .institution-nav .brand-ai,
 .institution-brand-ai {
   background: linear-gradient(
     135deg,
-    var(--inst-accent-light),
-    var(--inst-accent)
+    #c084fc,
+    #38bdf8
   );
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;

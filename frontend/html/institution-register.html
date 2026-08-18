@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SmartKCET Prep — Institution Registration</title>
+  <title>Mr.E — Institution Registration</title>
   <link rel="stylesheet" href="../css/style.css"/>
 </head>
 <body>
@@ -15,7 +15,7 @@
       <div class="brand-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       </div>
-      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+      <span class="brand-name">Mr.<span class="brand-ai">E</span></span>
     </div>
     <div class="nav-links">
       <a href="/login" class="nav-pill">Login</a>
@@ -32,27 +32,31 @@
       <div id="registerError" style="display:none;background:rgba(220,38,38,0.1);border:1px solid var(--red);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:0.85rem;color:var(--red-l);"></div>
       <div id="registerSuccess" style="display:none;background:rgba(5,150,105,0.1);border:1px solid var(--green);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:0.85rem;color:var(--green-l);"></div>
 
-      <form id="registerForm" autocomplete="on">
+      <form id="registerForm" autocomplete="off">
+        <!-- Hidden anti-autofill dummy trap -->
+        <input type="text" name="fake_email_autofill" style="display:none" tabindex="-1" aria-hidden="true"/>
+        <input type="password" name="fake_pwd_autofill" style="display:none" tabindex="-1" aria-hidden="true"/>
+
         <div class="input-group" style="margin-bottom:16px;">
           <label class="input-label" for="institutionName">Institution Name</label>
-          <input class="text-input" type="text" id="institutionName" name="institutionName" placeholder="e.g., ABC College of Engineering" required minlength="1" maxlength="100" autocomplete="organization"/>
+          <input class="text-input" type="text" id="institutionName" name="institutionName" placeholder="e.g., ABC College of Engineering" required minlength="1" maxlength="100" autocomplete="off"/>
         </div>
         <div class="input-group" style="margin-bottom:16px;">
           <label class="input-label" for="email">Institution Email</label>
-          <input class="text-input" type="email" id="email" name="email" placeholder="admin@institution.edu" required autocomplete="email"/>
+          <input class="text-input" type="email" id="email" name="inst_reg_email" placeholder="admin@institution.edu" required autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
         </div>
         <div class="input-group" style="margin-bottom:16px;">
           <label class="input-label" for="phone">Contact Phone</label>
-          <input class="text-input" type="tel" id="phone" name="phone" placeholder="+91 9876543210" required pattern="[0-9]{10,15}" autocomplete="tel"/>
+          <input class="text-input" type="tel" id="phone" name="phone" placeholder="+91 9876543210" required pattern="[0-9]{10,15}" autocomplete="off"/>
           <small style="color:var(--muted);font-size:0.75rem;margin-top:4px;display:block;">10-15 digits including country code</small>
         </div>
         <div class="input-group" style="margin-bottom:16px;">
           <label class="input-label" for="password">Password</label>
-          <input class="text-input" type="password" id="password" name="password" placeholder="Min 8 chars, at least 1 digit" required minlength="8" autocomplete="new-password"/>
+          <input class="text-input" type="password" id="password" name="inst_reg_pwd" placeholder="Min 8 chars, at least 1 digit" required minlength="8" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
         </div>
         <div class="input-group" style="margin-bottom:24px;">
           <label class="input-label" for="confirmPassword">Confirm Password</label>
-          <input class="text-input" type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter password" required autocomplete="new-password"/>
+          <input class="text-input" type="password" id="confirmPassword" name="inst_reg_confirm_pwd" placeholder="Re-enter password" required autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
         </div>
 
         <button type="submit" class="btn-primary" style="width:100%;justify-content:center;" id="registerBtn">

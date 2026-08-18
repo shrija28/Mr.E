@@ -1,4 +1,4 @@
-// SmartKCET Prep — Reusable Focus Trap (Task 18.2)
+// Mr.E — Reusable Focus Trap (Task 18.2)
 // ─────────────────────────────────────────────────────────────────────────────
 // Extracted from frontend/js/subscription-modal.js so every modal in the app
 // can share the same accessible keyboard-handling behaviour.

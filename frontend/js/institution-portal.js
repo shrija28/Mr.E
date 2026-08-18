@@ -1,4 +1,4 @@
-// SmartKCET Prep — Institution Portal API Client Module
+// Mr.E — Institution Portal API Client Module
 // Handles institution admin operations: dashboard, student management,
 // invitation generation/revocation, and institution subscription details.
 // Also exposes invitation lookup and acceptance for student-side flows.

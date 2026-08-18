@@ -1,4 +1,4 @@
-// SmartKCET Prep — Invitation Acceptance Module
+// Mr.E — Invitation Acceptance Module
 // Handles the student-facing invitation acceptance flow on
 // /invitation-accept?code={invitation_code}.
 //

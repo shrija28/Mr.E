@@ -280,7 +280,7 @@ async function loadCandidateProfile() {
     
     if (user) {
       const name = user.display_name || user.name || user.sub || 'Student';
-      const roll = user.kcet_student_id || user.sub || 'KCET0001';
+      const roll = user.kcet_student_id || user.sub || 'MrE0001';
 
       const nameInput = document.getElementById('studentName');
       const rollInput = document.getElementById('studentRoll');

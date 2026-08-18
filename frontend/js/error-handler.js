@@ -1,4 +1,4 @@
-// SmartKCET Prep — Error Handler Module
+// Mr.E — Error Handler Module
 // Provides centralized error handling, user-facing toast notifications,
 // a global handler for unhandled errors / promise rejections, and a
 // universal session-expiry interceptor that catches HTTP 401 responses

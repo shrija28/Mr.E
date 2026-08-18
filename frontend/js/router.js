@@ -1,6 +1,6 @@
-// SmartKCET Prep — Client-side Router Module
+// Mr.E — Client-side Router Module
 // Handles role-based access control, link interception, and browser
-// back/forward navigation for the SmartKCET frontend. Because the
+// back/forward navigation for the Mr.E frontend. Because the
 // FastAPI backend serves the HTML files directly (see
 // `backend/smartkcet/routes/pages.py`), this router primarily owns the
 // client-side concerns:
@@ -43,7 +43,7 @@ var Router = (function () {
     '/': {
       htmlFile: '/html/landing.html',
       requiresAuth: false,
-      title: 'SmartKCET Prep',
+      title: 'Mr.E',
     },
     '/login': {
       htmlFile: '/html/login.html',
@@ -374,7 +374,7 @@ var Router = (function () {
    */
   function _applyTitle(route) {
     if (route && route.title) {
-      document.title = route.title + ' — SmartKCET Prep';
+      document.title = route.title + ' — Mr.E';
     }
   }
 

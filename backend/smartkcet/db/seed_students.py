@@ -45,7 +45,7 @@ def hash_password(password: str) -> str:
 
 
 def get_next_kcet_id(session: Session, counter: int = None) -> str:
-    """Generate the next KCET student ID (KCET001, KCET002, etc.).
+    """Generate the next student ID (MrE0001, MrE0002, etc.).
     
     Args:
         session: Database session
@@ -54,21 +54,21 @@ def get_next_kcet_id(session: Session, counter: int = None) -> str:
     from sqlalchemy import func
 
     if counter is not None:
-        return f"KCET{counter:03d}"
+        return f"MrE{counter:04d}"
 
     # Get max ID from database
     max_result = session.query(func.max(User.kcet_student_id)).filter(
-        User.kcet_student_id.like("KCET%")
+        (User.kcet_student_id.like("MrE%")) | (User.kcet_student_id.like("ID%")) | (User.kcet_student_id.like("KCET%"))
     ).scalar()
 
     if max_result is None:
-        return "KCET001"
+        return "MrE0001"
 
     try:
-        max_num = int(max_result.replace("KCET", ""))
-        return f"KCET{max_num + 1:03d}"
+        max_num = int(max_result.replace("MrE", "").replace("ID", "").replace("KCET", ""))
+        return f"MrE{max_num + 1:04d}"
     except (ValueError, AttributeError):
-        return "KCET001"
+        return "MrE0001"
 
 
 def seed_test_institutions(session: Session, count: int = 3) -> list[Institution]:

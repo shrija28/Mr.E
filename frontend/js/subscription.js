@@ -1,4 +1,4 @@
-// SmartKCET Prep — Subscription API Client Module
+// Mr.E — Subscription API Client Module
 // Handles subscription management, status retrieval, and exam access checks.
 // All calls use credentials: 'include' to send httpOnly session cookies.
 // Implements error handling for HTTP status codes: 400, 401, 403, 404, 409, 500, 503.

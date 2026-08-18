@@ -1,4 +1,4 @@
-// SmartKCET Prep — Subscription Page JavaScript Logic
+// Mr.E — Subscription Page JavaScript Logic
 // Handles the dedicated /subscription management page:
 //   * Loads current subscription via GET /api/subscription/status
 //   * Renders plan name, status, dates, and remaining attempts
@@ -359,7 +359,7 @@
         + '<div class="sub-cta-inner">'
         + '<span class="cta-emoji">🏆</span>'
         + '<p class="cta-title">Premium member</p>'
-        + '<p class="cta-body">You have full access to all SmartKCET Prep features. Keep practising!</p>'
+        + '<p class="cta-body">You have full access to all Mr.E features. Keep practising!</p>'
         + '<a href="/exam" class="cta-btn cta-member">Take an Exam →</a>'
         + '</div></div>';
     }

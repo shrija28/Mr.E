@@ -1,4 +1,4 @@
-// SmartKCET Prep — Plan Comparison Modal (Task 7.2)
+// Mr.E — Plan Comparison Modal (Task 7.2)
 // -----------------------------------------------------------------------------
 // Renders a "Compare Plans" modal that shows a detailed Free Trial vs Pro
 // feature comparison table side-by-side. The modal is invoked from the

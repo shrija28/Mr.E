@@ -1,4 +1,4 @@
-// SmartKCET Prep — Upgrade Prompt Component (Task 7.1)
+// Mr.E — Upgrade Prompt Component (Task 7.1)
 // -----------------------------------------------------------------------------
 // Renders contextual upgrade prompts that nudge Free Trial / expired students
 // to upgrade to a Pro subscription. Handles two visual flavours:

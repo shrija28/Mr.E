@@ -395,8 +395,8 @@ def login(
             },
         )
 
-    # Unregistered email or non-student user
-    if user is None or user.role != "student":
+    # Unregistered email, non-student user, or platform admin account
+    if user is None or user.role != "student" or normalised_email in ["admin@smartkcet.com", "admin@gmail.com"]:
         return _generic_auth_failure()
 
     # Locked account → 423, with remaining wait time.
@@ -612,8 +612,8 @@ async def institution_admin_login(
             },
         )
 
-    # Unregistered email → generic failure
-    if user is None:
+    # Unregistered email or non-institution_admin user or platform admin account → generic failure
+    if user is None or normalised_email in ["admin@smartkcet.com", "admin@gmail.com"]:
         return _generic_auth_failure()
 
     # Locked account → 423
@@ -758,14 +758,19 @@ def me(
         result["subscription_status"] = payload["subscription_status"]
 
     # For students, always re-read from DB to get current subtype/institution
-    # (the token may be stale if linking happened after token was issued)
     if role == "student":
+        target_sub = sub.replace("KCET", "MrE").replace("ID", "MrE") if sub else sub
         user = session.execute(
-            select(User).where(User.kcet_student_id == sub)
-        ).scalar_one_or_none()
+            select(User).where(
+                (User.kcet_student_id == sub) | (User.kcet_student_id == target_sub)
+            )
+        ).scalars().first()
         if user:
             result["display_name"] = user.display_name
-            result["kcet_student_id"] = user.kcet_student_id
+            sid = user.kcet_student_id or target_sub
+            if sid and (sid.startswith("KCET") or sid.startswith("ID")):
+                sid = sid.replace("KCET", "MrE").replace("ID", "MrE")
+            result["kcet_student_id"] = sid
             # Always use DB values — these are the ground truth
             result["student_subtype"] = user.student_subtype
             result["institution_id"] = str(user.institution_id) if user.institution_id else None

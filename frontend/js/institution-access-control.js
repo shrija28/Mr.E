@@ -1,4 +1,4 @@
-// SmartKCET Prep — Institution Portal Access Control
+// Mr.E — Institution Portal Access Control
 // Blocks access to feature pages when institution has no active subscription.
 // Protected pages: /institution/upload, /institution/questions, /institution/exams, 
 // /institution/students, /institution/analytics

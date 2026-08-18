@@ -1,4 +1,4 @@
-// SmartKCET Prep — Subscription Banner Component
+// Mr.E — Subscription Banner Component
 // Persistent status banner shown on every authenticated student page.
 // Renders status, remaining attempts, renewal info, and quick actions.
 // Pairs with `subscription.css` (banner styles) and `subscription.js`

@@ -1,9 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const SmartKCETLoginFlow = require('./login-flow');
+const Mr.ELoginFlow = require('./login-flow');
 
 test('redirects normal students immediately without showing subscription UI', () => {
-  const result = SmartKCETLoginFlow.resolveStudentLoginDecision({
+  const result = Mr.ELoginFlow.resolveStudentLoginDecision({
     ok: true,
     data: {
       role: 'student',
@@ -17,7 +17,7 @@ test('redirects normal students immediately without showing subscription UI', ()
 });
 
 test('keeps direct subscribers on the subscription path when selection is required', () => {
-  const result = SmartKCETLoginFlow.resolveStudentLoginDecision({
+  const result = Mr.ELoginFlow.resolveStudentLoginDecision({
     ok: true,
     data: {
       role: 'student',
@@ -31,7 +31,7 @@ test('keeps direct subscribers on the subscription path when selection is requir
 });
 
 test('falls back to dashboard if the modal cannot be shown', () => {
-  const result = SmartKCETLoginFlow.buildStudentLoginFallback({
+  const result = Mr.ELoginFlow.buildStudentLoginFallback({
     redirectUrl: '/dashboard',
     message: 'Subscription options are unavailable right now. Redirecting you to your dashboard.'
   });

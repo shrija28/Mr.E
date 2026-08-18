@@ -1010,7 +1010,7 @@ window.exportReport = () => {
   });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-  a.download = `SmartKCET_Report_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.download = `Mr.E_Report_${new Date().toISOString().slice(0, 10)}.csv`;
   a.click();
   showToast('📊 Report exported as CSV', 'success');
 };

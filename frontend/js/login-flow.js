@@ -4,7 +4,7 @@
     module.exports = api;
   }
   if (root) {
-    root.SmartKCETLoginFlow = api;
+    root.Mr.ELoginFlow = api;
   }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';

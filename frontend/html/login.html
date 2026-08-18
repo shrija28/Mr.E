@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SmartKCET Prep — Login</title>
+  <title>Mr.E — Login</title>
   <link rel="stylesheet" href="../css/style.css"/>
   <style>
     .role-tabs {
@@ -46,7 +46,7 @@
       <div class="brand-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
       </div>
-      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+      <span class="brand-name">Mr.<span class="brand-ai">E</span></span>
     </div>
     <div class="nav-links">
       <a href="/login" class="nav-pill active">Login</a>
@@ -69,14 +69,18 @@
 
       <div id="loginError" style="display:none;background:rgba(220,38,38,0.1);border:1px solid var(--red);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:0.85rem;color:var(--red-l);"></div>
 
-      <form id="loginForm" autocomplete="on">
+      <form id="loginForm" autocomplete="off">
+        <!-- Hidden anti-autofill dummy trap -->
+        <input type="text" name="fake_email_autofill" style="display:none" tabindex="-1" aria-hidden="true"/>
+        <input type="password" name="fake_pwd_autofill" style="display:none" tabindex="-1" aria-hidden="true"/>
+
         <div class="input-group" style="margin-bottom:16px;">
           <label class="input-label" for="email">Email</label>
-          <input class="text-input" type="email" id="email" name="email" placeholder="you@example.com" required autocomplete="email"/>
+          <input class="text-input" type="email" id="email" name="user_email_login" placeholder="you@example.com" required autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
         </div>
         <div class="input-group" style="margin-bottom:24px;">
           <label class="input-label" for="password">Password</label>
-          <input class="text-input" type="password" id="password" name="password" placeholder="Your password" required autocomplete="current-password"/>
+          <input class="text-input" type="password" id="password" name="user_pwd_login" placeholder="Your password" required autocomplete="off" readonly onfocus="this.removeAttribute('readonly');"/>
         </div>
         <button type="submit" class="btn-primary" style="width:100%;justify-content:center;" id="loginBtn">
           Sign In
@@ -149,6 +153,23 @@
       }
     });
 
+    // ── Aggressive Anti-Autofill Clearing ────────────────────────────────
+    function clearInputs() {
+      var emailInput = document.getElementById('email');
+      var pwdInput = document.getElementById('password');
+      if (emailInput) { emailInput.value = ''; }
+      if (pwdInput) { pwdInput.value = ''; }
+    }
+    clearInputs();
+    window.addEventListener('DOMContentLoaded', clearInputs);
+    window.addEventListener('load', function() {
+      clearInputs();
+      setTimeout(clearInputs, 50);
+      setTimeout(clearInputs, 200);
+      setTimeout(clearInputs, 500);
+    });
+    window.addEventListener('pageshow', clearInputs);
+
     // ── Role tab switching ──────────────────────────────────────────────
     tabs.forEach(function (tab) {
       tab.addEventListener('click', function () {
@@ -160,6 +181,7 @@
         tab.setAttribute('aria-selected', 'true');
         currentRole = tab.getAttribute('data-role');
         hideError();
+        clearInputs();
       });
     });
 
@@ -217,7 +239,7 @@
      * show the subscription modal instead of redirecting to dashboard.
      */
     function _handleStudentLoginSuccess(result) {
-      var decision = window.SmartKCETLoginFlow.resolveStudentLoginDecision(result, _safeReturnUrl);
+      var decision = window.Mr.ELoginFlow.resolveStudentLoginDecision(result, _safeReturnUrl);
 
       if (decision.mode === 'redirect') {
         console.log('[login] Redirecting student to:', decision.redirectUrl);
@@ -239,7 +261,7 @@
           return;
         }
 
-        var fallback = window.SmartKCETLoginFlow.buildStudentLoginFallback({
+        var fallback = window.Mr.ELoginFlow.buildStudentLoginFallback({
           redirectUrl: decision.redirectUrl,
           message: 'Subscription options are unavailable right now. Redirecting you to your dashboard.'
         });

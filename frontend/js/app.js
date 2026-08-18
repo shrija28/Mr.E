@@ -1,4 +1,4 @@
-// SmartKCET Admin — Core App Logic
+// Mr.E Admin — Core App Logic
 // RAG API Integration Layer + Shared Utilities
 
 // ── Constants ────────────────────────────────────────────────────────────────

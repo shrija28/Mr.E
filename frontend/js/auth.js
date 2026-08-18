@@ -1,4 +1,4 @@
-// SmartKCET Prep — Auth Client Module
+// Mr.E — Auth Client Module
 // Shared authentication helpers for login, register, logout, and role checks.
 // All calls use credentials: 'include' so the httpOnly cookie is sent.
 // Tokens are NEVER read from or written to localStorage (REQ-14.5).

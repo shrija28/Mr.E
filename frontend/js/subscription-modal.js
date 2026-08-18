@@ -1,4 +1,4 @@
-// SmartKCET Prep — Subscription Selection Modal Component (4-Plan Version)
+// Mr.E — Subscription Selection Modal Component (4-Plan Version)
 // Handles plan selection (Free, 7-Day Trial, Pro Monthly, Pro Yearly),
 // Razorpay payment integration, activation API calls, error display,
 // loading states, and keyboard focus trap for accessibility.
@@ -415,7 +415,7 @@ var SubscriptionModal = (function () {
         amount: createData.amount,
         currency: createData.currency || 'INR',
         order_id: createData.order_id,
-        name: 'SmartKCET Prep',
+        name: 'Mr.E',
         description: createData.description || plan.name,
         prefill: createData.prefill || {},
         theme: { color: '#a78bfa' },
@@ -1480,7 +1480,7 @@ var SubscriptionModal = (function () {
         <div class="mock-rzp-header">
           <div class="mock-rzp-merchant-info">
             <div class="mock-rzp-logo">S</div>
-            <div class="mock-rzp-merchant-name">SmartKCET Prep</div>
+            <div class="mock-rzp-merchant-name">Mr.E</div>
           </div>
           <div class="mock-rzp-amount-info">
             <div class="mock-rzp-plan-name">${plan.name}</div>
@@ -1597,7 +1597,7 @@ var SubscriptionModal = (function () {
                 </div>
               </div>
               <div class="mock-rzp-success-title">Payment Successful!</div>
-              <p class="mock-rzp-success-text">Redirecting you back to SmartKCET...</p>
+              <p class="mock-rzp-success-text">Redirecting you back to Mr.E...</p>
             </div>
           </div>
         </div>

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SmartKCET Prep — Institution Plans</title>
+  <title>Mr.E — Institution Plans</title>
   <link rel="stylesheet" href="../css/style.css"/>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script src="/js/subscription-modal.js"></script>
@@ -82,7 +82,7 @@
   <nav class="navbar">
     <div class="nav-brand">
       <div class="brand-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
-      <span class="brand-name">SmartKCET<span class="brand-ai">Prep</span></span>
+      <span class="brand-name">Mr.<span class="brand-ai">E</span></span>
     </div>
     <div class="nav-links">
       <a href="/dashboard" class="nav-pill">Dashboard</a>
@@ -355,7 +355,7 @@
     };
 
     window.contactSales = function() {
-      window.location.href = 'mailto:sales@smartkcet.com?subject=Enterprise%20Plan%20Inquiry';
+      window.location.href = 'mailto:sales@mre.com?subject=Enterprise%20Plan%20Inquiry';
     };
 
     function showStatus(msg, ok) {
@@ -414,7 +414,7 @@
 
         var opts = {
           key: d.key_id || keyId, amount: d.amount, currency: d.currency || 'INR',
-          order_id: d.order_id, name: 'SmartKCET Prep', description: d.description || selectedPlan.name,
+          order_id: d.order_id, name: 'Mr.E', description: d.description || selectedPlan.name,
           prefill: d.prefill || {}, theme: { color: '#a78bfa' },
           handler: async function(res) {
             btn.textContent = 'Verifying…';

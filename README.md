@@ -1,8 +1,9 @@
-# 🚀 SmartKCET Prep / ExamForge AI
+# 🚀 Mr.E — SmartKCET Prep
 
-A specialized Karnataka Common Entrance Test (**KCET**) preparation platform powered by **Retrieval-Augmented Generation (RAG)**, **Groq LLMs**, **FAISS Vector Search**, **Flask**, and **React 18+**. SmartKCET filters question banks according to standard KCET patterns and extracts official **60-question paper sets** with instant evaluation, institutional management, and student subscription controls.
+A specialized Karnataka Common Entrance Test (**KCET**) preparation and exam platform designed for individuals involved in the KCET preparation and admission ecosystem including students, coaching institutions, and platform administrators. Powered by **Retrieval-Augmented Generation (RAG)**, **Groq LLMs**, **FAISS Vector Search**, **Flask**, and **React 18+**. **Mr.E** filters question banks according to standard KCET patterns and extracts official **60-question paper sets** with anti-cheating protection, instant evaluation, institutional management, and student subscription controls.
 
 ---
+
 
 ## 🌟 Key Features
 

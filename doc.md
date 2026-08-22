@@ -54,7 +54,7 @@ graph TD
 | :--- | :--- | :--- |
 | **KCET Student Aspirant** | Pre-University (PUC) student preparing specifically for KCET. | Takes 60-question proctored KCET timed subject papers, reviews step-by-step solutions, tracks KCET rank. |
 | **Coaching Institute Admin** | Instructor or Director at a KCET coaching institute. | Generates custom question papers based on specific requirements (subject, topics, difficulty) and views student/class performance analytics. |
-| **Platform Administrator** | Platform owner managing system health, subscription plans, and platform-wide settings. | Configures anti-cheating thresholds, manages pricing plans, triggers core textbook indexing. |
+| **Platform Administrator** | Platform owner managing system health, platform pricing, and direct independent subscribers. | Generates custom question papers and views performance analytics for independent students (not enrolled through any institution); manages platform-wide settings and anti-cheating thresholds. |
 
 
 ---

@@ -1,66 +1,141 @@
-# ExamForge AI - RAG Question Paper Generator
+# 🚀 SmartKCET Prep / ExamForge AI
 
-A smart exam paper generation system using Retrieval-Augmented Generation (RAG) to create unique question papers from previous year papers.
+A comprehensive competitive exam preparation platform (KCET, NEET, JEE) powered by **Retrieval-Augmented Generation (RAG)**, **Groq LLMs**, **FAISS Vector Search**, **Flask**, and **React 18+**. SmartKCET enables automated entrance-level question paper generation from textbooks, instant exam evaluation, institutional management, and tiered student subscriptions.
 
-## Project Structure
+---
 
+## 🌟 Key Features
+
+* 🎯 **AI & RAG Question Generation**: Generates standard competitive entrance exam MCQs directly from textbook PDFs using **Groq LLM (`llama-3.3-70b-versatile`)** combined with **FAISS vector search** for context retrieval.
+* 📄 **Vision OCR & Multimodal Parsing**: Handles complex diagrams, printed textbook pages, and past question papers using **PyMuPDF** & **Groq Vision OCR (`llama-3.2-90b-vision-preview`)**.
+* 🛡️ **Role-Based Access Control (RBAC)**: Role-specific portals (Admin, Student, Institution Manager) secured with **Flask-JWT-Extended** and **Bcrypt hashing**.
+* 💳 **Subscription & Access Control**: Tiered plans (Free Trial, Individual, Institutional) with access control gates and **Razorpay** payment gateway integration.
+* 🏫 **Institution & Student Management**: Supports bulk student creation, institution codes, trial tracking, and student association.
+* 📊 **Performance Analytics & Leaderboards**: Real-time evaluation, subject-wise accuracy tracking, attempt history, and percentile rank leaderboards.
+
+---
+
+## 🛠️ Technology Stack
+
+| Layer | Technologies Used |
+| :--- | :--- |
+| **Backend Core** | Python 3.10+, Flask 3.x, Flask Blueprints, Flask-CORS, Gunicorn/Waitress |
+| **Database & ORM** | SQLite (`smartkcet.db`), PostgreSQL support, Flask-SQLAlchemy, Flask-Migrate (Alembic) |
+
+| **AI / RAG / ML** | Groq API (`groq`), FAISS (`faiss-cpu`), Sentence-Transformers, PyTorch, PyMuPDF |
+| **Vision & Image** | OpenCV (`cv2`), Pillow (`PIL`), PyMuPDF (`fitz`) |
+| **Security** | PyJWT (JWT Tokens), Bcrypt (Password Hashing) |
+| **Payments** | Razorpay SDK |
+| **Frontend** | React 18+, Vite, TypeScript/JavaScript, React Router v6, Tailwind CSS, Recharts |
+
+---
+
+## 📁 Directory Structure
+
+```text
+SmartKCET-Prep/
+├── backend/
+│   ├── app.py                      # Application execution entry point
+│   ├── requirements.txt            # Python dependencies
+│   ├── smartkcet/
+│   │   ├── main.py                 # FastAPI application factory & router mounts
+│   │   ├── config.py               # Startup environment & config validator
+│   │   ├── admin/                  # Admin portal APIs (dashboard, students, institutions, exams)
+│   │   ├── auth/                   # Authentication (login, register, JWT, password hashing)
+│   │   ├── student/                # Student portal APIs (dashboard, exams, attempts, leaderboard)
+│   │   ├── subscription/           # Subscriptions, access control, plans & Razorpay wiring
+│   │   ├── institution/            # Institution student management & content APIs
+│   │   ├── rag/                    # RAG pipeline (parsing.py, groq_client.py, store.py, mcq_extractor.py)
+│   │   └── db/                     # SQLAlchemy models, database session, seed scripts
+│   └── tests/                      # Automated test suite (pytest)
+├── frontend/
+│   ├── html/                       # HTML pages (index, exam, dashboard, admin, institution)
+│   ├── js/                         # Frontend JS logic & REST API clients
+│   └── css/                        # CSS stylesheets
+├── docs/                           # Setup & architectural documentation
+├── QUICK_START.md                  # Quick testing guide
+├── PROJECT_RUNNING.md              # Live status and verification guide
+└── README.md                       # Project documentation
 ```
-project/
-├── backend/                 # FastAPI backend with Python
-│   ├── app.py             # Main Flask/FastAPI application
-│   ├── examforge_backend.ipynb # Jupyter notebook for development
-│   └── utils/             # Utility modules
-├── frontend/              # Web interface
-│   ├── html/             # HTML pages
-│   │   ├── index.html    # Main generator page
-│   │   ├── exam.html     # Exam interface
-│   │   └── dashboard.html # Dashboard view
-│   ├── js/               # JavaScript files
-│   │   ├── app.js        # Main application logic
-│   │   ├── exam.js       # Exam page functionality
-│   │   └── dashboard.js  # Dashboard functionality
-│   └── css/              # Stylesheets
-│       └── style.css     # Main styles
-├── docs/                 # Documentation
-└── README.md             # This file
+
+---
+
+## 🚀 Quick Start Guide
+
+### 1. Prerequisites
+- **Python 3.10+** installed.
+- **Groq API Key** (for AI question generation features).
+
+### 2. Environment Setup
+Set your `GROQ_API_KEY` in your environment or inside `backend/.env`:
+```bash
+# Windows PowerShell
+$env:GROQ_API_KEY="your_groq_api_key_here"
+
+# Linux / macOS
+export GROQ_API_KEY="your_groq_api_key_here"
 ```
 
-## Features
+### 3. Install Dependencies
+```bash
+cd backend
+pip install -r requirements.txt
+```
 
-- **RAG-Powered Generation**: Upload 10 previous year papers, AI extracts patterns
-- **Multiple Question Sets**: Generates 4 unique question sets
-- **Student Performance Analysis**: Analyzes performance metrics
-- **Web-Based Interface**: Modern, responsive UI
+### 4. Run the Backend Server
+```bash
+python app.py
+```
+*The server automatically initializes database schema self-healing, seeds admin credentials, subscription plans, and test institutions on first start.*
 
-## Getting Started
+---
 
-See [docs/SETUP.md](docs/SETUP.md) for complete setup instructions.
+## 🌐 Quick Access URLs
 
-### Quick Start (Windows)
+| Feature | URL |
+| :--- | :--- |
+| **Health Check** | [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health) |
+| **Admin Dashboard** | [http://127.0.0.1:8000/admin/dashboard](http://127.0.0.1:8000/admin/dashboard) |
+| **Interactive API Docs (Swagger)** | [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) |
+| **ReDoc Specification** | [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc) |
 
-1. **Set GROQ API Key** (Windows Environment Variable):
-   - Press `Win + X` → **System** → **Advanced system settings** → **Environment Variables**
-   - Add: `GROQ_API_KEY` = your_api_key
-   - Restart terminal
+### Default Admin Credentials
+- **Email:** `admin@smartkcet.com`
+- **Password:** Defined in `backend/.env` or generated during initial seeding
 
-2. **Run Backend**:
-   ```bash
-   cd backend
-   python app.py
-   ```
+---
 
-3. **Open Frontend**:
-   - Open `frontend/html/index.html` in your browser
-   - Or use: `python -m http.server 3000 -d frontend`
+## 🔑 Key API Endpoints
 
-### Frontend
+### 🔐 Auth Routes (`/api/auth`)
+* `POST /api/auth/login` — User authentication & JWT issuance
+* `POST /api/auth/register` — Student account registration
+* `POST /api/auth/refresh` — Refresh access token
 
-The frontend is a static web application. Open `frontend/html/index.html` in a browser or serve it via a web server.
+### ⚙️ Admin Routes (`/api/admin`)
+* `GET /api/admin/platform/students` — Manage registered students
+* `GET /api/admin/platform/institutions` — List & manage institutions
+* `POST /api/admin/exams/generate-textbook` — Trigger RAG-powered MCQ generation from textbook PDFs
 
-## API Endpoints
+### 🎓 Student Routes (`/api/student`)
+* `GET /api/student/dashboard` — Fetch student analytics & recent exam attempts
+* `POST /api/student/exams/{id}/submit` — Submit exam responses for automatic scoring
+* `GET /api/student/leaderboard` — View platform rank leaderboard
 
-- `POST /upload` - Upload papers for processing
-- `POST /generate` - Generate question papers
-- `GET /dashboard` - Get performance metrics
+### 💳 Subscription Routes (`/api/subscription`)
+* `GET /api/subscription/plans` — View active subscription plans
+* `POST /api/subscription/subscribe` — Initiate subscription plan purchase
+* `GET /api/subscription/status` — Check active subscription & trial period status
+
+---
+
+## 🧪 Testing
+
+To run the backend test suite:
+```bash
+cd backend
+pytest
+```
+
 
 

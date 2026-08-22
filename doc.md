@@ -52,9 +52,10 @@ graph TD
 
 | Persona / Role | Description & Needs | Primary Workflows |
 | :--- | :--- | :--- |
-| **KCET Student Aspirant** | High school student preparing specifically for KCET. | Takes 60-question proctored KCET timed subject papers, reviews step-by-step solutions, tracks KCET rank. |
-| **Coaching Institute Admin** | Instructor/Director monitoring online exams. | Reviews student violation logs (tab switches, full-screen exits), assigns 60-question papers, views class analytics. |
-| **Platform Administrator** | Platform owner managing system health and exam integrity policies. | Configures anti-cheating thresholds, triggers KCET paper extractions, manages pricing plans. |
+| **KCET Student Aspirant** | Pre-University (PUC) student preparing specifically for KCET. | Takes 60-question proctored KCET timed subject papers, reviews step-by-step solutions, tracks KCET rank. |
+| **Coaching Institute Admin** | Instructor or Director at a KCET coaching institute. | Generates custom question papers based on specific requirements (subject, topics, difficulty) and views student/class performance analytics. |
+| **Platform Administrator** | Platform owner managing system health, subscription plans, and platform-wide settings. | Configures anti-cheating thresholds, manages pricing plans, triggers core textbook indexing. |
+
 
 ---
 

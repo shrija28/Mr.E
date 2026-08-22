@@ -1,76 +1,71 @@
-# 🚀 Mr.E — SmartKCET Prep
+# 🚀 SmartKCET Prep / ExamForge AI
 
-A specialized Karnataka Common Entrance Test (**KCET**) preparation and exam platform designed for individuals involved in the KCET preparation and admission ecosystem including students, coaching institutions, and platform administrators. Powered by **Retrieval-Augmented Generation (RAG)**, **Groq LLMs**, **FAISS Vector Search**, **Flask**, and **React 18+**. **Mr.E** filters question banks according to standard KCET patterns and extracts official **60-question paper sets** with anti-cheating protection, instant evaluation, institutional management, and student subscription controls.
+A comprehensive competitive exam preparation platform for the Karnataka Common Entrance Test (**KCET**) powered by **FastAPI**, **Retrieval-Augmented Generation (RAG)**, **Groq LLMs**, **FAISS Vector Search**, and **SQLite**. SmartKCET enables automated entrance-level MCQ paper generation from textbook PDFs, instant exam evaluation, institutional management, performance analytics, and tiered student subscriptions.
 
 ---
 
+## 🌟 Features & Architecture
 
-## 🌟 Key Features
-
-* 🎯 **KCET 60-Question Paper Extraction**: Filters question banks to extract standard KCET-compliant MCQs, assembling official **60-question / 60-mark / 80-minute paper sets** (Sets A, B, C, D).
-* 📄 **Vision OCR & Multimodal Parsing**: Handles complex diagrams, printed textbook pages, and past KCET papers using **PyMuPDF** & **Groq Vision OCR (`llama-3.2-90b-vision-preview`)**.
-
-* 🔒 **Anti-Cheating & Exam Integrity Guard**: Enforces tab-switch detection, forced full-screen lockdown, DOM right-click/copy-paste prevention, dynamic option shuffling, and violation logging.
-* 🛡️ **Role-Based Access Control (RBAC)**: Role-specific portals (Admin, Student, Institution Manager) secured with **Flask-JWT-Extended** and **Bcrypt hashing**.
-* 💳 **Subscription & Access Control**: Tiered plans (Free Trial, Individual, Institutional) with access control gates and **Razorpay** payment gateway integration.
-* 🏫 **Institution & Student Management**: Supports bulk student creation, institution codes, trial tracking, and student association.
+* 🎯 **AI & RAG Question Generation**: Generates competitive entrance exam MCQs directly from textbook PDFs using **Groq LLM (`llama-3.3-70b-versatile`)** combined with **FAISS vector search** for context retrieval.
+* 📄 **Vision OCR & Multimodal Parsing**: Parses textbook PDFs and complex diagrams using **PyMuPDF (`fitz`)** & **Groq Vision OCR (`llama-3.2-90b-vision-preview`)**.
+* 🛡️ **Role-Based Access Control (RBAC)**: Role-scoped endpoints (Admin, Student, Institution Manager) secured with **PyJWT** tokens and **Bcrypt** password hashing.
+* 💳 **Subscription & Access Control**: Tiered subscription plans (Free Trial, Individual, Institutional) with access control gates and lifecycle expiration scheduling.
+* 🏫 **Institution & Cohort Management**: Supports bulk student enrollment, institution codes (e.g. `KCET_AC_001`), and institutional dashboard analytics.
 * 📊 **Performance Analytics & Leaderboards**: Real-time evaluation, subject-wise accuracy tracking, attempt history, and percentile rank leaderboards.
 
+---
+
+## 🛠️ Technology Stack (Actual Codebase)
+
+| Layer | Technology | Description |
+| :--- | :--- | :--- |
+| **Backend Framework** | **Python 3.10+ / FastAPI** | High-performance ASGI framework with Pydantic v2 validation |
+| **Server** | **Uvicorn** | ASGI server running the FastAPI app on port `8000` |
+| **Database & ORM** | **SQLite (`smartkcet.db`)** | SQLAlchemy 2.0 ORM with self-healing schema migrations & Alembic |
+| **AI / RAG Pipeline** | **Groq API / FAISS / PyMuPDF** | Vector similarity search (`faiss-cpu`), sentence embeddings, and Groq LLMs |
+| **Security** | **PyJWT & Bcrypt** | Bearer JWT authentication & salted password hashing |
+| **Payments** | **Razorpay SDK** | Payment gateway integration for subscription plans |
+| **Frontend** | **HTML5, CSS3, JavaScript (ES6)** | Served directly by FastAPI at `/html/*`, `/js/*`, `/css/*` |
 
 ---
 
-## 🛠️ Technology Stack
-
-| Layer | Technologies Used |
-| :--- | :--- |
-| **Backend Core** | Python 3.10+, Flask 3.x, Flask Blueprints, Flask-CORS, Gunicorn/Waitress |
-| **Database & ORM** | SQLite (`smartkcet.db`), PostgreSQL support, Flask-SQLAlchemy, Flask-Migrate (Alembic) |
-
-| **AI / RAG / ML** | Groq API (`groq`), FAISS (`faiss-cpu`), Sentence-Transformers, PyTorch, PyMuPDF |
-| **Vision & Image** | OpenCV (`cv2`), Pillow (`PIL`), PyMuPDF (`fitz`) |
-| **Security** | PyJWT (JWT Tokens), Bcrypt (Password Hashing) |
-| **Payments** | Razorpay SDK |
-| **Frontend** | React 18+, Vite, TypeScript/JavaScript, React Router v6, Tailwind CSS, Recharts |
-
----
-
-## 📁 Directory Structure
+## 📁 Repository Structure
 
 ```text
 SmartKCET-Prep/
 ├── backend/
-│   ├── app.py                      # Application execution entry point
+│   ├── app.py                      # Server entry point (starts Uvicorn on 127.0.0.1:8000)
 │   ├── requirements.txt            # Python dependencies
-│   ├── smartkcet/
+│   ├── smartkcet.db                # SQLite database
+│   ├── smartkcet/                  # Main Python package
 │   │   ├── main.py                 # FastAPI application factory & router mounts
-│   │   ├── config.py               # Startup environment & config validator
-│   │   ├── admin/                  # Admin portal APIs (dashboard, students, institutions, exams)
-│   │   ├── auth/                   # Authentication (login, register, JWT, password hashing)
-│   │   ├── student/                # Student portal APIs (dashboard, exams, attempts, leaderboard)
-│   │   ├── subscription/           # Subscriptions, access control, plans & Razorpay wiring
-│   │   ├── institution/            # Institution student management & content APIs
+│   │   ├── config.py               # Startup environment & config validation
+│   │   ├── admin/                  # Admin endpoints (dashboard, students, institutions, exams)
+│   │   ├── auth/                   # Authentication (login, register, JWT, passwords)
+│   │   ├── student/                # Student endpoints (dashboard, exams, attempts, leaderboard)
+│   │   ├── subscription/           # Subscriptions, access control gates, scheduler
+│   │   ├── institution/            # Institution cohort management & content APIs
 │   │   ├── rag/                    # RAG pipeline (parsing.py, groq_client.py, store.py, mcq_extractor.py)
-│   │   └── db/                     # SQLAlchemy models, database session, seed scripts
+│   │   └── db/                     # SQLAlchemy models, sessions, seed scripts
 │   └── tests/                      # Automated test suite (pytest)
 ├── frontend/
-│   ├── html/                       # HTML pages (index, exam, dashboard, admin, institution)
-│   ├── js/                         # Frontend JS logic & REST API clients
-│   └── css/                        # CSS stylesheets
-├── docs/                           # Setup & architectural documentation
-├── QUICK_START.md                  # Quick testing guide
-├── PROJECT_RUNNING.md              # Live status and verification guide
-└── README.md                       # Project documentation
+│   ├── html/                       # HTML view templates (index, exam, dashboards)
+│   ├── js/                         # Client-side JavaScript & API integration
+│   └── css/                        # Stylesheets
+├── docs/                           # Documentation
+├── QUICK_START.md                  # Quick testing reference guide
+└── README.md                       # Project overview and setup instructions
 ```
 
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 Quick Start & How to Run
 
 ### 1. Prerequisites
-- **Python 3.10+** installed.
-- **Groq API Key** (for AI question generation features).
+- **Python 3.10+** installed on your system.
+- **Groq API Key** (Set as environment variable `GROQ_API_KEY`).
 
-### 2. Environment Setup
+### 2. Set Up Environment Variables
 Set your `GROQ_API_KEY` in your environment or inside `backend/.env`:
 ```bash
 # Windows PowerShell
@@ -80,66 +75,68 @@ $env:GROQ_API_KEY="your_groq_api_key_here"
 export GROQ_API_KEY="your_groq_api_key_here"
 ```
 
-### 3. Install Dependencies
+### 3. Install Backend Dependencies
 ```bash
 cd backend
 pip install -r requirements.txt
 ```
 
-### 4. Run the Backend Server
+### 4. Start the Server
+Run the backend entry point:
 ```bash
 python app.py
 ```
-*The server automatically initializes database schema self-healing, seeds admin credentials, subscription plans, and test institutions on first start.*
+*Or run via Uvicorn directly:*
+```bash
+python -m uvicorn smartkcet.main:app --reload --host 127.0.0.1 --port 8000
+```
+On startup, the server automatically runs database self-healing, seeds admin credentials, subscription plans, and test institutions.
 
 ---
 
-## 🌐 Quick Access URLs
+## 🌐 Application URLs
 
-| Feature | URL |
+| Feature / Page | URL |
 | :--- | :--- |
 | **Health Check** | [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health) |
 | **Admin Dashboard** | [http://127.0.0.1:8000/admin/dashboard](http://127.0.0.1:8000/admin/dashboard) |
-| **Interactive API Docs (Swagger)** | [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) |
+| **API Documentation (Swagger UI)** | [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs) |
 | **ReDoc Specification** | [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc) |
 
 ### Default Admin Credentials
 - **Email:** `admin@smartkcet.com`
-- **Password:** Defined in `backend/.env` or generated during initial seeding
+- **Password:** Defined in `backend/.env` or generated during initial startup seeding.
 
 ---
 
-## 🔑 Key API Endpoints
+## 🔑 Primary REST API Routes
 
-### 🔐 Auth Routes (`/api/auth`)
-* `POST /api/auth/login` — User authentication & JWT issuance
-* `POST /api/auth/register` — Student account registration
-* `POST /api/auth/refresh` — Refresh access token
+### 🔐 Authentication (`/api/auth`)
+- `POST /api/auth/login` — Authenticate user & issue JWT bearer token
+- `POST /api/auth/register` — Student account registration
+- `POST /api/auth/refresh` — Refresh expired JWT access token
 
-### ⚙️ Admin Routes (`/api/admin`)
-* `GET /api/admin/platform/students` — Manage registered students
-* `GET /api/admin/platform/institutions` — List & manage institutions
-* `POST /api/admin/exams/generate-textbook` — Trigger RAG-powered MCQ generation from textbook PDFs
+### ⚙️ Admin Platform (`/api/admin`)
+- `GET /api/admin/platform/students` — List & manage registered students
+- `GET /api/admin/platform/institutions` — Manage institutions & cohorts
+- `POST /api/admin/exams/generate-textbook` — Trigger RAG-based MCQ paper generation
 
-### 🎓 Student Routes (`/api/student`)
-* `GET /api/student/dashboard` — Fetch student analytics & recent exam attempts
-* `POST /api/student/exams/{id}/submit` — Submit exam responses for automatic scoring
-* `GET /api/student/leaderboard` — View platform rank leaderboard
+### 🎓 Student Portal (`/api/student`)
+- `GET /api/student/dashboard` — Fetch student test history & analytics
+- `POST /api/student/exams/{id}/submit` — Submit exam answers for instant scoring
+- `GET /api/student/leaderboard` — View rank leaderboard
 
-### 💳 Subscription Routes (`/api/subscription`)
-* `GET /api/subscription/plans` — View active subscription plans
-* `POST /api/subscription/subscribe` — Initiate subscription plan purchase
-* `GET /api/subscription/status` — Check active subscription & trial period status
+### 💳 Subscription (`/api/subscription`)
+- `GET /api/subscription/plans` — Fetch active pricing plans
+- `POST /api/subscription/subscribe` — Initiate subscription purchase
+- `GET /api/subscription/status` — Check active subscription & trial status
 
 ---
 
-## 🧪 Testing
+## 🧪 Running Tests
 
-To run the backend test suite:
+To run the backend automated test suite:
 ```bash
 cd backend
 pytest
 ```
-
-
-

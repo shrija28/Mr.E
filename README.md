@@ -1,13 +1,14 @@
 # 🚀 SmartKCET Prep / ExamForge AI
 
-A comprehensive competitive exam preparation platform (KCET, NEET, JEE) powered by **Retrieval-Augmented Generation (RAG)**, **Groq LLMs**, **FAISS Vector Search**, **Flask**, and **React 18+**. SmartKCET enables automated entrance-level question paper generation from textbooks, instant exam evaluation, institutional management, and tiered student subscriptions.
+A specialized Karnataka Common Entrance Test (**KCET**) preparation platform powered by **Retrieval-Augmented Generation (RAG)**, **Groq LLMs**, **FAISS Vector Search**, **Flask**, and **React 18+**. SmartKCET filters question banks according to standard KCET patterns and extracts official **60-question paper sets** with instant evaluation, institutional management, and student subscription controls.
 
 ---
 
 ## 🌟 Key Features
 
-* 🎯 **AI & RAG Question Generation**: Generates standard competitive entrance exam MCQs directly from textbook PDFs using **Groq LLM (`llama-3.3-70b-versatile`)** combined with **FAISS vector search** for context retrieval.
-* 📄 **Vision OCR & Multimodal Parsing**: Handles complex diagrams, printed textbook pages, and past question papers using **PyMuPDF** & **Groq Vision OCR (`llama-3.2-90b-vision-preview`)**.
+* 🎯 **KCET 60-Question Paper Extraction**: Filters question banks to extract standard KCET-compliant MCQs, assembling official **60-question / 60-mark / 80-minute paper sets** (Sets A, B, C, D).
+* 📄 **Vision OCR & Multimodal Parsing**: Handles complex diagrams, printed textbook pages, and past KCET papers using **PyMuPDF** & **Groq Vision OCR (`llama-3.2-90b-vision-preview`)**.
+
 * 🛡️ **Role-Based Access Control (RBAC)**: Role-specific portals (Admin, Student, Institution Manager) secured with **Flask-JWT-Extended** and **Bcrypt hashing**.
 * 💳 **Subscription & Access Control**: Tiered plans (Free Trial, Individual, Institutional) with access control gates and **Razorpay** payment gateway integration.
 * 🏫 **Institution & Student Management**: Supports bulk student creation, institution codes, trial tracking, and student association.

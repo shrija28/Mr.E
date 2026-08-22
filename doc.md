@@ -1,10 +1,11 @@
 # 📄 Product Requirements Document (PRD)
-## SmartKCET Prep / ExamForge AI — RAG-Powered Entrance Exam Platform
+## SmartKCET Prep / ExamForge AI — Official KCET Question Paper Generation Platform
 
 **Document Status:** Approved & Active  
-**Version:** 1.2.0  
+**Version:** 2.0.0  
 **Target Audience:** Engineering & Development Team, Product Management, System Architects  
 **Product Name:** SmartKCET Prep / ExamForge AI  
+**Target Exam:** Karnataka Common Entrance Test (KCET) Exclusively  
 **Frontend Framework:** React 18+ Single Page Application (SPA)  
 **Backend Framework:** Flask (Python 3.10+) with Flask Blueprints  
 **Last Updated:** August 2026  
@@ -14,27 +15,38 @@
 ## 1. 🎯 Executive Summary & Problem Statement
 
 ### 1.1 Executive Summary
-SmartKCET Prep / ExamForge AI is an advanced, AI-driven competitive entrance exam preparation and learning platform. Built specifically for students preparing for the Karnataka Common Entrance Test (KCET) and similar competitive entrance exams (NEET, JEE), the system combines a modern **React 18+ Single Page Application (SPA)** frontend (built with **Vite**, **TypeScript/JavaScript**, **React Router v6**, and **Tailwind CSS**) with a robust **Flask (Python 3.10+)** REST API backend utilizing **Flask Blueprints**, **Flask-SQLAlchemy**, **Retrieval-Augmented Generation (RAG)**, **Groq LLMs**, and **FAISS Vector Search**.
+SmartKCET Prep / ExamForge AI is a specialized, AI-driven exam preparation and question paper extraction platform designed **exclusively for the Karnataka Common Entrance Test (KCET)**. The platform ingests textbook content and question banks, applies an automated KCET Pattern Filter to extract standard KCET-level questions, and generates official-format exam paper sets containing **exactly 60 questions per set** (matching the official KCET 60-question/60-mark 80-minute paper structure).
+
+The system integrates a modern **React 18+ Single Page Application (SPA)** frontend (built with **Vite**, **TypeScript/JavaScript**, **React Router v6**, and **Tailwind CSS**) with a robust **Flask (Python 3.10+)** REST API backend utilizing **Flask Blueprints**, **Flask-SQLAlchemy**, **RAG Retrieval**, **Groq LLMs**, and **FAISS Vector Search**.
 
 ### 1.2 Problem Statement
-* **Static & Repeated Question Banks:** Traditional coaching platforms reuse static PDF question papers, leading to rote memorization rather than conceptual problem-solving.
-* **Lack of Syllabus Alignment:** Generic AI question generators produce out-of-syllabus questions or trivial definitions rather than multi-step numerical calculation problems required by entrance exams.
-* **Vision & Diagram Extraction Gap:** Standard text-only parsers fail to extract questions containing chemical structures, circuit diagrams, and mathematical formulas from printed textbook scans.
-* **Monolithic/Laggy UIs:** Legacy server-rendered HTML pages lack fluid state management, instant client-side transitions, and real-time interactive timer/question grids required during online entrance exam practice.
+* **Non-Standard Question Counts & Patterns:** Existing online mock platforms present arbitrary question lengths (20, 50, or 100 questions) rather than adhering strictly to the official KCET 60-question format.
+* **Unfiltered Question Banks:** Raw question banks contain out-of-syllabus, overly simple, or JEE-Advanced level questions that do not reflect actual KCET difficulty or chapter weightage.
+* **Lack of Real KCET Simulation:** Students need timed practice that perfectly simulates the 60-question, 60-mark, 80-minute KCET subject paper environment.
 
 ---
 
-## 2. 🚀 Product Vision & Objectives
+## 2. 🚀 Product Vision & Core Workflow
 
 ### 2.1 Product Vision
-To empower students and educational institutions with an intelligent entrance exam platform featuring a high-performance **React SPA** frontend and a modular, reliable **Flask + RAG** backend that converts prescribed NCERT/KCET textbooks into dynamic, competitive-level test papers with instant analytics and subscription controls.
+To provide KCET aspirants and coaching institutions with an authentic, automated exam platform that extracts standard KCET-pattern questions from indexed textbook banks and generates production-ready **60-question exam sets** with instant evaluation and analytics.
 
-### 2.2 Core Business & Technical Objectives
-* **Fluid React User Experience:** Deliver an ultra-responsive React SPA (< 100ms client-side page transitions, zero full-page reloads).
-* **Modular Flask Backend:** Architecture structured into isolated **Flask Blueprints** (`auth_bp`, `admin_bp`, `student_bp`, `subscription_bp`, `institution_bp`).
-* **Automated Paper Generation:** Generate 80-question competitive exam papers across 4 paper sets (Sets A, B, C, D) in under 15 seconds.
-* **Strict Difficulty Enforcement:** Ensure at least 60% of Physics/Chemistry MCQs are numerical/calculation-based problems with high-quality distractors.
-* **Seamless Access Control:** Enforce JWT role-based access control (RBAC) and subscription gates across direct students and institutionally linked cohorts using **Flask-JWT-Extended** decorators (`@jwt_required()`, `@admin_required`) on backend endpoints and React `ProtectedRoute` components on the client.
+### 2.2 End-to-End Question Extraction & Exam Generation Workflow
+
+```mermaid
+graph TD
+    A[Textbook PDFs / Question Bank Ingestion] --> B[FAISS Vector Store & DB Indexing]
+    B --> C[KCET Pattern Evaluator & Filter Engine]
+    C -->|Extracts Standard KCET Pattern Qs| D[KCET Verified Question Pool]
+    D -->|Assembles 60 Qs per Subject Set| E[60-Question Paper Sets: A, B, C, D]
+    E --> F[React 18+ Client Exam Engine - 60 Qs / 60 Marks / 80 Mins]
+    F --> G[Instant Evaluation, Analytics & Percentile Leaderboard]
+```
+
+1. **Ingestion & Indexing:** Textbook PDFs and raw question banks are parsed and stored in the database and FAISS vector index.
+2. **KCET Pattern Filtering:** An automated evaluator inspects stored questions and extracts ONLY standard KCET-compliant questions matching official syllabus weightage and KCET difficulty.
+3. **60-Question Set Assembly:** The system selects exactly 60 verified KCET questions per subject paper set (Sets A, B, C, and D) without duplicate overlap.
+4. **Interactive Exam Execution:** React client loads the 60-question set with an official 80-minute timer for practice.
 
 ---
 
@@ -42,70 +54,60 @@ To empower students and educational institutions with an intelligent entrance ex
 
 | Persona / Role | Description & Needs | Primary Workflows |
 | :--- | :--- | :--- |
-| **Student Aspirant** | High school student preparing for KCET/NEET. Needs real-time exam practice, instant scoring, subject breakdown, and leaderboard ranking. | Register account, take timed exams in React Exam Interface, review detailed explanations, view interactive Recharts performance analytics. |
-| **Institution Manager** | Director or instructor at a coaching center. Needs to enroll student cohorts, assign institutional licenses, and track student activity. | Access React Institution Portal, link students using custom institution codes (e.g. `KCET_AC_001`). |
-| **Platform Admin** | Platform administrator monitoring system health, managing subscription pricing plans, and triggering AI question generation from textbooks. | Access React Admin Portal, monitor student metrics, trigger textbook exam generation, manage plans. |
+| **KCET Student Aspirant** | High school student preparing specifically for KCET (Physics, Chemistry, Math, Biology). | Takes 60-question KCET timed subject papers, reviews step-by-step solutions, tracks KCET rank progress. |
+| **Coaching Institute Admin** | Instructor/Director at a KCET coaching center. | Assigns 60-question paper sets to student groups, views class accuracy analytics, seeds institution cohorts. |
+| **Platform Administrator** | Platform owner managing system health and triggering KCET 60-question paper set extractions. | Monitors KCET question bank metrics, triggers paper extractions, manages pricing plans. |
 
 ---
 
 ## 4. ⚙️ Functional Requirements (FRs)
 
-### FR-1: React SPA Frontend Architecture
-* **FR-1.1 Framework & Build Tool:** Built using **React 18+** bundled with **Vite** for fast HMR development and optimized production builds.
-* **FR-1.2 Routing:** Client-side routing implemented using **React Router v6** with nested layouts, lazy-loaded page components, and role-based `ProtectedRoute` wrappers.
-* **FR-1.3 Styling & UI:** Styled using **Tailwind CSS** for responsive design, dark/light mode UI components, glassmorphism card layouts, and **Lucide React** icons.
-* **FR-1.4 State Management & API Integration:** 
-  - Centralized authentication state managed via `AuthContext` and custom `useAuth` hook.
-  - HTTP requests handled via **Axios** with global request/response interceptors to automatically attach `Authorization: Bearer <token>` headers and catch `401 Unauthorized` / `403 Forbidden` errors.
-  - Interactive charts rendered using **Recharts** / **Chart.js** (React-chartjs-2).
+### FR-1: KCET Question Extraction & Pattern Filtering Engine
+* **FR-1.1 Question Bank Storage:** System stores ingested textbook chunks and candidate questions in the database with subject and topic tagging.
+* **FR-1.2 KCET Pattern Rules & Extraction:**
+  - **Single Mark Standard:** Every extracted question must carry exactly **1 mark** (no negative marking, matching official KCET rules).
+  - **Difficulty Standard:** Questions must be standard entrance-level MCQs (application, multi-step numericals, conceptual deductions). Excludes trivial definitions.
+  - **Numerical Calculation Ratio:** At least 60% of Physics & Physical Chemistry questions must be multi-step numerical calculation problems.
+  - **Topic Alignment:** Questions must strictly align with the prescribed 1st & 2nd PUC KCET syllabus.
+  - **Distractor Quality:** 4 options (A, B, C, D) with plausible distractors representing common student calculation errors.
+  - **Exclusion Filter:** Excludes figure references ("as shown in fig"), brand names, and meta-references ("according to passage").
 
-### FR-2: Flask Backend & Blueprint Architecture
-* **FR-2.1 Framework Core:** Built with **Flask 3.x** / Python 3.10+ application factory pattern (`create_app()`).
-* **FR-2.2 Blueprint Segmentation:**
-  - `auth_bp` (`/api/auth`): Registration, login, JWT token refresh.
-  - `admin_bp` (`/api/admin`): Platform metrics, student management, institution setup, textbook exam generation.
-  - `student_bp` (`/api/student`): Dashboard analytics, exam taking, submission scoring, leaderboard ranks.
-  - `subscription_bp` (`/api/subscription`): Plans listing, checkout, subscription status checks.
+### FR-2: 60-Question Paper Set Generation (`/api/admin/exams/generate-kcet-set`)
+* **FR-2.1 Exact Set Count:** Each generated subject exam paper set MUST contain **EXACTLY 60 questions** — no more, no less.
+* **FR-2.2 Multi-Set Generation:** Generates 4 distinct paper sets (**Set A, Set B, Set C, Set D**), each containing 60 questions.
+* **FR-2.3 Duplicate Prevention:** Questions used in Set A are excluded from Sets B, C, and D within the same exam cycle.
+
+### FR-3: React SPA Frontend Architecture
+* **FR-3.1 Stack:** Built with **React 18+**, **Vite**, **TypeScript/JavaScript**, **React Router v6**, and **Tailwind CSS**.
+* **FR-3.2 State & Axios Client:** Centralized `AuthContext` for JWT authentication; Axios client handles requests to the Flask backend.
+* **FR-3.3 60-Question Exam Component (`<KCETExamEngine />`):**
+  - Displays interactive 60-question drawer grid (Numbered 1 to 60).
+  - Official **80-minute countdown timer** with auto-submission on expiration.
+  - Option selector (A, B, C, D), question flagging, and answer status tracking (Answered, Unanswered, Flagged).
+
+### FR-4: Flask Backend & Blueprint Architecture
+* **FR-4.1 Application Factory:** Built with **Flask 3.x** / Python 3.10+ using modular blueprints:
+  - `auth_bp` (`/api/auth`): Registration, login, JWT token issuance via **Flask-JWT-Extended**.
+  - `admin_bp` (`/api/admin`): Question bank management, KCET pattern filtering, 60-question set extraction.
+  - `student_bp` (`/api/student`): Dashboard analytics, 60-question exam execution, instant scoring, rank leaderboard.
+  - `subscription_bp` (`/api/subscription`): Pricing plans, access control pre-exam gate (`/api/exam/check-access`).
   - `institution_bp` (`/api/institution`): Bulk student enrollment and license allocation.
-* **FR-2.3 Database Layer:** **Flask-SQLAlchemy** (SQLAlchemy 2.0 ORM) with **Flask-Migrate** (Alembic) for schema migrations.
-* **FR-2.4 CORS Configuration:** **Flask-CORS** middleware enabling cross-origin requests from the React SPA.
+* **FR-4.2 Database Layer:** **Flask-SQLAlchemy** (SQLAlchemy 2.0 ORM) with **Flask-Migrate**.
 
-### FR-3: AI & RAG Question Generation Engine
-* **FR-3.1 Context Retrieval:** System shall query FAISS vector indices of uploaded textbook PDFs to retrieve relevant topic chunks for Physics, Chemistry, Mathematics, and Biology.
-* **FR-3.2 LLM Invocation:** System shall call Groq API (`llama-3.3-70b-versatile`) with explicit exam-setter prompts.
-* **FR-3.3 Exam Difficulty Rules:**
-  - **No Trivial Definitions:** Questions must be application-based, numerical, or rigorous conceptual deductions.
-  - **Numerical Ratio:** At least 60% of Physics questions must require multi-step numerical calculations.
-  - **Distractor Quality:** Incorrect options must represent common student calculation/sign errors.
-  - **Meta-Text Ban:** Output must be self-contained; no phrases like "In this passage" or "According to chapter".
-* **FR-3.4 Output Format:** System must output a clean, validated JSON array of MCQ objects with fields `q`, `opts` (4 options), `ans` (0-based index), `marks`, and `exp` (step-by-step solution).
-
-### FR-4: Multimodal PDF Parsing & Vision OCR
-* **FR-4.1 Text Extraction:** System shall use **PyMuPDF (`fitz`)** for native text extraction from textbook PDFs.
-* **FR-4.2 Vision OCR Fallback:** For scanned or image-heavy pages, system shall preprocess images with OpenCV/Pillow and invoke **Groq Vision OCR (`llama-3.2-90b-vision-preview`)** via a multi-threaded execution pool.
-
-### FR-5: User Authentication & Role-Based Access Control (RBAC)
-* **FR-5.1 JWT Token Management:** Issued using **Flask-JWT-Extended** upon successful authentication (`POST /api/auth/login`).
-* **FR-5.2 Password Hashing:** Passwords hashed using **Werkzeug / Bcrypt**.
-* **FR-5.3 Route & Endpoint Protection:** Endpoint routes decorated with `@jwt_required()`, `@admin_required`, `@student_required`. React client enforces `<ProtectedRoute />` redirects.
-
-### FR-6: Subscription & Access Control Engine
-* **FR-6.1 Plan Types:** Free Trial (14 days), Individual Monthly/Annual, and Institutional Bundle plans.
-* **FR-6.2 Pre-Exam Gate:** Before starting an exam (`POST /api/exam/check-access`), Flask decorator verifies subscription status.
-* **FR-6.3 Upgrade UI Prompts:** React client shows modal upgrade prompts for restricted actions.
-
-### FR-7: React Exam Engine & Automated Evaluation
-* **FR-7.1 Exam Interface Component (`<ExamEngine />`):** Real-time timer hook (`useTimer`), question navigation drawer (`<QuestionGrid />`), option selectors (`<OptionCard />`).
-* **FR-7.2 Instant Scoring:** Submission (`POST /api/student/exams/{id}/submit`) calculates score, subject breakdown, and updates database records instantly.
+### FR-5: Automated Instant Evaluation & Analytics
+* **FR-5.1 Instant Scoring:** Upon submitting the 60-question paper, backend immediately evaluates responses out of **60 marks**.
+* **FR-5.2 Analytics Breakdown:** Reports total score, accuracy %, correct/incorrect/unattempted breakdown, subject/chapter accuracy, and time spent per question.
+* **FR-5.3 Leaderboard:** Ranks students based on their 60-mark KCET score performance.
 
 ---
 
 ## 5. 🛡️ Non-Functional Requirements (NFRs)
 
-* **SPA & API Performance:** React client initial load time `< 1.2s`. Flask REST API endpoints respond in `< 200ms`. RAG MCQ paper generation completes in `< 15s`.
-* **Security:** HTTPS/TLS, Flask-JWT-Extended verification, CORS policy restricted to React SPA domain, XSS defense via React JSX auto-escaping, SQL injection prevention via SQLAlchemy ORM.
-* **Reliability & WSGI Deployment:** Production deployment via **Gunicorn** / **Waitress** WSGI server with multiple worker processes.
-* **Responsiveness:** Fluid layout using Tailwind CSS across Mobile, Tablet, and Desktop screens.
+* **Paper Set Extraction Speed:** Extraction and assembly of 60 KCET questions completed in `< 10s`.
+* **API Performance:** REST API response latency `< 200ms`.
+* **Exam Engine Smoothness:** React client 60-question navigation grid updates seamlessly with `< 16ms` UI render delay.
+* **Security:** HTTPS/TLS, Flask-JWT-Extended authentication, CORS policy restricted to React domain.
+* **WSGI Deployment:** Production backend hosted via **Gunicorn** / **Waitress**.
 
 ---
 
@@ -113,23 +115,23 @@ To empower students and educational institutions with an intelligent entrance ex
 
 ```text
 +-----------------------------------------------------------------------+
-|                       REACT 18+ SPA FRONTEND                          |
-|   React 18 + Vite + TypeScript + React Router v6 + Axios + Tailwind CSS|
-|   [Components: AuthContext, ExamEngine, StudentDashboard, AdminPortal]|
+|                    REACT 18+ SPA FRONTEND (Vite)                      |
+|  React Router v6 | Tailwind CSS | Axios | Recharts | Lucide Icons    |
+|  [Components: KCETExamEngine (60 Qs/80 Mins), StudentDashboard]       |
 +-----------------------------------------------------------------------+
                                    |
-                          REST API (JSON / JWT)
+                     REST API (JSON / JWT Headers)
                                    v
 +-----------------------------------------------------------------------+
 |                            FLASK BACKEND                              |
-|  +------------------+  +------------------+  +--------------------+   |
-|  | Auth Blueprint   |  | Admin/Student Bp |  | Subscription Gate  |   |
-|  | /api/auth        |  | /api/admin       |  | /api/subscription  |   |
-|  +------------------+  +------------------+  +--------------------+   |
+|  +-------------------+  +-------------------+  +------------------+   |
+|  | Auth Blueprint    |  | Admin Blueprint   |  | Student Blueprint|   |
+|  | /api/auth         |  | /api/admin        |  | /api/student     |   |
+|  +-------------------+  +-------------------+  +------------------+   |
 |                                                                       |
 |  +-----------------------------------------------------------------+  |
-|  |                         RAG ENGINE                              |  |
-|  |  PyMuPDF + Groq Vision OCR + FAISS Vector Index + Groq LLM API  |  |
+|  |             KCET PATTERN EVALUATION & FILTER ENGINE             |  |
+|  |  PyMuPDF + Groq Vision OCR + FAISS Index -> 60 Qs Extraction    |  |
 |  +-----------------------------------------------------------------+  |
 +-----------------------------------------------------------------------+
                                    |
@@ -137,6 +139,7 @@ To empower students and educational institutions with an intelligent entrance ex
                                    v
 +-----------------------------------------------------------------------+
 |                      SQLite / PostgreSQL Database                      |
+|            [QuestionBank, KCETPaperSets (60 Qs), Attempts]            |
 +-----------------------------------------------------------------------+
 ```
 
@@ -144,21 +147,20 @@ To empower students and educational institutions with an intelligent entrance ex
 
 ## 7. 🔌 API Specifications Summary
 
-| Method | Endpoint | Blueprint | Access Level | React Component / Consumer |
-| :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/login` | `auth_bp` | Public | `<LoginModal />` / `useAuth` hook |
-| `POST` | `/api/auth/register` | `auth_bp` | Public | `<RegisterForm />` |
-| `GET` | `/api/admin/platform/students` | `admin_bp` | Admin | `<AdminStudentTable />` |
-| `GET` | `/api/admin/platform/institutions`| `admin_bp` | Admin | `<AdminInstitutionList />` |
-| `POST` | `/api/admin/exams/generate-textbook` | `admin_bp` | Admin | `<TextbookExamGenerator />` |
-| `GET` | `/api/student/dashboard` | `student_bp` | Student | `<StudentDashboard />` / Recharts |
-| `POST` | `/api/student/exams/{id}/submit` | `student_bp` | Student | `<ExamEngine />` |
-| `GET` | `/api/subscription/plans` | `subscription_bp` | Public | `<PricingCards />` |
+| Method | Endpoint | Blueprint | Description |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/login` | `auth_bp` | Authenticates user and returns JWT token |
+| `POST` | `/api/auth/register` | `auth_bp` | Registers a new student account |
+| `GET` | `/api/admin/platform/students` | `admin_bp` | Fetches list of all platform students |
+| `POST` | `/api/admin/exams/extract-kcet-set` | `admin_bp` | Filters question bank & extracts 60 KCET Qs for Sets A/B/C/D |
+| `GET` | `/api/student/exams/{id}/paper` | `student_bp` | Fetches active 60-question KCET paper set for student |
+| `POST` | `/api/student/exams/{id}/submit` | `student_bp` | Submits 60 responses for evaluation (Max score: 60) |
+| `GET` | `/api/student/dashboard` | `student_bp` | Retrieves KCET score analytics and attempt history |
 
 ---
 
-## 8. 🗺️ Future Roadmap & Phase 2
+## 8. 🗺️ Future Roadmap
 
-* **PWA & Offline React Support:** Service Workers & IndexedDB for offline exam taking and background sync.
-* **Webhook Callbacks:** Real-time Razorpay payment webhook processing in Flask (`payment_bp`).
-* **Adaptive AI Tutor:** Personal AI learning recommendations rendered as interactive React flashcards.
+* **Official KCET OMR Sheet Mode:** Printable PDF OMR sheet exporter and bubble-sheet scanner integration.
+* **Chapter-Wise 60-Question Practice:** Custom 60-question chapter mock tests for targeted revision.
+* **Adaptive KCET Rank Predictor:** Predicts estimated KCET engineering/medical rank based on 60-mark paper scores.

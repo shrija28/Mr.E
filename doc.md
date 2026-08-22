@@ -113,15 +113,35 @@ graph TD
   - Official **80-minute countdown timer** with auto-submission on expiration.
   - Integrates `<AntiCheatingGuard />` for real-time focus and full-screen enforcement.
 
-### FR-5: Flask Backend & Blueprint Architecture
-* **FR-5.1 Application Factory:** Built with **Flask 3.x** / Python 3.10+ using modular blueprints:
-  - `auth_bp` (`/api/auth`): Registration, login, JWT token issuance via **Flask-JWT-Extended**.
-  - `admin_bp` (`/api/admin`): Question bank management, KCET pattern filtering, integrity log reviews.
-  - `student_bp` (`/api/student`): Dashboard analytics, 60-question proctored exam execution, scoring.
-  - `subscription_bp` (`/api/subscription`): Access control pre-exam gate (`/api/exam/check-access`).
+### FR-5: Subscription Tiers & Feature Benefits Matrix
 
-### FR-6: Automated Instant Evaluation & Violation Scoring
-* **FR-6.1 Instant Scoring:** Evaluates responses out of **60 marks**. If an attempt is auto-submitted due to anti-cheating violation, it calculates marks for answered questions up to the violation point and flags the attempt in student records.
+The platform enforces a tiered subscription access model. Access pre-exam gates (`/api/exam/check-access`) dynamically verify student entitlement before exam start based on their active subscription tier:
+
+#### 5.1 Individual User Subscription Plans
+
+| Plan Tier | Price | Badge / Tag | Included Features (✅) | Excluded Features / Limits (❌) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Free** | **₹0 /mo** | Starter | • 3–5 mock tests<br/>• Limited question bank access<br/>• Basic score analytics | • No unlimited mock tests<br/>• No full topic analytics<br/>• No AI recommendations<br/>• No weak-topic analysis |
+| **7-Day Premium Trial** | **₹99 /wk** | Most Popular | • Unlimited mock tests<br/>• KCET premium question bank access<br/>• Topic-wise analytics<br/>• Weak-topic analysis<br/>• AI recommendations<br/>• Performance reports<br/>• Leaderboard ranking | • Valid for 7 days of full premium access |
+| **Pro Monthly** | **₹349 /mo** | Best Value | • Unlimited mock tests<br/>• KCET premium question bank access<br/>• Topic-wise analytics<br/>• Weak-topic analysis<br/>• AI recommendations<br/>• Performance reports<br/>• Leaderboard ranking + medals | • Billed monthly |
+| **Pro Yearly** | **₹2,999 /yr** | Best Value (Save ₹1,189/yr) | • Everything in Pro Monthly<br/>• 12 months full access<br/>• Unlimited mock tests<br/>• KCET premium question bank<br/>• AI recommendations<br/>• Advanced performance reports<br/>• Priority feature access | • Billed annually |
+
+#### 5.2 Institutional License Tier
+
+| Plan Tier | Target User | Pricing Model | Feature Access & Benefits |
+| :--- | :--- | :--- | :--- |
+| **Coaching Institution Bundle** | Coaching Institutes & PU Colleges | Annual Institutional License (₹9,999/yr up to 100 students) | • Bulk student enrollment via custom institution codes (e.g. `KCET_AC_001`)<br/>• **Custom Question Paper Extraction** based on specific subject/topic requirements<br/>• Automatic distribution of 4 shuffled paper sets (Sets A, B, C, D) to class cohort<br/>• Class/Cohort performance analytics dashboard for instructors<br/>• Anti-cheating violation logs & integrity audit reports |
+
+
+### FR-6: React Exam Engine & Automated Evaluation
+
+* **FR-6.1 Exam Interface Component (`<KCETExamEngine />`):** Displays interactive 60-question drawer grid (Numbered 1 to 60), 80-minute countdown timer, and integrates `<AntiCheatingGuard />`.
+* **FR-6.2 Instant Scoring:** Evaluates responses out of **60 marks**. If an attempt is auto-submitted due to anti-cheating violation, it calculates marks for answered questions up to the violation point.
+
+### FR-7: Student & Institutional Analytics
+* **FR-7.1 Student Analytics:** Displays interactive Recharts performance trends, subject accuracy percentages, average time per question, and test history.
+* **FR-7.2 Class/Cohort Analytics for Institutions:** Instructor dashboard aggregates overall class performance, topic weakness areas, and test completion rates.
+* **FR-7.3 Percentile Leaderboard:** Ranks subscribed students based on 60-mark KCET exam performance.
 
 ---
 

@@ -63,12 +63,18 @@ graph TD
 
 ### FR-1: KCET Question Extraction & Pattern Filtering Engine
 * **FR-1.1 Question Bank Storage:** System stores ingested textbook chunks and candidate questions in the database with subject and topic tagging.
-* **FR-1.2 KCET Pattern Rules & Extraction:**
+* **FR-1.2 KCET Pattern Rules & Subject Breakdown Ratios:**
   - **Single Mark Standard:** Every extracted question carries exactly **1 mark** (no negative marking, matching official KCET rules).
-  - **Difficulty Standard:** Standard entrance-level MCQs (application, multi-step numericals, conceptual deductions).
-  - **Numerical Calculation Ratio:** At least 60% of Physics & Physical Chemistry questions must be multi-step numerical calculation problems.
   - **Topic Alignment:** Questions strictly align with prescribed 1st & 2nd PUC KCET syllabus.
-  - **Distractor Quality:** 4 options (A, B, C, D) with plausible distractors.
+  - **Physics Question Breakdown (60 Qs Total | 50% to 60% Numerical Ratio):**
+    * **Direct Formula Substitution Numericals:** ~30% to 40% of the paper (~18 to 24 questions).
+    * **Multi-Step Conceptual Problem Solving:** ~15% to 20% of the paper (~9 to 12 questions).
+    * **Pure Theory & Definition-Based Questions:** ~40% to 50% of the paper (~24 to 30 questions).
+  - **Chemistry Question Breakdown (60 Qs Total | 10% to 15% Numerical Ratio):**
+    * **Physical Chemistry Numerical Problems** (Solutions, Chemical Kinetics, Electrochemistry): ~5 to 8 questions out of 60 (~8% to 12%).
+    * **Direct Fact, Memory, or Reaction-Based Questions** (Organic & Inorganic Chemistry): ~88% to 92% of the paper (~52 to 55 questions).
+  - **Distractor Quality:** 4 options (A, B, C, D) with plausible distractors reflecting common student calculation/sign errors.
+
 
 ### FR-2: 60-Question Paper Set Generation (`/api/admin/exams/extract-kcet-set`)
 * **FR-2.1 Exact Set Count:** Each generated subject exam paper set MUST contain **EXACTLY 60 questions**.

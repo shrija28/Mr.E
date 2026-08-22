@@ -76,10 +76,15 @@ graph TD
   - **Distractor Quality:** 4 options (A, B, C, D) with plausible distractors reflecting common student calculation/sign errors.
 
 
-### FR-2: 60-Question Paper Set Generation (`/api/admin/exams/extract-kcet-set`)
-* **FR-2.1 Exact Set Count:** Each generated subject exam paper set MUST contain **EXACTLY 60 questions**.
-* **FR-2.2 Multi-Set Generation:** Generates 4 distinct paper sets (**Set A, Set B, Set C, Set D**), each containing 60 questions.
-* **FR-2.3 Option & Question Randomization:** Options (A, B, C, D) and question order are dynamically shuffled per student candidate to prevent answer sharing.
+### FR-2: 60-Question Paper Set Generation & Student Assignment (`/api/admin/exams/extract-kcet-set`)
+* **FR-2.1 Master 60-Question Pool:** The system selects a master pool of **EXACTLY 60 KCET-pattern questions** for a given subject exam cycle.
+* **FR-2.2 4 Paper Sets (Sets A, B, C, D) with Shuffled Question Order:**
+  - The system generates 4 paper sets (**Set A, Set B, Set C, Set D**).
+  - All 4 sets contain the **exact same 60 questions**, but the **order of questions and option choices (A, B, C, D) is randomized uniquely for each set**.
+* **FR-2.3 Random 1-Set Per Student Assignment:**
+  - When an institution (or admin) publishes the exam to a student cohort, **each student receives exactly 1 out of the 4 paper sets (Set A, B, C, or D)** assigned randomly.
+  - Ensures absolute fairness (identical question pool) while rendering peer-to-peer answer sharing impossible due to distinct question ordering.
+
 
 ### FR-3: Anti-Cheating & Exam Integrity System (`<AntiCheatingGuard />`)
 * **FR-3.1 Tab Switch, Notification Pop-Up & Window Focus Detection:**

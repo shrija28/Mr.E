@@ -9,10 +9,12 @@ A specialized Karnataka Common Entrance Test (**KCET**) preparation platform pow
 * 🎯 **KCET 60-Question Paper Extraction**: Filters question banks to extract standard KCET-compliant MCQs, assembling official **60-question / 60-mark / 80-minute paper sets** (Sets A, B, C, D).
 * 📄 **Vision OCR & Multimodal Parsing**: Handles complex diagrams, printed textbook pages, and past KCET papers using **PyMuPDF** & **Groq Vision OCR (`llama-3.2-90b-vision-preview`)**.
 
+* 🔒 **Anti-Cheating & Exam Integrity Guard**: Enforces tab-switch detection, forced full-screen lockdown, DOM right-click/copy-paste prevention, dynamic option shuffling, and violation logging.
 * 🛡️ **Role-Based Access Control (RBAC)**: Role-specific portals (Admin, Student, Institution Manager) secured with **Flask-JWT-Extended** and **Bcrypt hashing**.
 * 💳 **Subscription & Access Control**: Tiered plans (Free Trial, Individual, Institutional) with access control gates and **Razorpay** payment gateway integration.
 * 🏫 **Institution & Student Management**: Supports bulk student creation, institution codes, trial tracking, and student association.
 * 📊 **Performance Analytics & Leaderboards**: Real-time evaluation, subject-wise accuracy tracking, attempt history, and percentile rank leaderboards.
+
 
 ---
 

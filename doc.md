@@ -71,8 +71,8 @@ graph TD
     * **Multi-Step Conceptual Problem Solving:** ~15% to 20% of the paper (~9 to 12 questions).
     * **Pure Theory & Definition-Based Questions:** ~40% to 50% of the paper (~24 to 30 questions).
   - **Chemistry Question Breakdown (60 Qs Total | 10% to 15% Numerical Ratio):**
-    * **Physical Chemistry Numerical Problems** (Solutions, Chemical Kinetics, Electrochemistry): ~5 to 8 questions out of 60 (~8% to 12%).
-    * **Direct Fact, Memory, or Reaction-Based Questions** (Organic & Inorganic Chemistry): ~88% to 92% of the paper (~52 to 55 questions).
+    * **Physical Chemistry Numerical Problems** : ~5 to 8 questions out of 60 (~8% to 12%).
+    * **Direct Fact, Memory, or Reaction-Based Questions** (Organic and Inorganic Chemistry): ~88% to 92% of the paper (~52 to 55 questions).
   - **Distractor Quality:** 4 options (A, B, C, D) with plausible distractors reflecting common student calculation/sign errors.
 
 
@@ -82,9 +82,10 @@ graph TD
 * **FR-2.3 Option & Question Randomization:** Options (A, B, C, D) and question order are dynamically shuffled per student candidate to prevent answer sharing.
 
 ### FR-3: Anti-Cheating & Exam Integrity System (`<AntiCheatingGuard />`)
-* **FR-3.1 Tab Switch & Window Focus Detection:**
-  - React hook listens to `visibilitychange`, `window.onblur`, and `window.onfocus` events.
+* **FR-3.1 Tab Switch, Notification Pop-Up & Window Focus Detection:**
+  - React hook listens to `visibilitychange`, `window.onblur`, `window.onfocus`, and system notification focus loss events.
   - Displays modal warnings on tab switches. On exceeding **3 tab-switch warnings**, the exam is automatically submitted immediately with a logged violation.
+  - **Notification Pop-Up Instant Auto-Submit:** Any system notification pop-up, browser push notification, or external application pop-up overlay that causes window focus loss automatically triggers immediate auto-submission of the exam.
 * **FR-3.2 Forced Full-Screen Enforcement:**
   - React client requires full-screen mode (`requestFullscreen()`) before initializing the 60-question paper.
   - Exiting full-screen mode pauses the exam, logs a warning, and gives a 10-second grace timer to return to full-screen mode before auto-submitting.
@@ -98,7 +99,7 @@ graph TD
 * **FR-3.5 Dual-Session & Single Device Binding:**
   - Active JWT session tokens prevent concurrent exam logins from multiple devices or browser windows under the same account.
 * **FR-3.6 Violation Logging:**
-  - System logs every integrity event (tab switch counts, full-screen exit timestamps, focus loss) to the candidate's exam attempt record (`exam_attempts.integrity_log`).
+  - System logs every integrity event (tab switch counts, notification pop-up focus losses, full-screen exit timestamps) to the candidate's exam attempt record (`exam_attempts.integrity_log`).
 
 ### FR-4: React SPA Frontend Architecture
 * **FR-4.1 Stack:** Built with **React 18+**, **Vite**, **TypeScript/JavaScript**, **React Router v6**, and **Tailwind CSS**.

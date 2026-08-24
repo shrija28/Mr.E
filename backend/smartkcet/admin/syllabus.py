@@ -1,47 +1,32 @@
-"""Admin KCET Syllabus management API.
-
-Endpoints
----------
-GET    /api/admin/syllabus             – list all topics (with filters)
-GET    /api/admin/syllabus/counts      – chapter counts per subject/PUC
-POST   /api/admin/syllabus             – add a new topic
-PATCH  /api/admin/syllabus/{id}        – edit topic (name, order, active, description)
-DELETE /api/admin/syllabus/{id}        – delete a topic
-
-Public (no auth required)
-GET    /api/syllabus                   – all active topics (for students/institutions)
-GET    /api/syllabus/{subject}         – active topics for one subject
-"""
+"""Admin KCET Syllabus management API using Flask Blueprint."""
 
 from __future__ import annotations
 
 import logging
+import os
+import shutil
+import uuid
+from pathlib import Path as PathlibPath
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Path, Query, Request, status, File, Form, UploadFile
-from fastapi.responses import JSONResponse, FileResponse
-from pydantic import BaseModel
-import os
-import uuid
-import shutil
-from pathlib import Path as PathlibPath
+from flask import Blueprint, jsonify, request, send_from_directory
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from ..db.models import SyllabusTopic, Subject
-from ..db.session import get_async_session as get_session
+from ..db.models import Subject, SyllabusTopic
+from ..db.session import get_db
 from ..middleware.rbac import require_admin
 
 logger = logging.getLogger("smartkcet.admin.syllabus")
 
-router = APIRouter()
-public_router = APIRouter()   # mounted separately — no auth
+router = Blueprint("admin_syllabus", __name__, url_prefix="/api/admin")
+public_router = Blueprint("public_syllabus", __name__, url_prefix="/api")
 
+TEXTBOOKS_DIR = PathlibPath(__file__).resolve().parent.parent.parent / "data" / "textbooks"
+VALID_PUC = {"1st PUC", "2nd PUC"}
+VALID_SUBJECTS = {s.value for s in Subject}
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _serialise(t: SyllabusTopic) -> dict[str, Any]:
     return {
@@ -60,63 +45,27 @@ def _serialise(t: SyllabusTopic) -> dict[str, Any]:
     }
 
 
-TEXTBOOKS_DIR = PathlibPath(__file__).resolve().parent.parent.parent / "data" / "textbooks"
-
-@public_router.get("/syllabus/textbook/{filename}")
-def download_textbook(
-    filename: str,
-) -> FileResponse:
-    """Download/view an associated textbook file."""
-    file_path = TEXTBOOKS_DIR / filename
-    if not file_path.exists() or not file_path.is_file():
-        from fastapi import HTTPException
-        raise HTTPException(status_code=404, detail="Textbook file not found")
-    return FileResponse(file_path, filename=filename)
-
-
-def _validation_error(msg: str, field: Optional[str] = None) -> JSONResponse:
+def _validation_error(msg: str, field: Optional[str] = None):
     body: dict[str, Any] = {"error": "validation_error", "message": msg}
     if field:
         body["field"] = field
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=body)
+    return jsonify(body), 400
 
 
-VALID_PUC = {"1st PUC", "2nd PUC"}
-VALID_SUBJECTS = {s.value for s in Subject}
+@public_router.route("/syllabus/textbook/<filename>", methods=["GET"])
+def download_textbook(filename: str):
+    file_path = TEXTBOOKS_DIR / filename
+    if not file_path.exists() or not file_path.is_file():
+        return jsonify({"error": "not_found", "message": "Textbook file not found"}), 404
+    return send_from_directory(TEXTBOOKS_DIR, filename)
 
 
-# ---------------------------------------------------------------------------
-# Request bodies
-# ---------------------------------------------------------------------------
+@public_router.route("/syllabus", methods=["GET"])
+def list_syllabus_public():
+    session: Session = get_db()
+    subject = request.args.get("subject")
+    puc_year = request.args.get("puc_year")
 
-class CreateTopicRequest(BaseModel):
-    subject: str
-    puc_year: str
-    chapter_number: int
-    chapter_name: str
-    display_order: int = 0
-    description: Optional[str] = None
-    is_active: bool = True
-
-
-class PatchTopicRequest(BaseModel):
-    chapter_name: Optional[str] = None
-    display_order: Optional[int] = None
-    description: Optional[str] = None
-    is_active: Optional[bool] = None
-
-
-# ---------------------------------------------------------------------------
-# PUBLIC endpoints (no auth)
-# ---------------------------------------------------------------------------
-
-@public_router.get("/syllabus")
-def list_syllabus_public(
-    subject: Optional[str] = Query(default=None),
-    puc_year: Optional[str] = Query(default=None),
-    session: Session = Depends(get_session),
-) -> Any:
-    """Return all active KCET syllabus topics — accessible by students and institutions."""
     stmt = (
         select(SyllabusTopic)
         .where(SyllabusTopic.is_active.is_(True))
@@ -138,7 +87,6 @@ def list_syllabus_public(
 
     rows = session.execute(stmt).scalars().all()
 
-    # Group into nested structure: subject → puc_year → chapters
     grouped: dict[str, dict[str, list]] = {}
     for t in rows:
         grouped.setdefault(t.subject, {}).setdefault(t.puc_year, []).append(_serialise(t))
@@ -158,23 +106,18 @@ def list_syllabus_public(
             "total_chapters": sum(len(v) for v in puc_map.values()),
         })
 
-    return {
+    return jsonify({
         "subjects": result,
         "total_topics": len(rows),
-    }
+    }), 200
 
 
-@public_router.get("/syllabus/{subject}")
-def get_syllabus_by_subject(
-    subject: str = Path(...),
-    session: Session = Depends(get_session),
-) -> Any:
-    """Return active topics for one subject, grouped by PUC year."""
+@public_router.route("/syllabus/<subject>", methods=["GET"])
+def get_syllabus_by_subject(subject: str):
+    session: Session = get_db()
     if subject not in VALID_SUBJECTS:
-        return JSONResponse(
-            status_code=404,
-            content={"error": "not_found", "message": f"Subject '{subject}' not found"},
-        )
+        return jsonify({"error": "not_found", "message": f"Subject '{subject}' not found"}), 404
+
     stmt = (
         select(SyllabusTopic)
         .where(SyllabusTopic.subject == subject, SyllabusTopic.is_active.is_(True))
@@ -186,27 +129,21 @@ def get_syllabus_by_subject(
     for t in rows:
         puc_map.setdefault(t.puc_year, []).append(_serialise(t))
 
-    return {
+    return jsonify({
         "subject": subject,
         "puc_years": [
             {"puc_year": p, "chapters": chs, "total_chapters": len(chs)}
             for p, chs in sorted(puc_map.items())
         ],
         "total_chapters": len(rows),
-    }
+    }), 200
 
 
-# ---------------------------------------------------------------------------
-# ADMIN endpoints
-# ---------------------------------------------------------------------------
-
-@router.get("/syllabus/counts")
-def get_topic_counts(
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
-    """Per-subject, per-PUC chapter counts (all + active)."""
-    from sqlalchemy import Integer as SAInteger, case
+@router.route("/syllabus/counts", methods=["GET"])
+@require_admin
+def get_topic_counts():
+    session: Session = get_db()
+    from sqlalchemy import case
     rows = session.execute(
         select(
             SyllabusTopic.subject,
@@ -224,18 +161,18 @@ def get_topic_counts(
         {"subject": r.subject, "puc_year": r.puc_year, "total": r.total, "active": r.active or 0}
         for r in rows
     ]
-    return {"counts": counts}
+    return jsonify({"counts": counts}), 200
 
 
-@router.get("/syllabus")
-def list_topics(
-    subject: Optional[str] = Query(default=None),
-    puc_year: Optional[str] = Query(default=None),
-    include_inactive: bool = Query(default=True),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
-    """Admin: list all syllabus topics with optional filters."""
+@router.route("/syllabus", methods=["GET"])
+@require_admin
+def list_topics():
+    session: Session = get_db()
+    subject = request.args.get("subject")
+    puc_year = request.args.get("puc_year")
+    include_inactive_str = request.args.get("include_inactive", "true")
+    include_inactive = include_inactive_str.lower() == "true"
+
     stmt = select(SyllabusTopic).order_by(
         SyllabusTopic.subject,
         SyllabusTopic.puc_year,
@@ -254,31 +191,39 @@ def list_topics(
         stmt = stmt.where(SyllabusTopic.is_active.is_(True))
 
     rows = session.execute(stmt).scalars().all()
-    return {"topics": [_serialise(t) for t in rows], "total": len(rows)}
+    return jsonify({"topics": [_serialise(t) for t in rows], "total": len(rows)}), 200
 
 
-@router.post("/syllabus", status_code=status.HTTP_201_CREATED)
-def create_topic(
-    subject: str = Form(...),
-    puc_year: str = Form(...),
-    chapter_number: int = Form(...),
-    chapter_name: str = Form(...),
-    display_order: int = Form(default=0),
-    description: Optional[str] = Form(default=None),
-    is_active: bool = Form(default=True),
-    textbook: Optional[UploadFile] = File(default=None),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
-    """Admin: add a new syllabus chapter."""
-    if subject not in VALID_SUBJECTS:
+@router.route("/syllabus", methods=["POST"])
+@require_admin
+def create_topic():
+    session: Session = get_db()
+    subject = request.form.get("subject")
+    puc_year = request.form.get("puc_year")
+    raw_chapter_number = request.form.get("chapter_number")
+    chapter_name = request.form.get("chapter_name")
+    raw_display_order = request.form.get("display_order", 0)
+    description = request.form.get("description")
+    raw_is_active = request.form.get("is_active", "true")
+    textbook = request.files.get("textbook")
+
+    if not subject or subject not in VALID_SUBJECTS:
         return _validation_error(f"subject must be one of {sorted(VALID_SUBJECTS)}", "subject")
-    if puc_year not in VALID_PUC:
+    if not puc_year or puc_year not in VALID_PUC:
         return _validation_error("puc_year must be '1st PUC' or '2nd PUC'", "puc_year")
-    if not chapter_name.strip():
+    if not chapter_name or not chapter_name.strip():
         return _validation_error("chapter_name is required", "chapter_name")
+
+    try:
+        chapter_number = int(raw_chapter_number)
+    except (ValueError, TypeError):
+        return _validation_error("chapter_number must be an integer", "chapter_number")
+
     if chapter_number < 1:
         return _validation_error("chapter_number must be >= 1", "chapter_number")
+
+    display_order = int(raw_display_order) if str(raw_display_order).isdigit() else 0
+    is_active = raw_is_active.lower() in ("true", "1")
 
     topic = SyllabusTopic(
         subject=subject,
@@ -297,21 +242,19 @@ def create_topic(
             unique_prefix = f"topic_{topic.id}"
             safe_filename = f"{unique_prefix}_{textbook.filename}"
             dest_path = TEXTBOOKS_DIR / safe_filename
-            with open(dest_path, "wb") as buffer:
-                shutil.copyfileobj(textbook.file, buffer)
+            textbook.save(dest_path)
             topic.textbook_filename = textbook.filename
             topic.textbook_path = f"/api/syllabus/textbook/{safe_filename}"
 
             try:
                 from .upload import _extract_text, chunk_text, stores
-                textbook.file.seek(0)
-                content = textbook.file.read()
+                textbook.seek(0)
+                content = textbook.read()
                 text = _extract_text(textbook.filename, content)
                 if text and text.strip():
                     chunks = chunk_text(text)
-                    if chunks:
+                    if chunks and stores:
                         stores.add(Subject(subject), chunks)
-                        logger.info("Indexed textbook '%s' for syllabus chapter %d", textbook.filename, topic.id)
             except Exception as index_err:
                 logger.warning("Textbook indexing failed (non-fatal): %s", index_err)
 
@@ -320,51 +263,48 @@ def create_topic(
     except SQLAlchemyError as exc:
         session.rollback()
         if "UNIQUE" in str(exc).upper():
-            return JSONResponse(
-                status_code=status.HTTP_409_CONFLICT,
-                content={
-                    "error": "duplicate_chapter",
-                    "message": f"Chapter {chapter_number} already exists for {subject} {puc_year}",
-                },
-            )
-        logger.warning("POST /admin/syllabus failed: %s", exc)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "db_error", "message": str(exc)},
-        )
-    return _serialise(topic)
+            return jsonify({
+                "error": "duplicate_chapter",
+                "message": f"Chapter {chapter_number} already exists for {subject} {puc_year}",
+            }), 409
+        return jsonify({"error": "db_error", "message": str(exc)}), 500
+
+    return jsonify(_serialise(topic)), 201
 
 
-@router.patch("/syllabus/{topic_id}")
-def patch_topic(
-    topic_id: int = Path(...),
-    chapter_name: Optional[str] = Form(default=None),
-    display_order: Optional[int] = Form(default=None),
-    description: Optional[str] = Form(default=None),
-    is_active: Optional[bool] = Form(default=None),
-    textbook: Optional[UploadFile] = File(default=None),
-    clear_textbook: bool = Form(default=False),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
-    """Admin: edit a syllabus topic (name, order, active status, description, textbook)."""
-    topic = session.get(SyllabusTopic, topic_id)
+@router.route("/syllabus/<topic_id>", methods=["PATCH"])
+@require_admin
+def patch_topic(topic_id: str):
+    session: Session = get_db()
+    try:
+        tid = int(topic_id)
+    except ValueError:
+        return jsonify({"error": "validation_error", "message": "Invalid topic_id"}), 400
+
+    topic = session.get(SyllabusTopic, tid)
     if topic is None:
-        return JSONResponse(
-            status_code=404,
-            content={"error": "not_found", "id": topic_id},
-        )
+        return jsonify({"error": "not_found", "id": topic_id}), 404
+
+    chapter_name = request.form.get("chapter_name")
+    raw_display_order = request.form.get("display_order")
+    description = request.form.get("description")
+    raw_is_active = request.form.get("is_active")
+    textbook = request.files.get("textbook")
+    clear_textbook = request.form.get("clear_textbook", "false").lower() == "true"
 
     if chapter_name is not None:
         if not chapter_name.strip():
             return _validation_error("chapter_name cannot be empty", "chapter_name")
         topic.chapter_name = chapter_name.strip()
-    if display_order is not None:
-        topic.display_order = display_order
+    if raw_display_order is not None:
+        try:
+            topic.display_order = int(raw_display_order)
+        except ValueError:
+            pass
     if description is not None:
         topic.description = description
-    if is_active is not None:
-        topic.is_active = is_active
+    if raw_is_active is not None:
+        topic.is_active = raw_is_active.lower() in ("true", "1")
 
     if clear_textbook:
         topic.textbook_filename = None
@@ -374,21 +314,19 @@ def patch_topic(
         unique_prefix = f"topic_{topic.id}"
         safe_filename = f"{unique_prefix}_{textbook.filename}"
         dest_path = TEXTBOOKS_DIR / safe_filename
-        with open(dest_path, "wb") as buffer:
-            shutil.copyfileobj(textbook.file, buffer)
+        textbook.save(dest_path)
         topic.textbook_filename = textbook.filename
         topic.textbook_path = f"/api/syllabus/textbook/{safe_filename}"
 
         try:
             from .upload import _extract_text, chunk_text, stores
-            textbook.file.seek(0)
-            content = textbook.file.read()
+            textbook.seek(0)
+            content = textbook.read()
             text = _extract_text(textbook.filename, content)
             if text and text.strip():
                 chunks = chunk_text(text)
-                if chunks:
+                if chunks and stores:
                     stores.add(Subject(topic.subject), chunks)
-                    logger.info("Indexed textbook '%s' for syllabus chapter %d", textbook.filename, topic.id)
         except Exception as index_err:
             logger.warning("Textbook indexing failed (non-fatal): %s", index_err)
 
@@ -397,62 +335,44 @@ def patch_topic(
         session.refresh(topic)
     except SQLAlchemyError as exc:
         session.rollback()
-        return JSONResponse(
-            status_code=500,
-            content={"error": "db_error", "message": str(exc)},
-        )
-    return _serialise(topic)
+        return jsonify({"error": "db_error", "message": str(exc)}), 500
+
+    return jsonify(_serialise(topic)), 200
 
 
-@router.delete("/syllabus/{topic_id}")
-def delete_topic(
-    topic_id: int = Path(...),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
-    """Admin: permanently delete a syllabus topic."""
-    topic = session.get(SyllabusTopic, topic_id)
-    if topic is None:
-        return JSONResponse(
-            status_code=404,
-            content={"error": "not_found", "id": topic_id},
-        )
+@router.route("/syllabus/<topic_id>", methods=["DELETE"])
+@require_admin
+def delete_topic(topic_id: str):
+    session: Session = get_db()
     try:
-        session.execute(delete(SyllabusTopic).where(SyllabusTopic.id == topic_id))
+        tid = int(topic_id)
+    except ValueError:
+        return jsonify({"error": "validation_error", "message": "Invalid topic_id"}), 400
+
+    topic = session.get(SyllabusTopic, tid)
+    if topic is None:
+        return jsonify({"error": "not_found", "id": topic_id}), 404
+
+    try:
+        session.execute(delete(SyllabusTopic).where(SyllabusTopic.id == tid))
         session.commit()
     except SQLAlchemyError as exc:
         session.rollback()
-        return JSONResponse(
-            status_code=500,
-            content={"error": "db_error", "message": str(exc)},
-        )
-    return {"deleted": True, "id": topic_id}
+        return jsonify({"error": "db_error", "message": str(exc)}), 500
+
+    return jsonify({"deleted": True, "id": topic_id}), 200
 
 
-# ---------------------------------------------------------------------------
-# BULK TEXTBOOK UPLOAD
-# ---------------------------------------------------------------------------
-
-@router.post("/syllabus/bulk-textbook")
-async def bulk_upload_textbooks(
-    request: Request,
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
-    """Admin: upload textbooks for multiple chapters at once.
-
-    Accepts a multipart/form-data body where each field named ``textbook_{topic_id}``
-    is a file upload for that chapter.  Returns per-chapter results.
-    """
-    form = await request.form()
-
+@router.route("/syllabus/bulk-textbook", methods=["POST"])
+@require_admin
+def bulk_upload_textbooks():
+    session: Session = get_db()
     results = []
     errors = []
 
     os.makedirs(TEXTBOOKS_DIR, exist_ok=True)
 
-    for field_name, field_value in form.multi_items():
-        # Only process fields named textbook_<int>
+    for field_name, upload_file in request.files.items():
         if not field_name.startswith("textbook_"):
             continue
         try:
@@ -460,18 +380,16 @@ async def bulk_upload_textbooks(
         except ValueError:
             continue
 
-        # Must be a file upload
-        if not hasattr(field_value, "filename") or not field_value.filename:
+        if not upload_file.filename:
             continue
 
-        upload_file = field_value
         topic = session.get(SyllabusTopic, topic_id)
         if topic is None:
             errors.append({"topic_id": topic_id, "error": "Chapter not found"})
             continue
 
         try:
-            content = await upload_file.read()
+            content = upload_file.read()
             safe_filename = f"topic_{topic_id}_{upload_file.filename}"
             dest_path = TEXTBOOKS_DIR / safe_filename
 
@@ -481,20 +399,15 @@ async def bulk_upload_textbooks(
             topic.textbook_filename = upload_file.filename
             topic.textbook_path = f"/api/syllabus/textbook/{safe_filename}"
 
-            # Index into RAG (non-fatal)
             try:
                 from .upload import _extract_text, chunk_text, stores
                 text = _extract_text(upload_file.filename, content)
                 if text and text.strip():
                     chunks = chunk_text(text)
-                    if chunks:
+                    if chunks and stores:
                         stores.add(Subject(topic.subject), chunks)
-                        logger.info(
-                            "Bulk: indexed textbook '%s' for chapter %d (%s)",
-                            upload_file.filename, topic_id, topic.subject,
-                        )
             except Exception as index_err:
-                logger.warning("Bulk textbook indexing failed (non-fatal): %s", index_err)
+                logger.warning("Bulk textbook indexing failed: %s", index_err)
 
             session.flush()
             results.append({
@@ -504,26 +417,21 @@ async def bulk_upload_textbooks(
                 "filename": upload_file.filename,
                 "status": "ok",
             })
-
         except Exception as exc:
-            logger.warning("Bulk textbook upload failed for topic %d: %s", topic_id, exc)
             errors.append({"topic_id": topic_id, "error": str(exc)})
 
     try:
         session.commit()
     except SQLAlchemyError as exc:
         session.rollback()
-        return JSONResponse(
-            status_code=500,
-            content={"error": "db_error", "message": str(exc)},
-        )
+        return jsonify({"error": "db_error", "message": str(exc)}), 500
 
-    return {
+    return jsonify({
         "uploaded": len(results),
         "errors": len(errors),
         "results": results,
         "error_details": errors,
-    }
+    }), 200
 
 
 __all__ = ["router", "public_router"]

@@ -1,39 +1,24 @@
-"""Admin leaderboard endpoint — full ranked list with optional subject filter.
-
-Implements GET /api/admin/leaderboard?subject=... (REQ-11.4, REQ-11.5, REQ-11.7).
-
-Returns:
-- The full ranked list with names, KCET IDs, composite scores, subject-wise averages
-- Optional subject filter parameter
-- Total count of ranked students
-"""
+"""Admin leaderboard endpoint using Flask Blueprint."""
 
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
-
-from fastapi import APIRouter, Depends, Query
+from flask import Blueprint, jsonify, request
 from sqlalchemy.orm import Session
 
-from ..db.session import get_async_session as get_session
+from ..db.session import get_db
 from ..leaderboard.service import get_leaderboard
 from ..middleware.rbac import require_admin
 
-router = APIRouter()
+router = Blueprint("admin_leaderboard", __name__, url_prefix="/api/admin")
 
 
-@router.get("/leaderboard")
-def admin_leaderboard(
-    subject: Optional[str] = Query(default=None, description="Optional subject filter"),
-    payload: Dict[str, Any] = Depends(require_admin),
-    session: Session = Depends(get_session),
-) -> Dict[str, Any]:
-    """Return the full ranked leaderboard with optional subject filter.
+@router.route("/leaderboard", methods=["GET"])
+@require_admin
+def admin_leaderboard():
+    session: Session = get_db()
+    subject = request.args.get("subject")
 
-    When *subject* is provided, only submissions for that subject are
-    considered and students with zero submissions in that subject are
-    excluded (REQ-11.7).
-    """
     ranked = get_leaderboard(session, subject=subject)
 
     entries: List[Dict[str, Any]] = []
@@ -49,11 +34,11 @@ def admin_leaderboard(
             }
         )
 
-    return {
+    return jsonify({
         "total_ranked": len(ranked),
         "subject": subject,
         "entries": entries,
-    }
+    }), 200
 
 
 __all__ = ["router"]

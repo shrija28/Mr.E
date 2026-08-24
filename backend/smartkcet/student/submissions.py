@@ -1,61 +1,33 @@
-"""Student submission history endpoints.
-
-Implements task 8.5 / REQ-4.5, REQ-10.1, REQ-10.4, REQ-14.3.
-
-Access Control (Tasks 5.3, 5.4):
-- Free Trial: Basic analytics only (total score, pass/fail)
-- Pro: Full analytics (topic breakdowns, AI recommendations, trends)
-
-Endpoints
----------
-
-``GET /api/student/submissions``
-    Return the authenticated student's submissions.  Default sort is
-    ``submitted_at DESC`` (REQ-10.4).  Optional filters: ``subject``
-    (joins through exam_sets → exams), ``limit`` (default 50, capped at
-    200), ``offset`` (default 0).  Response items are summary records —
-    detailed answer data lives on the ``GET .../{id}`` endpoint.
-
-``GET /api/student/submissions/{submission_id}``
-    Return the full submission record for a single attempt, including
-    the answers, scoring envelope, and per-question correctness review.
-    Enforces ownership: a 403 is returned when the submission does not
-    belong to the authenticated student.  The 403 body is intentionally
-    bare so no information about the submission leaks (REQ-4.5).
-"""
+"""Student submission history endpoints using Flask Blueprint."""
 
 from __future__ import annotations
 
+import logging
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Path, Query, Request, status
-from fastapi.responses import JSONResponse
+from flask import Blueprint, jsonify, request
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from ..db.models import Exam, ExamSet, ExamSetQuestion, Question, Submission, Subject
-from ..db.session import get_async_session as get_session
+from ..db.session import get_db
 from ..middleware.rbac import current_user, require_student
 from ..subscription.dependencies import get_access_control
 
-router = APIRouter()
+logger = logging.getLogger("smartkcet.student.submissions")
 
+router = Blueprint("student_submissions", __name__, url_prefix="/api/student")
 
 _DEFAULT_LIMIT = 50
 _MAX_LIMIT = 200
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _validation_error(message: str, field: Optional[str] = None) -> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None):
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=body)
+    return jsonify(body), 400
 
 
 def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
@@ -70,11 +42,7 @@ def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
         return None
 
 
-def _summary_row(
-    submission: Submission, exam_set: ExamSet, exam: Exam
-) -> dict[str, Any]:
-    """Map a join row to the dashboard summary shape."""
-
+def _summary_row(submission: Submission, exam_set: ExamSet, exam: Exam) -> dict[str, Any]:
     submitted_at = submission.submitted_at
     return {
         "id": str(submission.id),
@@ -92,49 +60,34 @@ def _summary_row(
     }
 
 
-# ---------------------------------------------------------------------------
-# GET /api/student/submissions  (REQ-10.1, REQ-10.4)
-# ---------------------------------------------------------------------------
-
-
-@router.get("/submissions")
-def list_submissions(
-    request: Request,
-    subject: Optional[str] = Query(default=None),
-    limit: int = Query(default=_DEFAULT_LIMIT, ge=1),
-    offset: int = Query(default=0, ge=0),
-    session: Session = Depends(get_session),
-    _student: dict = Depends(require_student),
-    access_control = Depends(get_access_control),
-) -> Any:
-    """List the authenticated student's submissions, newest first.
-    
-    **Subscription Integration (REQ-2.4):**
-    Response includes subscription status and remaining attempts for dashboard display.
-    """
-
+@router.route("/submissions", methods=["GET"])
+@require_student
+def list_submissions():
+    session: Session = get_db()
     user = current_user(request, session)
     if user is None or user.role != "student":
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={
-                "error": "auth_required",
-                "message": "Authenticated student account not found.",
-            },
-        )
+        return jsonify({"error": "auth_required", "message": "Authenticated student account not found."}), 401
+
+    subject = request.args.get("subject")
+    raw_limit = request.args.get("limit", _DEFAULT_LIMIT)
+    raw_offset = request.args.get("offset", 0)
+
+    try:
+        limit = int(raw_limit)
+        offset = int(raw_offset)
+    except (ValueError, TypeError):
+        limit = _DEFAULT_LIMIT
+        offset = 0
 
     selected_subject: Optional[Subject] = None
     if subject is not None:
         normalised = _normalise_subject(subject)
         if normalised is None:
             allowed = [s.value for s in Subject]
-            return _validation_error(
-                f"subject must be one of {allowed}",
-                field="subject",
-            )
+            return _validation_error(f"subject must be one of {allowed}", field="subject")
         selected_subject = normalised
 
-    capped_limit = min(int(limit), _MAX_LIMIT)
+    capped_limit = min(max(1, limit), _MAX_LIMIT)
 
     stmt = (
         select(Submission, ExamSet, Exam)
@@ -151,11 +104,9 @@ def list_submissions(
     rows = session.execute(stmt).all()
     summaries = [_summary_row(sub, exam_set, exam) for sub, exam_set, exam in rows]
 
-    # Get subscription status and remaining attempts for dashboard display (REQ-2.4)
     subscription_status = None
     remaining_attempts_data = None
     try:
-        # Get effective subscription status
         from ..subscription.service import SubscriptionService
         subscription_service = SubscriptionService(session)
         effective_status = subscription_service.get_effective_status(user.id)
@@ -174,87 +125,64 @@ def list_submissions(
             "institution_name": effective_status.institution_name,
         }
         
-        # Get remaining attempts
-        remaining_attempts_data = access_control.get_remaining_attempts(user.id)
+        access_control = get_access_control(session)
+        remaining_attempts_obj = access_control.get_remaining_attempts(user.id)
+        if hasattr(remaining_attempts_obj, "model_dump"):
+            remaining_attempts_data = remaining_attempts_obj.model_dump(mode="json")
+        else:
+            remaining_attempts_data = remaining_attempts_obj
     except Exception as exc:
-        # If we can't get subscription info, log but don't fail the request
-        import logging
-        logger = logging.getLogger("smartkcet.student.submissions")
         logger.warning("Failed to get subscription info for user %s: %s", user.id, exc)
 
-    return {
+    return jsonify({
         "submissions": summaries,
         "limit": capped_limit,
-        "offset": int(offset),
+        "offset": offset,
         "subject": selected_subject.value if selected_subject is not None else None,
         "subscription_status": subscription_status,
         "remaining_attempts": remaining_attempts_data,
-    }
+    }), 200
 
 
-# ---------------------------------------------------------------------------
-# GET /api/student/submissions/{submission_id}  (REQ-4.5, REQ-14.3)
-# ---------------------------------------------------------------------------
-
-
-@router.get("/submissions/{submission_id}")
-def get_submission(
-    request: Request,
-    submission_id: uuid.UUID = Path(...),
-    session: Session = Depends(get_session),
-    _student: dict = Depends(require_student),
-    access_control = Depends(get_access_control),
-) -> Any:
-    """Return the full submission record (with question review).
-
-    A 403 is returned when the submission belongs to a different
-    student, with no body data leaked (REQ-4.5).
-    """
-
+@router.route("/submissions/<submission_id>", methods=["GET"])
+@require_student
+def get_submission(submission_id: str):
+    session: Session = get_db()
     user = current_user(request, session)
     if user is None or user.role != "student":
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={
-                "error": "auth_required",
-                "message": "Authenticated student account not found.",
-            },
-        )
+        return jsonify({"error": "auth_required", "message": "Authenticated student account not found."}), 401
+
+    try:
+        sub_uuid = uuid.UUID(submission_id)
+    except (ValueError, TypeError):
+        return jsonify({"error": "validation_error", "message": "submission_id must be a UUID"}), 400
 
     submission = session.execute(
         select(Submission)
-        .where(Submission.id == submission_id)
+        .where(Submission.id == sub_uuid)
         .options(joinedload(Submission.exam_set).joinedload(ExamSet.exam))
     ).scalar_one_or_none()
 
     if submission is None:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
-                "error": "not_found",
-                "resource": "submission",
-                "value": str(submission_id),
-            },
-        )
+        return jsonify({
+            "error": "not_found",
+            "resource": "submission",
+            "value": str(submission_id),
+        }), 404
 
     if submission.user_id != user.id:
-        # REQ-4.5: forbidden, with no submission data in the body.
-        return JSONResponse(
-            status_code=status.HTTP_403_FORBIDDEN,
-            content={"error": "forbidden", "message": "Access denied."},
-        )
+        return jsonify({"error": "forbidden", "message": "Access denied."}), 403
 
     exam_set = submission.exam_set
     exam = exam_set.exam if exam_set is not None else None
 
-    # Pull the question rows so the detail drawer can render the answer
-    # review (correct option, topic, etc.) without a second request.
     question_rows = session.execute(
         select(Question, ExamSetQuestion.order_index)
         .join(ExamSetQuestion, ExamSetQuestion.question_id == Question.id)
         .where(ExamSetQuestion.exam_set_id == submission.exam_set_id)
         .order_by(ExamSetQuestion.order_index.asc())
     ).all()
+
     questions: list[dict[str, Any]] = []
     answers = submission.answers if isinstance(submission.answers, dict) else {}
     from ..db.subscription_models import Subscription
@@ -298,7 +226,6 @@ def get_submission(
         )
 
     submitted_at = submission.submitted_at
-    
     analytics_data = {
         "id": str(submission.id),
         "exam_set_id": str(submission.exam_set_id),
@@ -318,10 +245,10 @@ def get_submission(
         "questions": questions,
     }
     
-    # Filter analytics data based on subscription tier
+    access_control = get_access_control(session)
     filtered_data = access_control.filter_analytics_data(analytics_data, user.id)
     
-    return filtered_data
+    return jsonify(filtered_data), 200
 
 
 __all__ = ["router"]

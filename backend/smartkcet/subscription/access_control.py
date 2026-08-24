@@ -206,16 +206,14 @@ class SubscriptionAccessControl:
             .first()
         )
 
-        if plan and plan.name.lower() != "free":
+        # Pro subscription or paid plan active: grant full analytics
+        if plan and plan.name not in ["Free", "Free Trial"] and plan.price > 0 and subscription.status in ["active", "grace_period"]:
             return AccessCheckResult(access=AccessLevel.GRANTED, reason=None)
         
-        if subscription.status in ["active", "trial", "grace_period"]:
-            return AccessCheckResult(access=AccessLevel.GRANTED, reason=None)
-        
-        # Default: basic analytics only
+        # Free Tier / Free Trial: basic score analytics only (total score, pass/fail, percentage)
         return AccessCheckResult(
             access=AccessLevel.UPGRADE_REQUIRED,
-            reason="Full analytics require Pro subscription",
+            reason="Full topic analytics, AI recommendations, and weak-topic analysis require a Pro subscription.",
             upgrade_url="/api/subscription/upgrade",
         )
     
@@ -374,12 +372,17 @@ class SubscriptionAccessControl:
             # Pro subscription: return full analytics
             return analytics_data
         
-        # Free Trial: return analytics data with is_premium_subscriber = False
+        # Free Trial / Free Plan: return basic analytics data with is_premium_subscriber = False
         res = dict(analytics_data)
         res["is_premium_subscriber"] = False
         res["upgrade_required"] = True
         res["upgrade_url"] = access_result.upgrade_url
         res["upgrade_message"] = access_result.reason
+        res["topic_breakdown"] = None
+        res["topicScores"] = None
+        res["weak_topics"] = None
+        res["ai_recommendations"] = None
+        res["rank_suggestions"] = None
         return res
     
     def filter_leaderboard_data(self, leaderboard_data: dict, user_id: UUID) -> dict:

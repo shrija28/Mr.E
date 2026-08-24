@@ -1,16 +1,4 @@
-"""Platform Admin Dashboard — aggregated metrics endpoint.
-
-GET /api/admin/dashboard  (requires platform_admin)
-
-Returns a single JSON object with every KPI tile the admin dashboard
-needs:
-  - Platform overview (institutions, students, questions, exams)
-  - Question bank breakdown (admin vs institution, per subject)
-  - Subscription summary (active, expired, trial, revenue)
-  - Exam activity (total created, total attempted, recent)
-  - Recent institutions (last 5 registered)
-  - Alerts (expiring subscriptions, inactive institutions)
-"""
+"""Platform Admin Dashboard — aggregated metrics endpoint using Flask Blueprint."""
 
 from __future__ import annotations
 
@@ -18,31 +6,27 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from flask import Blueprint, jsonify, request
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from ..db.models import Exam, ExamSet, IndexedFile, Question, Submission, User
-from ..db.session import get_session
+from ..db.session import get_db
 from ..db.subscription_models import Institution, Subscription, SubscriptionPlan
 from ..middleware.rbac import require_admin
 
 logger = logging.getLogger("smartkcet.admin.dashboard")
 
-router = APIRouter()
+router = Blueprint("admin_dashboard", __name__, url_prefix="/api/admin")
 
 
-@router.get("/dashboard")
-def get_admin_dashboard(
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
-    """Return all KPI metrics for the platform admin dashboard."""
-
+@router.route("/dashboard", methods=["GET"])
+@require_admin
+def get_admin_dashboard():
+    session: Session = get_db()
     now = datetime.utcnow()
     soon = now + timedelta(days=30)
 
-    # ── Institutions ─────────────────────────────────────────────────────────
     total_institutions = session.execute(
         select(func.count(Institution.id))
     ).scalar_one()
@@ -53,7 +37,6 @@ def get_admin_dashboard(
         )
     ).scalar_one()
 
-    # ── Users / Students ──────────────────────────────────────────────────────
     total_students = session.execute(
         select(func.count(User.id)).where(User.role == "student")
     ).scalar_one()
@@ -67,13 +50,10 @@ def get_admin_dashboard(
 
     direct_students = total_students - institution_linked_students
 
-    # ── Questions ─────────────────────────────────────────────────────────────
-    # Admin (platform-wide) questions — institution_id IS NULL
     admin_questions_total = session.execute(
         select(func.count(Question.id)).where(Question.institution_id.is_(None))
     ).scalar_one()
 
-    # Per-subject admin questions
     admin_q_by_subject = dict(
         session.execute(
             select(Question.subject, func.count(Question.id))
@@ -82,12 +62,10 @@ def get_admin_dashboard(
         ).all()
     )
 
-    # Institution questions — institution_id IS NOT NULL
     institution_questions_total = session.execute(
         select(func.count(Question.id)).where(Question.institution_id.isnot(None))
     ).scalar_one()
 
-    # Per-institution question counts
     inst_q_rows = session.execute(
         select(Institution.name, func.count(Question.id))
         .join(Question, Question.institution_id == Institution.id)
@@ -97,22 +75,18 @@ def get_admin_dashboard(
     ).all()
     institution_question_counts = [{"name": r[0], "count": r[1]} for r in inst_q_rows]
 
-    # ── Exams ─────────────────────────────────────────────────────────────────
     total_exams = session.execute(select(func.count(Exam.id))).scalar_one()
     published_exams = session.execute(
         select(func.count(Exam.id)).where(Exam.is_published.is_(True))
     ).scalar_one()
 
-    # Total exam attempts (submissions)
     total_attempts = session.execute(select(func.count(Submission.id))).scalar_one()
 
-    # Average score across all submissions
     avg_score_result = session.execute(
         select(func.avg(Submission.score_pct))
     ).scalar_one()
     avg_score = round(float(avg_score_result or 0), 1)
 
-    # Exams by subject
     exams_by_subject = dict(
         session.execute(
             select(Exam.subject, func.count(Exam.id))
@@ -120,7 +94,6 @@ def get_admin_dashboard(
         ).all()
     )
 
-    # ── Subscriptions ─────────────────────────────────────────────────────────
     active_subscriptions = session.execute(
         select(func.count(Subscription.id)).where(
             Subscription.status.in_(["active", "trial", "grace_period"])
@@ -139,7 +112,6 @@ def get_admin_dashboard(
         )
     ).scalar_one()
 
-    # Institution subscriptions detail (for subscriptions page)
     inst_sub_rows = session.execute(
         select(
             Institution.id,
@@ -176,7 +148,6 @@ def get_admin_dashboard(
             "price": float(row[6]) if row[6] else None,
         })
 
-    # Alerts: subscriptions expiring within 30 days
     expiring_soon = session.execute(
         select(
             Institution.name,
@@ -204,7 +175,6 @@ def get_admin_dashboard(
             "days_left": days_left,
         })
 
-    # Inactive institutions (no subscription at all)
     inactive_count = session.execute(
         select(func.count(Institution.id)).where(
             Institution.subscription_status == "inactive"
@@ -219,7 +189,6 @@ def get_admin_dashboard(
             "count": int(inactive_count),
         })
 
-    # ── Recent institutions (last 5) ──────────────────────────────────────────
     recent_inst_rows = session.execute(
         select(
             Institution.id,
@@ -241,7 +210,6 @@ def get_admin_dashboard(
         for r in recent_inst_rows
     ]
 
-    # ── Indexed files ─────────────────────────────────────────────────────────
     admin_files = session.execute(
         select(func.count(IndexedFile.id)).where(IndexedFile.institution_id.is_(None))
     ).scalar_one()
@@ -250,11 +218,8 @@ def get_admin_dashboard(
         select(func.count(IndexedFile.id)).where(IndexedFile.institution_id.isnot(None))
     ).scalar_one()
 
-    # ── Assemble response ─────────────────────────────────────────────────────
-    return {
+    return jsonify({
         "generated_at": now.isoformat(),
-
-        # Overview KPIs
         "overview": {
             "total_institutions": int(total_institutions),
             "active_institutions": int(active_institutions),
@@ -274,28 +239,18 @@ def get_admin_dashboard(
             "admin_indexed_files": int(admin_files),
             "institution_indexed_files": int(institution_files),
         },
-
-        # Question bank breakdown
         "question_bank": {
             "admin_by_subject": {s: int(v) for s, v in admin_q_by_subject.items()},
             "institution_by_institution": institution_question_counts,
         },
-
-        # Exams breakdown
         "exams": {
             "by_subject": {s: int(v) for s, v in exams_by_subject.items()},
         },
-
-        # Institution subscriptions
         "institution_subscriptions": institution_subscriptions,
-
-        # Recent institutions
         "recent_institutions": recent_institutions,
-
-        # Alerts
         "alerts": alerts,
         "alert_count": len(alerts),
-    }
+    }), 200
 
 
 __all__ = ["router"]

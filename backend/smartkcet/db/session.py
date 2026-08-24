@@ -124,10 +124,30 @@ async def get_async_session() -> AsyncGenerator[Session, None]:
         session.close()
 
 
+def get_db() -> Session:
+    """Return a request-scoped database session attached to Flask g context."""
+    from flask import g
+    if "db" not in g:
+        g.db = SessionLocal()
+    return g.db
+
+
+def teardown_db(exception=None) -> None:
+    """Close the request-scoped database session on Flask app teardown."""
+    from flask import g
+    db = g.pop("db", None)
+    if db is not None:
+        if exception is not None:
+            db.rollback()
+        db.close()
+
+
 __all__ = [
     "DATABASE_URL",
     "engine",
     "SessionLocal",
     "get_session",
     "get_async_session",
+    "get_db",
+    "teardown_db",
 ]

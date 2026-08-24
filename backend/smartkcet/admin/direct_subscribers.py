@@ -1,28 +1,25 @@
-"""Admin API endpoints for managing direct subscriber students."""
+"""Admin API endpoints for managing direct subscriber students using Flask Blueprint."""
 
-from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+from __future__ import annotations
+
+import logging
+from flask import Blueprint, jsonify, request
 from sqlalchemy.orm import Session
 
 from ..db.models import User
-from ..db.session import get_async_session as get_session
+from ..db.session import get_db
 from ..middleware.rbac import require_admin
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+logger = logging.getLogger("smartkcet.admin.direct_subscribers")
+
+router = Blueprint("admin_direct_subscribers", __name__, url_prefix="/api/admin")
 
 
-@router.get("/direct-subscribers")
-async def get_direct_subscribers(
-    db: Session = Depends(get_session),
-    _: Annotated[dict, Depends(require_admin)] = None,
-):
-    """Get all direct subscriber students (admin only).
-    
-    Returns list of students registered as personal/direct subscribers
-    with their subscription status.
-    """
+@router.route("/direct-subscribers", methods=["GET"])
+@require_admin
+def get_direct_subscribers():
+    db: Session = get_db()
     try:
-        # Query all direct subscriber students
         direct_subscribers = (
             db.query(User)
             .filter(User.student_subtype == "direct_subscriber")
@@ -30,16 +27,14 @@ async def get_direct_subscribers(
         )
         
         if not direct_subscribers:
-            return {
+            return jsonify({
                 "count": 0,
                 "students": [],
                 "message": "No direct subscriber students found"
-            }
-        
-        # Build response with subscription info
+            }), 200
+
         students_data = []
         for user in direct_subscribers:
-            # Get subscription info
             from ..db.subscription_models import Subscription
             subscription = (
                 db.query(Subscription)
@@ -61,40 +56,29 @@ async def get_direct_subscribers(
                 "created_at": user.created_at.isoformat() if user.created_at else None,
             })
         
-        return {
+        return jsonify({
             "count": len(students_data),
             "students": students_data,
             "message": f"Found {len(students_data)} direct subscriber student(s)"
-        }
+        }), 200
         
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching direct subscribers: {str(e)}"
-        )
+        logger.error("Error fetching direct subscribers: %s", e)
+        return jsonify({"error": "server_error", "message": f"Error fetching direct subscribers: {str(e)}"}), 500
 
 
-@router.get("/direct-subscribers/unsubscribed")
-async def get_unsubscribed_direct_subscribers(
-    db: Session = Depends(get_session),
-    _: Annotated[dict, Depends(require_admin)] = None,
-):
-    """Get direct subscriber students WITHOUT active subscriptions (admin only).
-    
-    These students will see the subscription popup on next login.
-    """
+@router.route("/direct-subscribers/unsubscribed", methods=["GET"])
+@require_admin
+def get_unsubscribed_direct_subscribers():
+    db: Session = get_db()
     try:
-        # Query direct subscribers without active subscriptions
         from ..db.subscription_models import Subscription
-        
-        # Subquery for users with active subscriptions
         active_sub_users = (
             db.query(Subscription.user_id)
             .filter(Subscription.status.in_(["trial", "active", "overdue", "grace_period"]))
             .distinct()
         )
         
-        # Get direct subscribers without active subscriptions
         unsubscribed = (
             db.query(User)
             .filter(
@@ -105,12 +89,12 @@ async def get_unsubscribed_direct_subscribers(
         )
         
         if not unsubscribed:
-            return {
+            return jsonify({
                 "count": 0,
                 "students": [],
                 "message": "No unsubscribed direct subscriber students found"
-            }
-        
+            }), 200
+
         students_data = []
         for user in unsubscribed:
             students_data.append({
@@ -123,32 +107,24 @@ async def get_unsubscribed_direct_subscribers(
                 "created_at": user.created_at.isoformat() if user.created_at else None,
             })
         
-        return {
+        return jsonify({
             "count": len(students_data),
             "students": students_data,
-            "message": f"Found {len(students_data)} unsubscribed direct subscriber student(s) - they will see popup on next login"
-        }
+            "message": f"Found {len(students_data)} unsubscribed direct subscriber student(s)"
+        }), 200
         
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching unsubscribed students: {str(e)}"
-        )
+        logger.error("Error fetching unsubscribed direct subscribers: %s", e)
+        return jsonify({"error": "server_error", "message": f"Error fetching unsubscribed students: {str(e)}"}), 500
 
 
-@router.get("/direct-subscribers/statistics")
-async def get_direct_subscribers_statistics(
-    db: Session = Depends(get_session),
-    _: Annotated[dict, Depends(require_admin)] = None,
-):
-    """Get statistics about direct subscriber students (admin only)."""
+@router.route("/direct-subscribers/statistics", methods=["GET"])
+@require_admin
+def get_direct_subscribers_statistics():
+    db: Session = get_db()
     try:
         from ..db.subscription_models import Subscription
-        
-        # Total direct subscribers
         total = db.query(User).filter(User.student_subtype == "direct_subscriber").count()
-        
-        # With active subscriptions
         active_sub_users = (
             db.query(Subscription.user_id)
             .filter(Subscription.status.in_(["trial", "active", "overdue", "grace_period"]))
@@ -158,20 +134,20 @@ async def get_direct_subscribers_statistics(
             User.student_subtype == "direct_subscriber",
             User.id.in_(active_sub_users)
         ).count()
-        
-        # Without subscriptions (will see popup)
+
         without_subscription = total - with_subscription
-        
-        return {
+
+        return jsonify({
             "total_direct_subscribers": total,
             "with_active_subscription": with_subscription,
             "without_subscription": without_subscription,
             "percentage_subscribed": (with_subscription / total * 100) if total > 0 else 0,
             "percentage_needs_popup": (without_subscription / total * 100) if total > 0 else 0,
-        }
+        }), 200
         
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error fetching statistics: {str(e)}"
-        )
+        logger.error("Error fetching statistics: %s", e)
+        return jsonify({"error": "server_error", "message": f"Error fetching statistics: {str(e)}"}), 500
+
+
+__all__ = ["router"]

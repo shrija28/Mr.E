@@ -4,7 +4,7 @@ A consolidated record of what was built, when, and how the project evolved.
 
 ---
 
-## Project Evolution
+## Project   Evolution
 
 SmartKCET Prep started as a basic KCET exam preparation platform and grew into a full multi-role SaaS product with a subscription system, institution management, Razorpay payment integration, and a role-based access control layer.
 

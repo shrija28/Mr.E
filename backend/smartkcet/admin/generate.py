@@ -27,13 +27,15 @@ Response shape on success::
 """
 
 from __future__ import annotations
+import os
 
 import random
 import uuid
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Request, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, func as sa_func
 from sqlalchemy.orm import Session
@@ -51,7 +53,7 @@ from ..rag.store import stores
 
 logger = logging.getLogger("smartkcet.admin.generate")
 
-router = APIRouter()
+router = Blueprint("admin_generate", __name__)
 
 
 # Generation contract: 4 sets, up to 20 questions each = up to 80 total.
@@ -60,16 +62,16 @@ QUESTIONS_PER_SET = 20
 MIN_TOTAL_QUESTIONS = 20  # Minimum to generate any sets at all
 
 
-def _validation_error(message: str, field: Optional[str] = None) -> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None)-> JSONResponse:
     """Return a 400 JSON envelope identical in shape to the upload endpoint."""
 
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=body)
+    return JSONResponse(status_code=400, content=body)
 
 
-def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
+def _normalise_subject(value: Optional[str])-> Optional[Subject]:
     """Return the matching :class:`Subject` enum or ``None`` for invalid input."""
 
     if not isinstance(value, str):
@@ -83,7 +85,7 @@ def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
         return None
 
 
-async def _read_subject(request: Request) -> Optional[str]:
+def _read_subject()-> Optional[str]:
     """Extract the ``subject`` field from form-data or a JSON body.
 
     Mirrors the dual-input behaviour an admin UI would use: either an
@@ -97,7 +99,7 @@ async def _read_subject(request: Request) -> Optional[str]:
     # Form-data path (mirrors the upload endpoint).
     if "multipart/form-data" in content_type or "application/x-www-form-urlencoded" in content_type:
         try:
-            form = await request.form()
+            form = request.form()
         except Exception:
             return None
         value = form.get("subject")
@@ -106,7 +108,7 @@ async def _read_subject(request: Request) -> Optional[str]:
     # JSON path.
     if "application/json" in content_type:
         try:
-            body = await request.json()
+            body = request.json()
         except Exception:
             return None
         if isinstance(body, dict):
@@ -117,7 +119,7 @@ async def _read_subject(request: Request) -> Optional[str]:
     # No content-type or an unsupported one — try JSON as a best-effort
     # fallback so callers using raw bodies still work, otherwise None.
     try:
-        body = await request.json()
+        body = request.json()
     except Exception:
         return None
     if isinstance(body, dict):
@@ -126,7 +128,7 @@ async def _read_subject(request: Request) -> Optional[str]:
     return None
 
 
-def _question_row_to_dict(row: Question, set_label: str, index: int) -> dict:
+def _question_row_to_dict(row: Question, set_label: str, index: int)-> dict:
     """Convert a Question ORM row to the frontend-expected dict format."""
     return {
         "id": f"{set_label}-{index}",
@@ -140,12 +142,12 @@ def _question_row_to_dict(row: Question, set_label: str, index: int) -> dict:
     }
 
 
-@router.post("/generate")
-async def generate(
-    request: Request,
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/generate", methods=["POST"])
+def generate()-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Generate 4 paper sets from the DB question bank for the chosen subject.
 
     No external API calls are made. Questions are pulled from the DB
@@ -153,7 +155,7 @@ async def generate(
     into 4 non-overlapping sets.
     """
 
-    raw_subject = await _read_subject(request)
+    raw_subject = _read_subject(request)
     selected = _normalise_subject(raw_subject)
     if selected is None:
         allowed = [s.value for s in Subject]

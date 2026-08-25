@@ -28,7 +28,7 @@ from smartkcet.leaderboard import service  # noqa: F401 — wired for future use
 logger = logging.getLogger("smartkcet.leaderboard")
 
 
-def recompute_async(student_id: Any) -> None:
+def recompute_async(student_id: Any)-> None:
     """Signal that a leaderboard recompute is needed for *student_id*.
 
     Called by the submission service strictly after ``session.commit()``

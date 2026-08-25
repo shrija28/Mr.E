@@ -49,12 +49,12 @@ logger = logging.getLogger("smartkcet.payments.service")
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _paise(rupees: Decimal | float) -> int:
+def _paise(rupees: Decimal | float)-> int:
     """Convert rupees (Decimal or float) to paise (integer)."""
     return int(Decimal(str(rupees)) * 100)
 
 
-def _plan_duration(billing_period: str) -> timedelta:
+def _plan_duration(billing_period: str)-> timedelta:
     return timedelta(days=7) if billing_period == "weekly" else timedelta(days=30)
 
 
@@ -62,11 +62,7 @@ def _plan_duration(billing_period: str) -> timedelta:
 # Order creation
 # ---------------------------------------------------------------------------
 
-def create_institution_order(
-    db: Session,
-    institution_id: uuid.UUID,
-    plan_id: uuid.UUID,
-) -> dict[str, Any]:
+def create_institution_order(db: Session, institution_id: uuid.UUID, plan_id: uuid.UUID)-> dict[str, Any]:
     """Create a Razorpay order for an institution plan purchase.
 
     Returns the data the frontend needs to open the Razorpay checkout modal.
@@ -146,11 +142,7 @@ def create_institution_order(
     }
 
 
-def _get_or_create_pending_sub(
-    db: Session,
-    institution_id: uuid.UUID,
-    plan: SubscriptionPlan,
-) -> uuid.UUID:
+def _get_or_create_pending_sub(db: Session, institution_id: uuid.UUID, plan: SubscriptionPlan)-> uuid.UUID:
     """Return a stub subscription ID for the billing record when no active sub exists."""
     # In real flow, subscription is created/updated only after payment webhook
     # We create a minimal pending record to link billing
@@ -173,11 +165,7 @@ def _get_or_create_pending_sub(
 # Webhook handler — THE authoritative activation path
 # ---------------------------------------------------------------------------
 
-def handle_webhook(
-    db: Session,
-    raw_body: bytes,
-    signature_header: str,
-) -> dict[str, Any]:
+def handle_webhook(db: Session, raw_body: bytes, signature_header: str)-> dict[str, Any]:
     """Process a Razorpay webhook.
 
     Verifies signature, then handles:
@@ -221,11 +209,7 @@ def handle_webhook(
 # Now using dispatcher function below
 
 
-def _fail_billing_record(
-    db: Session,
-    order_id: str,
-    payment_id: str,
-) -> None:
+def _fail_billing_record(db: Session, order_id: str, payment_id: str)-> None:
     billing = db.query(BillingRecord).filter(
         BillingRecord.razorpay_order_id == order_id
     ).first()
@@ -236,15 +220,7 @@ def _fail_billing_record(
         logger.info("BillingRecord marked failed for order %s", order_id)
 
 
-def _log_webhook(
-    db: Session,
-    event: str,
-    order_id: str,
-    payment_id: str,
-    amount_paise: int,
-    status: str,
-    raw_body: bytes,
-) -> None:
+def _log_webhook(db: Session, event: str, order_id: str, payment_id: str, amount_paise: int, status: str, raw_body: bytes)-> None:
     log = PaymentLog(
         id=uuid.uuid4(),
         event_type=event,
@@ -262,11 +238,7 @@ def _log_webhook(
 # Payment history for billing dashboard
 # ---------------------------------------------------------------------------
 
-def get_institution_payment_history(
-    db: Session,
-    institution_id: uuid.UUID,
-    limit: int = 50,
-) -> list[dict]:
+def get_institution_payment_history(db: Session, institution_id: uuid.UUID, limit: int = 50)-> list[dict]:
     """Return billing records for an institution, newest first."""
     records = (
         db.query(BillingRecord, SubscriptionPlan)
@@ -299,11 +271,7 @@ def get_institution_payment_history(
 # Student order creation — mirrors institution flow
 # ---------------------------------------------------------------------------
 
-def create_student_order(
-    db: Session,
-    user_id: uuid.UUID,
-    plan_id: uuid.UUID,
-) -> dict[str, Any]:
+def create_student_order(db: Session, user_id: uuid.UUID, plan_id: uuid.UUID)-> dict[str, Any]:
     """Create a Razorpay order for a student plan purchase (Pro subscription).
 
     Returns the data the frontend needs to open the Razorpay checkout modal.
@@ -422,11 +390,7 @@ def create_student_order(
     }
 
 
-def _get_or_create_pending_student_sub(
-    db: Session,
-    user_id: uuid.UUID,
-    plan: SubscriptionPlan,
-) -> uuid.UUID:
+def _get_or_create_pending_student_sub(db: Session, user_id: uuid.UUID, plan: SubscriptionPlan)-> uuid.UUID:
     """Create a minimal pending subscription stub for billing linkage."""
     now = datetime.utcnow()
     # Ensure plan_id is a UUID, not a string (SQLite may return strings)
@@ -447,14 +411,7 @@ def _get_or_create_pending_student_sub(
 # Activate student subscription after payment
 # ---------------------------------------------------------------------------
 
-def _activate_student_on_payment(
-    db: Session,
-    billing: BillingRecord,
-    payment_id: str,
-    method: str,
-    amount_paise: int,
-    order_id: str,
-) -> None:
+def _activate_student_on_payment(db: Session, billing: BillingRecord, payment_id: str, method: str, amount_paise: int, order_id: str)-> None:
     """Activate / upgrade a student subscription after verified webhook."""
     from ..db.models import User as UserModel
     from datetime import timedelta
@@ -521,13 +478,7 @@ def _activate_student_on_payment(
 # Extend webhook handler to support student subscriptions
 # ---------------------------------------------------------------------------
 
-def _activate_on_payment(
-    db: Session,
-    order_id: str,
-    payment_id: str,
-    amount_paise: int,
-    method: str,
-) -> None:
+def _activate_on_payment(db: Session, order_id: str, payment_id: str, amount_paise: int, method: str)-> None:
     """Activate subscription (institution or student) after successful payment."""
     billing = db.query(BillingRecord).filter(
         BillingRecord.razorpay_order_id == order_id
@@ -563,15 +514,7 @@ def _activate_on_payment(
         logger.error("Subscription %s has neither user_id nor institution_id", sub.id)
 
 
-def _activate_institution_sub(
-    db: Session,
-    sub: Subscription,
-    billing: BillingRecord,
-    payment_id: str,
-    method: str,
-    amount_paise: int,
-    order_id: str,
-) -> None:
+def _activate_institution_sub(db: Session, sub: Subscription, billing: BillingRecord, payment_id: str, method: str, amount_paise: int, order_id: str)-> None:
     """Activate institution subscription (extracted for clarity)."""
     # Use billing.plan_id if available (user's selection), fallback to sub.plan_id
     plan_id_to_use = billing.plan_id or sub.plan_id
@@ -637,13 +580,7 @@ def _activate_institution_sub(
 # Refund hook (records the refund; refunds initiated via Razorpay dashboard)
 # ---------------------------------------------------------------------------
 
-def handle_refund_webhook(
-    db: Session,
-    order_id: str,
-    payment_id: str,
-    refund_id: str,
-    amount_paise: int,
-) -> None:
+def handle_refund_webhook(db: Session, order_id: str, payment_id: str, refund_id: str, amount_paise: int)-> None:
     """Mark billing record as refunded and suspend subscription access.
 
     Refunds are initiated via the Razorpay dashboard or admin API.
@@ -693,11 +630,7 @@ def handle_refund_webhook(
 # Student payment history
 # ---------------------------------------------------------------------------
 
-def get_student_payment_history(
-    db: Session,
-    user_id: uuid.UUID,
-    limit: int = 50,
-) -> list[dict]:
+def get_student_payment_history(db: Session, user_id: uuid.UUID, limit: int = 50)-> list[dict]:
     """Return billing records for a student, newest first."""
     records = (
         db.query(BillingRecord, SubscriptionPlan)
@@ -726,7 +659,7 @@ def get_student_payment_history(
 
 
 # keep old _fail_billing_record for the original webhook path
-def _fail_billing_record(db: Session, order_id: str, payment_id: str) -> None:
+def _fail_billing_record(db: Session, order_id: str, payment_id: str)-> None:
     billing = db.query(BillingRecord).filter(
         BillingRecord.razorpay_order_id == order_id
     ).first()

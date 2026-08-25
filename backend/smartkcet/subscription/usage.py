@@ -34,7 +34,7 @@ class UsageTracker:
         """
         self.db = db
 
-    def can_start_exam(self, user_id: UUID) -> UsageCheckResult:
+    def can_start_exam(self, user_id: UUID)-> UsageCheckResult:
         """Check if user has remaining quota.
         
         Uses pessimistic locking to prevent race conditions on concurrent
@@ -254,8 +254,8 @@ class UsageTracker:
         
         # Check quota based on subscription type
         
-        # Case 1: Free Trial - 5 lifetime attempts
-        if subscription.status == "trial":
+        # Case 1: Free Trial / Free Plan - 5 lifetime attempts cap (3-5 mock tests)
+        if subscription.status == "trial" or (plan and (plan.name in ["Free", "Free Trial"] or plan.price == 0)):
             # Count total usage records for this user
             attempt_count = (
                 self.db.query(UsageRecord)
@@ -268,7 +268,7 @@ class UsageTracker:
             if remaining <= 0:
                 return UsageCheckResult(
                     can_start=False,
-                    reason="Trial attempt limit reached (5 lifetime attempts)",
+                    reason="Free test attempt limit reached (5 lifetime mock tests). Upgrade to Pro for unlimited mock tests.",
                     remaining_attempts=0,
                     quota_type="trial",
                     resets_at=None,
@@ -282,8 +282,8 @@ class UsageTracker:
                 resets_at=None,
             )
         
-        # Case 2: Pro Subscription - unlimited attempts
-        if plan.plan_type == "individual" and subscription.status in ["active", "grace_period"]:
+        # Case 2: Pro Paid Subscription - unlimited attempts
+        if plan.plan_type == "individual" and plan.price > 0 and plan.name not in ["Free", "Free Trial"] and subscription.status in ["active", "grace_period"]:
             return UsageCheckResult(
                 can_start=True,
                 reason=None,
@@ -301,9 +301,7 @@ class UsageTracker:
             resets_at=None,
         )
 
-    def record_attempt(
-        self, user_id: UUID, submission_id: UUID, subject: str
-    ) -> None:
+    def record_attempt(self, user_id: UUID, submission_id: UUID, subject: str)-> None:
         """Record a successful exam start against the user's quota.
         
         **Requirements:** 5.1, 5.7
@@ -371,7 +369,7 @@ class UsageTracker:
         self.db.add(usage_record)
         self.db.commit()
 
-    def get_remaining_attempts(self, user_id: UUID) -> RemainingAttempts:
+    def get_remaining_attempts(self, user_id: UUID)-> RemainingAttempts:
         """Return remaining attempts for display on dashboard.
         
         **Requirements:** 2.4
@@ -509,8 +507,8 @@ class UsageTracker:
             .count()
         )
         
-        # Case 1: Free Trial - 5 lifetime attempts
-        if subscription.status == "trial":
+        # Case 1: Free Trial / Free Plan - 5 lifetime attempts cap (3-5 mock tests)
+        if subscription.status == "trial" or (plan and (plan.name in ["Free", "Free Trial"] or plan.price == 0)):
             max_attempts = 5
             remaining = max(0, max_attempts - total_attempts)
             
@@ -523,8 +521,8 @@ class UsageTracker:
                 period_end=None,  # Trial doesn't have a period end
             )
         
-        # Case 2: Pro Subscription - unlimited attempts
-        if plan.plan_type == "individual" and subscription.status in ["active", "grace_period"]:
+        # Case 2: Pro Paid Subscription - unlimited attempts
+        if plan.plan_type == "individual" and plan.price > 0 and plan.name not in ["Free", "Free Trial"] and subscription.status in ["active", "grace_period"]:
             return RemainingAttempts(
                 total_attempts=total_attempts,
                 max_attempts=None,
@@ -544,9 +542,7 @@ class UsageTracker:
             period_end=subscription.next_renewal_date,
         )
 
-    def reset_period_counters(
-        self, institution_id: UUID, period: str
-    ) -> None:
+    def reset_period_counters(self, institution_id: UUID, period: str)-> None:
         """Reset weekly/monthly counters for an institution.
         
         **Requirements:** 5.6
@@ -598,12 +594,7 @@ class UsageTracker:
         
         self.db.commit()
 
-    def get_usage_stats(
-        self,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        subscription_tier: Optional[str] = None,
-    ) -> dict:
+    def get_usage_stats(self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None, subscription_tier: Optional[str] = None)-> dict:
         """Platform admin query for usage analytics.
         
         **Requirements:** 5.8

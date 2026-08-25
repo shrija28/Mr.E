@@ -18,7 +18,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Path, Query, Request, status, File, Form, UploadFile
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import BaseModel
 import os
@@ -35,15 +36,15 @@ from ..middleware.rbac import require_admin
 
 logger = logging.getLogger("smartkcet.admin.syllabus")
 
-router = APIRouter()
-public_router = APIRouter()   # mounted separately — no auth
+router = Blueprint("admin_syllabus", __name__)
+router = Blueprint("admin_syllabus", __name__)
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _serialise(t: SyllabusTopic) -> dict[str, Any]:
+def _serialise(t: SyllabusTopic)-> dict[str, Any]:
     return {
         "id": t.id,
         "subject": t.subject,
@@ -62,10 +63,8 @@ def _serialise(t: SyllabusTopic) -> dict[str, Any]:
 
 TEXTBOOKS_DIR = PathlibPath(__file__).resolve().parent.parent.parent / "data" / "textbooks"
 
-@public_router.get("/syllabus/textbook/{filename}")
-def download_textbook(
-    filename: str,
-) -> FileResponse:
+@router.route("/syllabus/textbook/{filename}")
+def download_textbook(filename: str)-> FileResponse:
     """Download/view an associated textbook file."""
     file_path = TEXTBOOKS_DIR / filename
     if not file_path.exists() or not file_path.is_file():
@@ -74,11 +73,11 @@ def download_textbook(
     return FileResponse(file_path, filename=filename)
 
 
-def _validation_error(msg: str, field: Optional[str] = None) -> JSONResponse:
+def _validation_error(msg: str, field: Optional[str] = None)-> JSONResponse:
     body: dict[str, Any] = {"error": "validation_error", "message": msg}
     if field:
         body["field"] = field
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=body)
+    return JSONResponse(status_code=400, content=body)
 
 
 VALID_PUC = {"1st PUC", "2nd PUC"}
@@ -110,12 +109,23 @@ class PatchTopicRequest(BaseModel):
 # PUBLIC endpoints (no auth)
 # ---------------------------------------------------------------------------
 
-@public_router.get("/syllabus")
-def list_syllabus_public(
-    subject: Optional[str] = Query(default=None),
-    puc_year: Optional[str] = Query(default=None),
-    session: Session = Depends(get_session),
-) -> Any:
+@router.route("/syllabus")
+def list_syllabus_public()-> Any:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    puc_year = request.args.get("puc_year", None)
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    puc_year = request.args.get("puc_year", None)
     """Return all active KCET syllabus topics — accessible by students and institutions."""
     stmt = (
         select(SyllabusTopic)
@@ -164,17 +174,18 @@ def list_syllabus_public(
     }
 
 
-@public_router.get("/syllabus/{subject}")
-def get_syllabus_by_subject(
-    subject: str = Path(...),
-    session: Session = Depends(get_session),
-) -> Any:
+@router.route("/syllabus/{subject}")
+def get_syllabus_by_subject(subject: str)-> Any:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Return active topics for one subject, grouped by PUC year."""
     if subject not in VALID_SUBJECTS:
-        return JSONResponse(
-            status_code=404,
-            content={"error": "not_found", "message": f"Subject '{subject}' not found"},
-        )
+        return make_response(jsonify({"error": "not_found", "message": f"Subject '{subject}' not found"}), 404)
     stmt = (
         select(SyllabusTopic)
         .where(SyllabusTopic.subject == subject, SyllabusTopic.is_active.is_(True))
@@ -200,11 +211,12 @@ def get_syllabus_by_subject(
 # ADMIN endpoints
 # ---------------------------------------------------------------------------
 
-@router.get("/syllabus/counts")
-def get_topic_counts(
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/syllabus/counts", methods=["GET"])
+def get_topic_counts()-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Per-subject, per-PUC chapter counts (all + active)."""
     from sqlalchemy import Integer as SAInteger, case
     rows = session.execute(
@@ -227,14 +239,29 @@ def get_topic_counts(
     return {"counts": counts}
 
 
-@router.get("/syllabus")
-def list_topics(
-    subject: Optional[str] = Query(default=None),
-    puc_year: Optional[str] = Query(default=None),
-    include_inactive: bool = Query(default=True),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/syllabus", methods=["GET"])
+def list_topics()-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    puc_year = request.args.get("puc_year", None)
+    from flask import request
+    include_inactive = request.args.get("include_inactive", True)
+    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    puc_year = request.args.get("puc_year", None)
+    from flask import request
+    include_inactive = request.args.get("include_inactive", True)
     """Admin: list all syllabus topics with optional filters."""
     stmt = select(SyllabusTopic).order_by(
         SyllabusTopic.subject,
@@ -257,19 +284,12 @@ def list_topics(
     return {"topics": [_serialise(t) for t in rows], "total": len(rows)}
 
 
-@router.post("/syllabus", status_code=status.HTTP_201_CREATED)
-def create_topic(
-    subject: str = Form(...),
-    puc_year: str = Form(...),
-    chapter_number: int = Form(...),
-    chapter_name: str = Form(...),
-    display_order: int = Form(default=0),
-    description: Optional[str] = Form(default=None),
-    is_active: bool = Form(default=True),
-    textbook: Optional[UploadFile] = File(default=None),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/syllabus", methods=["POST"])
+def create_topic(subject: str, puc_year: str, chapter_number: int, chapter_name: str, display_order: int, description: Optional[str], is_active: bool, textbook: Optional[UploadFile])-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Admin: add a new syllabus chapter."""
     if subject not in VALID_SUBJECTS:
         return _validation_error(f"subject must be one of {sorted(VALID_SUBJECTS)}", "subject")
@@ -320,40 +340,25 @@ def create_topic(
     except SQLAlchemyError as exc:
         session.rollback()
         if "UNIQUE" in str(exc).upper():
-            return JSONResponse(
-                status_code=status.HTTP_409_CONFLICT,
-                content={
+            return make_response(jsonify({
                     "error": "duplicate_chapter",
                     "message": f"Chapter {chapter_number} already exists for {subject} {puc_year}",
-                },
-            )
+                }), 409)
         logger.warning("POST /admin/syllabus failed: %s", exc)
-        return JSONResponse(
-            status_code=500,
-            content={"error": "db_error", "message": str(exc)},
-        )
+        return make_response(jsonify({"error": "db_error", "message": str(exc)}), 500)
     return _serialise(topic)
 
 
-@router.patch("/syllabus/{topic_id}")
-def patch_topic(
-    topic_id: int = Path(...),
-    chapter_name: Optional[str] = Form(default=None),
-    display_order: Optional[int] = Form(default=None),
-    description: Optional[str] = Form(default=None),
-    is_active: Optional[bool] = Form(default=None),
-    textbook: Optional[UploadFile] = File(default=None),
-    clear_textbook: bool = Form(default=False),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/syllabus/<topic_id>", methods=["PATCH"])
+def patch_topic(topic_id: int, chapter_name: Optional[str], display_order: Optional[int], description: Optional[str], is_active: Optional[bool], textbook: Optional[UploadFile], clear_textbook: bool)-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Admin: edit a syllabus topic (name, order, active status, description, textbook)."""
     topic = session.get(SyllabusTopic, topic_id)
     if topic is None:
-        return JSONResponse(
-            status_code=404,
-            content={"error": "not_found", "id": topic_id},
-        )
+        return make_response(jsonify({"error": "not_found", "id": topic_id}), 404)
 
     if chapter_name is not None:
         if not chapter_name.strip():
@@ -397,35 +402,26 @@ def patch_topic(
         session.refresh(topic)
     except SQLAlchemyError as exc:
         session.rollback()
-        return JSONResponse(
-            status_code=500,
-            content={"error": "db_error", "message": str(exc)},
-        )
+        return make_response(jsonify({"error": "db_error", "message": str(exc)}), 500)
     return _serialise(topic)
 
 
-@router.delete("/syllabus/{topic_id}")
-def delete_topic(
-    topic_id: int = Path(...),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/syllabus/<topic_id>", methods=["DELETE"])
+def delete_topic(topic_id: int)-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Admin: permanently delete a syllabus topic."""
     topic = session.get(SyllabusTopic, topic_id)
     if topic is None:
-        return JSONResponse(
-            status_code=404,
-            content={"error": "not_found", "id": topic_id},
-        )
+        return make_response(jsonify({"error": "not_found", "id": topic_id}), 404)
     try:
         session.execute(delete(SyllabusTopic).where(SyllabusTopic.id == topic_id))
         session.commit()
     except SQLAlchemyError as exc:
         session.rollback()
-        return JSONResponse(
-            status_code=500,
-            content={"error": "db_error", "message": str(exc)},
-        )
+        return make_response(jsonify({"error": "db_error", "message": str(exc)}), 500)
     return {"deleted": True, "id": topic_id}
 
 
@@ -433,18 +429,18 @@ def delete_topic(
 # BULK TEXTBOOK UPLOAD
 # ---------------------------------------------------------------------------
 
-@router.post("/syllabus/bulk-textbook")
-async def bulk_upload_textbooks(
-    request: Request,
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/syllabus/bulk-textbook", methods=["POST"])
+def bulk_upload_textbooks()-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Admin: upload textbooks for multiple chapters at once.
 
     Accepts a multipart/form-data body where each field named ``textbook_{topic_id}``
     is a file upload for that chapter.  Returns per-chapter results.
     """
-    form = await request.form()
+    form = request.form()
 
     results = []
     errors = []
@@ -471,7 +467,7 @@ async def bulk_upload_textbooks(
             continue
 
         try:
-            content = await upload_file.read()
+            content = upload_file.read()
             safe_filename = f"topic_{topic_id}_{upload_file.filename}"
             dest_path = TEXTBOOKS_DIR / safe_filename
 
@@ -513,10 +509,7 @@ async def bulk_upload_textbooks(
         session.commit()
     except SQLAlchemyError as exc:
         session.rollback()
-        return JSONResponse(
-            status_code=500,
-            content={"error": "db_error", "message": str(exc)},
-        )
+        return make_response(jsonify({"error": "db_error", "message": str(exc)}), 500)
 
     return {
         "uploaded": len(results),

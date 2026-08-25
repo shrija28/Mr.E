@@ -30,7 +30,7 @@ class GroqAPIKeyError(ValueError):
     pass
 
 
-def _mask_key(key: str) -> str:
+def _mask_key(key: str)-> str:
     """Return a masked version of the API key for logging (e.g., gsk_xxx***)."""
     if not key:
         return "(empty)"
@@ -39,7 +39,7 @@ def _mask_key(key: str) -> str:
     return key[:7] + "***" + key[-3:]
 
 
-def validate_groq_api_key() -> str:
+def validate_groq_api_key()-> str:
     """Validate the Groq API key at startup. Returns the key or raises GroqAPIKeyError."""
     api_key = os.getenv("GROQ_API_KEY", "").strip()
 
@@ -77,7 +77,7 @@ def validate_groq_api_key() -> str:
     return api_key
 
 
-def get_groq_client() -> Groq:
+def get_groq_client()-> Groq:
     """Return a process-wide Groq client, creating it on first use."""
 
     global _client
@@ -88,13 +88,13 @@ def get_groq_client() -> Groq:
     return _client
 
 
-def reset_groq_client() -> None:
+def reset_groq_client()-> None:
     """Force re-creation of the Groq client on next use. Call after .env changes."""
     global _client
     _client = None
 
 
-def create_chat_completion_with_fallback(client: Groq, **kwargs) -> Any:
+def create_chat_completion_with_fallback(client: Groq, **kwargs)-> Any:
     """Wrapper around client.chat.completions.create that implements automatic
     fallback to llama-3.1-8b-instant/instruct on 429 rate limit errors.
     If the API key is an Nvidia NIM key (starts with nvapi-), it uses Nvidia API
@@ -206,7 +206,7 @@ def create_chat_completion_with_fallback(client: Groq, **kwargs) -> Any:
             raise
 
 
-def parse_llm_json(raw: str) -> List[dict]:
+def parse_llm_json(raw: str)-> List[dict]:
     """Robustly extract a JSON array of question dicts from an LLM response."""
 
     original = raw
@@ -233,12 +233,7 @@ def parse_llm_json(raw: str) -> List[dict]:
     return []
 
 
-def generate_mcq_set(
-    context_chunks: Iterable[str],
-    subject: str,
-    set_label: str,
-    used_questions: Set[str],
-) -> List[dict]:
+def generate_mcq_set(context_chunks: Iterable[str], subject: str, set_label: str, used_questions: Set[str])-> List[dict]:
     """Generate a 20-question MCQ set for ``subject`` using ``context_chunks``."""
 
     chunks = list(context_chunks)
@@ -328,7 +323,7 @@ Output ONLY a valid JSON array of exactly 20 items. Each item:
     return valid_questions[:20]
 
 
-def detect_subject(sample_text: str) -> Optional[str]:
+def detect_subject(sample_text: str)-> Optional[str]:
     """Ask Groq to label a small text sample with a subject name.
 
     Returns ``None`` on any failure so callers can fall back to a default.
@@ -355,14 +350,7 @@ def detect_subject(sample_text: str) -> Optional[str]:
         return None
 
 
-def generate_kcet_mcqs_from_textbook(
-    context_chunks: Iterable[str],
-    subject: str,
-    set_label: str,
-    used_questions: Set[str],
-    questions_needed: int = 20,
-    chapter_names: Optional[List[str]] = None,
-) -> List[dict]:
+def generate_kcet_mcqs_from_textbook(context_chunks: Iterable[str], subject: str, set_label: str, used_questions: Set[str], questions_needed: int = 20, chapter_names: Optional[List[str]] = None)-> List[dict]:
     """Generate KCET-level MCQs from textbook content chunks.
 
     Reads actual extracted textbook text and creates high-quality KCET-pattern

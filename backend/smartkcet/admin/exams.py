@@ -38,6 +38,7 @@ Endpoints
 """
 
 from __future__ import annotations
+import os
 
 import logging
 import random
@@ -45,7 +46,8 @@ import time
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Path, Query, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import func, select
@@ -58,7 +60,7 @@ from ..middleware.rbac import require_admin
 
 logger = logging.getLogger("smartkcet.admin.exams")
 
-router = APIRouter()
+router = Blueprint("admin_exams", __name__)
 
 
 # REQ-7.1 — exam contract: 4 sets × 20 questions = 80 total.  Defined as
@@ -74,16 +76,16 @@ QUESTIONS_PER_EXAM = QUESTIONS_PER_SET * len(SET_LABELS)  # 80
 # ---------------------------------------------------------------------------
 
 
-def _validation_error(message: str, field: Optional[str] = None) -> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None)-> JSONResponse:
     """Return a 400 envelope identical in shape to other admin endpoints."""
 
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=body)
+    return JSONResponse(status_code=400, content=body)
 
 
-def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
+def _normalise_subject(value: Optional[str])-> Optional[Subject]:
     """Return the matching :class:`Subject` enum or ``None`` for invalid input."""
 
     if not isinstance(value, str):
@@ -121,12 +123,14 @@ class PublishExamRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/exams", status_code=status.HTTP_201_CREATED)
-def create_exam(
-    payload: CreateExamRequest,
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/exams", methods=["POST"])
+def create_exam()-> Any:    
+    from flask import request
+    payload = CreateExamRequest(**(request.get_json() or {}))
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Create one exam (1 row + 4 sets + 80 set-question links) atomically.
 
     Supports two question sources:
@@ -160,7 +164,7 @@ def create_exam(
     return _create_exam_from_db(payload, selected, session, source_filter=source)
 
 
-def _get_clean_unique_questions(session: Session, subject_val: str, source_filter: Optional[str] = None) -> list[Question]:
+def _get_clean_unique_questions(session: Session, subject_val: str, source_filter: Optional[str] = None)-> list[Question]:
     """Return all valid, complete, deduplicated Question rows for the given subject."""
     from ..rag.mcq_extractor import is_valid_question
     import json
@@ -203,12 +207,7 @@ def _get_clean_unique_questions(session: Session, subject_val: str, source_filte
     return clean_rows
 
 
-def _create_exam_from_db(
-    payload: CreateExamRequest,
-    selected: Subject,
-    session: Session,
-    source_filter: Optional[str],
-) -> Any:
+def _create_exam_from_db(selected: Subject, session: Session, source_filter: Optional[str])-> Any:
     """Draw 80 random, clean, unique questions from the DB question bank and build an exam.
     
     Guarantees no incomplete questions and no repeated questions across paper sets A, B, C, D.
@@ -294,10 +293,7 @@ def _create_exam_from_db(
     except (SQLAlchemyError, Exception) as exc:
         session.rollback()
         logger.warning("POST /api/admin/exams (DB path) failed: %s", exc)
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": "exam_creation_failed", "message": str(exc)},
-        )
+        return make_response(jsonify({"error": "exam_creation_failed", "message": str(exc)}), 500)
 
     return {
         "exam_id": str(exam.id),
@@ -309,11 +305,7 @@ def _create_exam_from_db(
     }
 
 
-def _create_exam_from_textbook(
-    payload: CreateExamRequest,
-    selected: Subject,
-    session: Session,
-) -> Any:
+def _create_exam_from_textbook(selected: Subject, session: Session)-> Any:
     """Generate 80 KCET-level MCQs by reading the actual textbook PDFs
     uploaded via the Syllabus page, extracting their text, and calling
     Groq 4 times (once per set A/B/C/D × 20 questions each).
@@ -341,17 +333,14 @@ def _create_exam_from_textbook(
     chapters_with_textbooks = session.execute(stmt).scalars().all()
 
     if not chapters_with_textbooks:
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
+        return make_response(jsonify({
                 "error": "no_textbook_content",
                 "subject": subject_name,
                 "message": (
                     f"No textbooks uploaded for {subject_name} chapters. "
                     "Go to Syllabus → Upload Textbooks and upload PDFs for each chapter first."
                 ),
-            },
-        )
+            }), 422)
 
     logger.info(
         "Textbook exam: found %d chapters with textbooks for %s",
@@ -399,17 +388,14 @@ def _create_exam_from_textbook(
             )
 
     if not chapter_texts:
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
+        return make_response(jsonify({
                 "error": "text_extraction_failed",
                 "subject": subject_name,
                 "message": (
                     f"Could not extract text from any {subject_name} textbook files. "
                     "Make sure the uploaded files are readable PDFs/DOCX/TXT."
                 ),
-            },
-        )
+            }), 422)
 
     logger.info(
         "Textbook exam: extracted text from %d/%d chapter textbooks for %s",
@@ -450,18 +436,13 @@ def _create_exam_from_textbook(
             )
             
         except GroqAPIKeyError as e:
-            return JSONResponse(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                content={"error": "groq_api_key_error", "message": str(e)},
-            )
+            return make_response(jsonify({"error": "groq_api_key_error", "message": str(e)}), 503)
         except Exception as e:
             logger.error("Textbook generation set %s failed: %s", label, e)
             generation_errors.append(f"Set {label}: {e}")
 
     if len(generated_questions) < QUESTIONS_PER_EXAM:
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
+        return make_response(jsonify({
                 "error": "generation_incomplete",
                 "generated": len(generated_questions),
                 "required": QUESTIONS_PER_EXAM,
@@ -470,8 +451,7 @@ def _create_exam_from_textbook(
                     f"Only generated {len(generated_questions)}/{QUESTIONS_PER_EXAM} questions. "
                     + (f"Errors: {'; '.join(generation_errors)}" if generation_errors else "")
                 ),
-            },
-        )
+            }), 500)
 
     # ── Step 5: store the 80 generated questions in DB as source_type='textbook'
     stored_ids: list[uuid.UUID] = []
@@ -500,15 +480,12 @@ def _create_exam_from_textbook(
 
     if len(stored_ids) < QUESTIONS_PER_EXAM:
         session.rollback()
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
+        return make_response(jsonify({
                 "error": "question_storage_failed",
                 "stored": len(stored_ids),
                 "required": QUESTIONS_PER_EXAM,
                 "message": "Failed to store enough generated questions in the database.",
-            },
-        )
+            }), 500)
 
     # ── Step 6: create Exam + 4 ExamSets + 80 ExamSetQuestion links atomically
     exam = Exam(subject=subject_name, exam_name=payload.exam_name)
@@ -538,10 +515,7 @@ def _create_exam_from_textbook(
     except (SQLAlchemyError, Exception) as exc:
         session.rollback()
         logger.warning("POST /api/admin/exams (textbook) commit failed: %s", exc)
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": "exam_creation_failed", "message": str(exc)},
-        )
+        return make_response(jsonify({"error": "exam_creation_failed", "message": str(exc)}), 500)
 
     logger.info(
         "Textbook exam created: id=%s subject=%s chapters_used=%d questions=%d",
@@ -565,13 +539,14 @@ def _create_exam_from_textbook(
 # ---------------------------------------------------------------------------
 
 
-@router.patch("/exams/{exam_id}")
-def patch_exam(
-    payload: PublishExamRequest,
-    exam_id: uuid.UUID = Path(...),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/exams/<exam_id>", methods=["PATCH"])
+def patch_exam(exam_id: uuid.UUID)-> Any:    
+    from flask import request
+    payload = PublishExamRequest(**(request.get_json() or {}))
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Toggle publish/unpublish on an existing exam (idempotent).
 
     REQ-7.4 / REQ-7.5 / design.md §4.1: ``exams.is_published`` is the
@@ -591,10 +566,7 @@ def patch_exam(
 
     exam = session.get(Exam, exam_id)
     if exam is None:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"error": "not_found", "exam_id": str(exam_id)},
-        )
+        return make_response(jsonify({"error": "not_found", "exam_id": str(exam_id)}), 404)
 
     # Idempotent assignment — if the column already holds the requested
     # value the UPDATE is a no-op but the response shape is unchanged.
@@ -607,13 +579,10 @@ def patch_exam(
             logger.warning(
                 "PATCH /api/admin/exams/%s failed: %s", exam_id, exc
             )
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={
+            return make_response(jsonify({
                     "error": "publish_update_failed",
                     "message": f"failed to update publish state: {exc}",
-                },
-            )
+                }), 500)
 
     return {"exam_id": str(exam.id), "is_published": exam.is_published}
 
@@ -623,12 +592,14 @@ def patch_exam(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/exams")
-def list_exams(
-    subject: Optional[str] = Query(default=None),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/exams", methods=["GET"])
+def list_exams()-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
     """List all exams with subject, creation date, published status, set_count.
 
     REQ-7.6: the admin panel shows every exam regardless of publish

@@ -22,7 +22,7 @@ class AdminCredentials:
     password_hash: str
 
 
-def load_admin_credentials() -> Optional[AdminCredentials]:
+def load_admin_credentials()-> Optional[AdminCredentials]:
     """Return the configured admin credentials, or ``None`` if absent."""
 
     email = (os.getenv("ADMIN_EMAIL") or "").strip()

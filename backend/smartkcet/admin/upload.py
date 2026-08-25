@@ -21,13 +21,15 @@ Implements task 4.3 / REQ-5.1, REQ-5.3, REQ-5.4, REQ-8.5:
 """
 
 from __future__ import annotations
+import os
 
 import hashlib
 import logging
 import uuid
 from typing import Any, List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -65,7 +67,7 @@ from ..rag.store import stores
 
 logger = logging.getLogger("smartkcet.admin.upload")
 
-router = APIRouter()
+router = Blueprint("admin_upload", __name__)
 
 
 # REQ-5.3 — matches the legacy ``/upload`` cap so admins don't experience
@@ -73,16 +75,16 @@ router = APIRouter()
 MAX_FILES_PER_BATCH = 10
 
 
-def _validation_error(message: str, field: Optional[str] = None) -> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None)-> JSONResponse:
     """Return a 400 JSON envelope identical in shape to other auth/admin errors."""
 
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=body)
+    return JSONResponse(status_code=400, content=body)
 
 
-def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
+def _normalise_subject(value: Optional[str])-> Optional[Subject]:
     """Return the matching :class:`Subject` enum or ``None`` for invalid input."""
 
     if not isinstance(value, str):
@@ -96,7 +98,7 @@ def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
         return None
 
 
-def _extract_text(filename: str, content: bytes) -> Optional[str]:
+def _extract_text(filename: str, content: bytes)-> Optional[str]:
     """Dispatch on the filename extension; return ``None`` for unsupported types."""
 
     lowered = filename.lower()
@@ -113,12 +115,12 @@ def _extract_text(filename: str, content: bytes) -> Optional[str]:
     return None
 
 
-def _compute_file_hash(content: bytes) -> str:
+def _compute_file_hash(content: bytes)-> str:
     """Compute SHA-256 hex digest of file content."""
     return hashlib.sha256(content).hexdigest()
 
 
-def _check_duplicate(db: Session, subject: str, file_hash: str) -> Optional[IndexedFile]:
+def _check_duplicate(db: Session, subject: str, file_hash: str)-> Optional[IndexedFile]:
     """Check if a file with the same hash already exists for admin (institution_id IS NULL)."""
     stmt = select(IndexedFile).where(
         IndexedFile.subject == subject,
@@ -128,15 +130,7 @@ def _check_duplicate(db: Session, subject: str, file_hash: str) -> Optional[Inde
     return db.execute(stmt).scalar_one_or_none()
 
 
-def _record_indexed_file(
-    db: Session,
-    subject: str,
-    filename: str,
-    file_hash: str,
-    file_size: int,
-    chunk_count: int,
-    file_type: str = "question_paper",
-) -> IndexedFile:
+def _record_indexed_file(db: Session, subject: str, filename: str, file_hash: str, file_size: int, chunk_count: int, file_type: str = "question_paper")-> IndexedFile:
     """Insert a new admin IndexedFile record (institution_id=NULL) and commit."""
     record = IndexedFile(
         subject=subject,
@@ -153,13 +147,7 @@ def _record_indexed_file(
     return record
 
 
-def _store_mcqs_in_db(
-    db: Session,
-    mcqs: List[dict],
-    subject: str,
-    batch_id: uuid.UUID,
-    source_type: str = "question_paper",
-) -> int:
+def _store_mcqs_in_db(db: Session, mcqs: List[dict], subject: str, batch_id: uuid.UUID, source_type: str = "question_paper")-> int:
     """Store extracted MCQs as platform-wide Question rows (institution_id=NULL).
 
     Returns the number of questions successfully stored.
@@ -203,12 +191,14 @@ def _store_mcqs_in_db(
 # ─── GET /upload/files — list indexed files for a subject ─────────────────────
 
 
-@router.get("/upload/files")
-async def list_indexed_files(
-    subject: str = Query(..., description="Subject to list files for"),
-    _admin: dict = Depends(require_admin),
-    db: Session = Depends(get_session),
-) -> Any:
+@router.route("/upload/files", methods=["GET"])
+def list_indexed_files()-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
     """Return all previously indexed files for a subject."""
 
     selected = _normalise_subject(subject)
@@ -246,14 +236,12 @@ async def list_indexed_files(
 # ─── POST /upload/single — individual file upload with progress ───────────────
 
 
-@router.post("/upload/single")
-async def upload_single(
-    subject: Optional[str] = Form(default=None),
-    file_type: str = Form(default="question_paper"),
-    file: UploadFile = File(...),
-    _admin: dict = Depends(require_admin),
-    db: Session = Depends(get_session),
-) -> Any:
+@router.route("/upload/single", methods=["POST"])
+def upload_single(subject: Optional[str], file_type: str, file: UploadFile)-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Index a single uploaded file. Returns per-file status for progress tracking."""
 
     selected = _normalise_subject(subject)
@@ -265,7 +253,7 @@ async def upload_single(
         )
 
     filename = file.filename or ""
-    content = await file.read()
+    content = file.read()
     file_size = len(content)
     file_hash = _compute_file_hash(content)
 
@@ -354,14 +342,12 @@ async def upload_single(
 # ─── POST /upload — batch upload (backward compat) ────────────────────────────
 
 
-@router.post("/upload")
-async def upload(
-    subject: Optional[str] = Form(default=None),
-    file_type: str = Form(default="question_paper"),
-    files: List[UploadFile] = File(default_factory=list),
-    _admin: dict = Depends(require_admin),
-    db: Session = Depends(get_session),
-) -> Any:
+@router.route("/upload", methods=["POST"])
+def upload(subject: Optional[str], file_type: str, files: List[UploadFile])-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Index uploaded files into the requested subject's FAISS store.
 
     Now includes duplicate detection — files with matching SHA-256 hash
@@ -390,7 +376,7 @@ async def upload(
 
     for upload_file in files:
         filename = upload_file.filename or ""
-        content = await upload_file.read()
+        content = upload_file.read()
         file_size = len(content)
         file_hash = _compute_file_hash(content)
 

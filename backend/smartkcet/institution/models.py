@@ -54,7 +54,7 @@ class InstitutionRegistrationData(BaseModel):
 
     @field_validator("contact_phone")
     @classmethod
-    def validate_phone_digits(cls, v: str) -> str:
+    def validate_phone_digits(cls, v: str)-> str:
         """Ensure phone number contains only digits."""
         if not v.isdigit():
             raise ValueError("contact_phone must contain only digits")
@@ -62,7 +62,7 @@ class InstitutionRegistrationData(BaseModel):
 
     @field_validator("admin_password")
     @classmethod
-    def validate_password_has_digit(cls, v: str) -> str:
+    def validate_password_has_digit(cls, v: str)-> str:
         """Ensure password contains at least one digit."""
         if not any(ch.isdigit() for ch in v):
             raise ValueError("admin_password must contain at least one digit")

@@ -4,6 +4,7 @@
     module.exports = api;
   }
   if (root) {
+    root.Mr = root.Mr || {};
     root.Mr.ELoginFlow = api;
   }
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {

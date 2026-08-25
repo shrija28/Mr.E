@@ -18,10 +18,12 @@ Visibility").
 """
 
 from __future__ import annotations
+import os
 
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Query, Request, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -32,7 +34,7 @@ from ..db.session import get_async_session as get_session
 from ..middleware.rbac import require_student
 from ..subscription.dependencies import get_access_control, require_exam_access
 
-router = APIRouter()
+router = Blueprint("student_exams", __name__)
 
 
 # ---------------------------------------------------------------------------
@@ -40,16 +42,16 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 
 
-def _validation_error(message: str, field: Optional[str] = None) -> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None)-> JSONResponse:
     """Return a 400 envelope identical in shape to the admin endpoints."""
 
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=body)
+    return JSONResponse(status_code=400, content=body)
 
 
-def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
+def _normalise_subject(value: Optional[str])-> Optional[Subject]:
     """Return the matching :class:`Subject` enum or ``None`` for invalid input."""
 
     if not isinstance(value, str):
@@ -68,14 +70,16 @@ def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/exams")
-def list_published_exams(
-    request: Request,
-    subject: Optional[str] = Query(default=None),
-    session: Session = Depends(get_session),
-    _student: dict = Depends(require_student),
-    access_control = Depends(get_access_control),
-) -> Any:
+@router.route("/exams", methods=["GET"])
+def list_published_exams()-> Any:    
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import g
+    access_control = getattr(g, "access_control", None)
+    from flask import request
+    subject = request.args.get("subject", None)
     """Return per-subject groupings of published exams visible to students.
 
     Response shape::
@@ -224,13 +228,12 @@ def list_published_exams(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/exams/{exam_set_id}")
-def get_exam_set_questions(
-    exam_set_id: str,
-    session: Session = Depends(get_session),
-    _student: dict = Depends(require_student),
-    _exam_access: dict = Depends(require_exam_access),
-) -> Any:
+@router.route("/exams/<exam_set_id>", methods=["GET"])
+def get_exam_set_questions(exam_set_id: str)-> Any:    
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Return the questions for a specific exam set so the student can take the exam.
 
     Response shape::
@@ -254,25 +257,16 @@ def get_exam_set_questions(
     try:
         set_id = _uuid.UUID(exam_set_id)
     except (ValueError, TypeError):
-        return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            content={"error": "validation_error", "message": "exam_set_id must be a valid UUID"},
-        )
+        return make_response(jsonify({"error": "validation_error", "message": "exam_set_id must be a valid UUID"}), 400)
 
     exam_set = session.get(ExamSet, set_id)
     if exam_set is None:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"error": "not_found", "resource": "exam_set", "value": str(set_id)},
-        )
+        return make_response(jsonify({"error": "not_found", "resource": "exam_set", "value": str(set_id)}), 404)
 
     # Verify the parent exam is published
     exam = session.get(Exam, exam_set.exam_id)
     if exam is None or not exam.is_published:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"error": "not_found", "message": "Exam is not available"},
-        )
+        return make_response(jsonify({"error": "not_found", "message": "Exam is not available"}), 404)
 
     # ── Ownership check: enforce strict exam isolation ───────────────────────
     # Institution student → can only access their institution's exams
@@ -283,17 +277,11 @@ def get_exam_set_questions(
     if student_subtype == "institution_linked":
         # Must belong to their institution
         if str(exam.institution_id) != str(student_institution_id):
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={"error": "not_found", "message": "Exam is not available"},
-            )
+            return make_response(jsonify({"error": "not_found", "message": "Exam is not available"}), 404)
     else:
         # Personal student: must be platform-wide (institution_id IS NULL)
         if exam.institution_id is not None:
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={"error": "not_found", "message": "Exam is not available"},
-            )
+            return make_response(jsonify({"error": "not_found", "message": "Exam is not available"}), 404)
 
     # Load questions ordered by position
     stmt = (

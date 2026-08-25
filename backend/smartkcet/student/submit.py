@@ -32,12 +32,14 @@ Endpoints
 """
 
 from __future__ import annotations
+import os
 
 import logging
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Path, Request, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -59,7 +61,7 @@ from ..submissions.scoring import score_submission
 
 logger = logging.getLogger("smartkcet.student.submit")
 
-router = APIRouter()
+router = Blueprint("student_submit", __name__)
 
 
 # Idempotency tokens are stored in a VARCHAR(64) column — see the
@@ -72,23 +74,20 @@ _MAX_IDEMPOTENCY_KEY_LEN = 64
 # ---------------------------------------------------------------------------
 
 
-def _validation_error(message: str, field: Optional[str] = None) -> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None)-> JSONResponse:
     """Return a 400 envelope identical in shape to the admin endpoints."""
 
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=body)
+    return JSONResponse(status_code=400, content=body)
 
 
-def _not_found(resource: str, value: Any) -> JSONResponse:
-    return JSONResponse(
-        status_code=status.HTTP_404_NOT_FOUND,
-        content={"error": "not_found", "resource": resource, "value": str(value)},
-    )
+def _not_found(resource: str, value: Any)-> JSONResponse:
+    return make_response(jsonify({"error": "not_found", "resource": resource, "value": str(value)}), 404)
 
 
-def _serialise_submission(sub: Submission) -> dict[str, Any]:
+def _serialise_submission(sub: Submission)-> dict[str, Any]:
     """Map a :class:`Submission` ORM row to the JSON shape the dashboard expects."""
 
     submitted_at = sub.submitted_at
@@ -109,9 +108,7 @@ def _serialise_submission(sub: Submission) -> dict[str, Any]:
     }
 
 
-def _load_exam_set_questions(
-    session: Session, exam_set_id: uuid.UUID
-) -> list[dict[str, Any]]:
+def _load_exam_set_questions(session: Session, exam_set_id: uuid.UUID)-> list[dict[str, Any]]:
     """Return the question rows for ``exam_set_id`` as scoring-helper dicts.
 
     Ordered by ``ExamSetQuestion.order_index`` so the keys in the
@@ -158,13 +155,14 @@ class SubmitRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-@router.post("/submit")
-def submit(
-    payload: SubmitRequest,
-    request: Request,
-    session: Session = Depends(get_session),
-    _student: dict = Depends(require_student),
-) -> Any:
+@router.route("/submit", methods=["POST"])
+def submit()-> Any:    
+    from flask import request
+    payload = SubmitRequest(**(request.get_json() or {}))
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Score and persist one student submission.
 
     The flow follows design.md §5.1:
@@ -225,13 +223,10 @@ def submit(
         # token whose ``sub`` no longer matches a row in ``users`` would
         # slip through — surface that as 401 here rather than handing
         # the submission to a phantom user.
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={
+        return make_response(jsonify({
                 "error": "auth_required",
                 "message": "Authenticated student account not found.",
-            },
-        )
+            }), 401)
 
     # ---- Step 3: idempotency lookup ----------------------------------
     existing = session.execute(
@@ -261,14 +256,11 @@ def submit(
         # An exam set without question rows is in an invalid state from
         # the admin side (REQ-7.1 makes that impossible for new exams),
         # but we surface it as a 422 rather than scoring 0/0.
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
+        return make_response(jsonify({
                 "error": "exam_set_empty",
                 "message": "exam set has no questions",
                 "exam_set_id": str(exam_set_id),
-            },
-        )
+            }), 422)
 
     score = score_submission(questions, payload.answers)
     answers_data = dict(payload.answers) if payload.answers else {}
@@ -305,23 +297,17 @@ def submit(
                 "submission": _serialise_submission(replay),
                 "idempotent_replay": True,
             }
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
+        return make_response(jsonify({
                 "error": "persistence_failed",
                 "message": "failed to persist submission",
-            },
-        )
+            }), 500)
     except SQLAlchemyError as exc:
         session.rollback()
         logger.warning("POST /api/student/submit failed: %s", exc)
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
+        return make_response(jsonify({
                 "error": "persistence_failed",
                 "message": f"failed to persist submission: {exc}",
-            },
-        )
+            }), 500)
 
     # ---- Step 5: leaderboard recompute (REQ-11.6) --------------------
     # Fired only after the transaction has committed.  The current
@@ -371,13 +357,12 @@ def submit(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/exams/{exam_set_id}/status")
-def exam_set_status(
-    request: Request,
-    exam_set_id: uuid.UUID = Path(...),
-    session: Session = Depends(get_session),
-    _student: dict = Depends(require_student),
-) -> Any:
+@router.route("/exams/<exam_set_id>/status", methods=["GET"])
+def exam_set_status(exam_set_id: uuid.UUID)-> Any:    
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Return the student's prior completed submission for ``exam_set_id``.
 
     Response shape::
@@ -392,13 +377,10 @@ def exam_set_status(
 
     user = current_user(request, session)
     if user is None or user.role != "student":
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={
+        return make_response(jsonify({
                 "error": "auth_required",
                 "message": "Authenticated student account not found.",
-            },
-        )
+            }), 401)
 
     # Confirm the exam_set actually exists so a 404 here is meaningful
     # (an unknown id should not collapse to "not completed").

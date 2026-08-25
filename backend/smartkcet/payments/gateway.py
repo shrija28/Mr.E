@@ -32,7 +32,7 @@ _KEYS_CONFIGURED     = (
 _razorpay_client: Any = None
 
 
-def _get_client() -> Any:
+def _get_client()-> Any:
     global _razorpay_client
     if _razorpay_client is not None:
         return _razorpay_client
@@ -52,11 +52,7 @@ def _get_client() -> Any:
 # ---------------------------------------------------------------------------
 
 
-def create_order(
-    amount_paise: int,
-    receipt: str,
-    notes: Optional[dict] = None,
-) -> dict[str, Any]:
+def create_order(amount_paise: int, receipt: str, notes: Optional[dict] = None)-> dict[str, Any]:
     """Create a Razorpay order.
 
     Returns dict with at minimum: id, amount, currency, receipt, status.
@@ -91,11 +87,7 @@ def create_order(
     return order
 
 
-def verify_payment_signature(
-    order_id: str,
-    payment_id: str,
-    signature: str,
-) -> bool:
+def verify_payment_signature(order_id: str, payment_id: str, signature: str)-> bool:
     """Verify the Razorpay payment signature (client-side success).
 
     This is the lightweight verification for the /verify endpoint hit
@@ -112,7 +104,7 @@ def verify_payment_signature(
     return hmac.compare_digest(expected, signature)
 
 
-def verify_webhook_signature(body: bytes, header_signature: str) -> bool:
+def verify_webhook_signature(body: bytes, header_signature: str)-> bool:
     """Verify Razorpay webhook HMAC-SHA256 signature.
 
     body             — raw request body bytes
@@ -134,10 +126,10 @@ def verify_webhook_signature(body: bytes, header_signature: str) -> bool:
     return hmac.compare_digest(expected, header_signature)
 
 
-def get_public_key() -> str:
+def get_public_key()-> str:
     """Return the Razorpay key_id for the frontend (safe to expose)."""
     return _RAZORPAY_KEY_ID
 
 
-def is_configured() -> bool:
+def is_configured()-> bool:
     return _KEYS_CONFIGURED

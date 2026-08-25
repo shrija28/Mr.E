@@ -1,0 +1,1366 @@
+ï»¿/* Ã¢â€¢â€Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢â€”
+   Ã¢â€¢â€˜  Subscription UI Styles                                              Ã¢â€¢â€˜
+   Ã¢â€¢â€˜  Covers: Subscription Banner (Task 2.1)                              Ã¢â€¢â€˜
+   Ã¢â€¢â€˜  Requirements: 4.2 (positioning), 4.10 (color coding),               Ã¢â€¢â€˜
+   Ã¢â€¢â€˜                13.1 (responsive 320Ã¢â‚¬â€œ1920px),                         Ã¢â€¢â€˜
+   Ã¢â€¢â€˜                13.3 (mobile condensed banner)                        Ã¢â€¢â€˜
+   Ã¢â€¢â€˜                                                                      Ã¢â€¢â€˜
+   Ã¢â€¢â€˜  Builds on the dark theme variables defined in style.css.            Ã¢â€¢â€˜
+   Ã¢â€¢Å¡Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Status palette Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+   Re-uses the base palette in style.css and exposes semantic aliases that
+   the subscription banner (and later modal) can target without coupling to
+   hard-coded color literals. */
+:root {
+  /* Active / Trial Ã¢â‚¬â€ green */
+  --sub-active-bg: rgba(5, 150, 105, 0.10);
+  --sub-active-border: rgba(52, 211, 153, 0.40);
+  --sub-active-text: var(--green-l);
+  --sub-active-glow: 0 0 16px rgba(52, 211, 153, 0.10);
+
+  /* Overdue / Grace period Ã¢â‚¬â€ yellow / orange */
+  --sub-warn-bg: rgba(217, 119, 6, 0.10);
+  --sub-warn-border: rgba(251, 191, 36, 0.40);
+  --sub-warn-text: var(--yellow-l);
+  --sub-warn-glow: 0 0 16px rgba(251, 191, 36, 0.12);
+
+  /* Expired / Cancelled Ã¢â‚¬â€ red */
+  --sub-error-bg: rgba(220, 38, 38, 0.10);
+  --sub-error-border: rgba(248, 113, 113, 0.40);
+  --sub-error-text: var(--red-l);
+  --sub-error-glow: 0 0 16px rgba(248, 113, 113, 0.14);
+
+  /* Institution-linked Ã¢â‚¬â€ cyan accent (subset of "active") */
+  --sub-institution-bg: rgba(8, 145, 178, 0.10);
+  --sub-institution-border: rgba(34, 211, 238, 0.40);
+  --sub-institution-text: var(--cyan-l);
+}
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Subscription Banner Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+   Persistent component shown below the main navbar on every authenticated
+   student page (REQ-4.2). The navbar height is 60px (see .navbar in
+   style.css), so the banner sits flush against it via top: 60px. */
+.subscription-banner {
+  position: sticky;
+  top: 60px;
+  z-index: 90; /* below navbar (z=100), above page content */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 24px;
+  background: var(--s2);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+  color: var(--text);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background 0.25s ease, border-color 0.25s ease,
+              padding 0.25s ease, max-height 0.3s ease, opacity 0.25s ease;
+  overflow: hidden;
+  max-height: 80px;
+}
+
+/* Hidden / not yet hydrated */
+.subscription-banner[hidden] { display: none !important; }
+
+/* Collapsed state Ã¢â‚¬â€ keeps element in flow for smooth toggle (REQ-4.11) */
+.subscription-banner.collapsed {
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom-color: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Banner inner content */
+.banner-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0; /* allows flex children to ellipsis */
+}
+
+.banner-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.06);
+}
+.banner-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.banner-text {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.banner-status {
+  font-weight: 700;
+  font-size: 0.88rem;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+}
+
+.banner-details {
+  color: var(--muted2);
+  font-size: 0.82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Action area */
+.banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.banner-actions .btn-banner-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: linear-gradient(135deg, var(--purple), var(--blue));
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 2px 10px rgba(124, 58, 237, 0.30);
+}
+.banner-actions .btn-banner-action:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.45);
+}
+.banner-actions .btn-banner-action:focus-visible {
+  outline: 2px solid var(--purple-l);
+  outline-offset: 2px;
+}
+
+.banner-actions .btn-collapse {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+.banner-actions .btn-collapse:hover {
+  color: var(--text);
+  border-color: var(--border2);
+  background: var(--s3);
+}
+.banner-actions .btn-collapse:focus-visible {
+  outline: 2px solid var(--purple-l);
+  outline-offset: 2px;
+}
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Status color coding (REQ-4.10) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+   Green for active (trial/active/institution-linked active),
+   yellow/orange for overdue or grace period,
+   red for expired or cancelled. */
+
+/* Active / Trial Ã¢â‚¬â€ green */
+.subscription-banner[data-status="trial"],
+.subscription-banner[data-status="active"] {
+  background: var(--sub-active-bg);
+  border-bottom-color: var(--sub-active-border);
+  box-shadow: var(--sub-active-glow);
+}
+.subscription-banner[data-status="trial"] .banner-status,
+.subscription-banner[data-status="active"] .banner-status,
+.subscription-banner[data-status="trial"] .banner-icon,
+.subscription-banner[data-status="active"] .banner-icon {
+  color: var(--sub-active-text);
+}
+.subscription-banner[data-status="trial"] .banner-icon,
+.subscription-banner[data-status="active"] .banner-icon {
+  background: rgba(5, 150, 105, 0.18);
+}
+
+/* Institution-linked Ã¢â‚¬â€ cyan accent (still "active") */
+.subscription-banner[data-status="institution"] {
+  background: var(--sub-institution-bg);
+  border-bottom-color: var(--sub-institution-border);
+}
+.subscription-banner[data-status="institution"] .banner-status,
+.subscription-banner[data-status="institution"] .banner-icon {
+  color: var(--sub-institution-text);
+}
+.subscription-banner[data-status="institution"] .banner-icon {
+  background: rgba(8, 145, 178, 0.18);
+}
+
+/* Overdue / Grace period Ã¢â‚¬â€ yellow / orange */
+.subscription-banner[data-status="overdue"],
+.subscription-banner[data-status="grace_period"],
+.subscription-banner[data-status="expiring_soon"] {
+  background: var(--sub-warn-bg);
+  border-bottom-color: var(--sub-warn-border);
+  box-shadow: var(--sub-warn-glow);
+}
+.subscription-banner[data-status="overdue"] .banner-status,
+.subscription-banner[data-status="grace_period"] .banner-status,
+.subscription-banner[data-status="expiring_soon"] .banner-status,
+.subscription-banner[data-status="overdue"] .banner-icon,
+.subscription-banner[data-status="grace_period"] .banner-icon,
+.subscription-banner[data-status="expiring_soon"] .banner-icon {
+  color: var(--sub-warn-text);
+}
+.subscription-banner[data-status="overdue"] .banner-icon,
+.subscription-banner[data-status="grace_period"] .banner-icon,
+.subscription-banner[data-status="expiring_soon"] .banner-icon {
+  background: rgba(217, 119, 6, 0.20);
+}
+/* Use a warmer "Pay Now" CTA for warnings */
+.subscription-banner[data-status="overdue"] .btn-banner-action,
+.subscription-banner[data-status="grace_period"] .btn-banner-action {
+  background: linear-gradient(135deg, var(--orange), var(--yellow));
+  box-shadow: 0 2px 10px rgba(234, 88, 12, 0.30);
+}
+.subscription-banner[data-status="overdue"] .btn-banner-action:hover,
+.subscription-banner[data-status="grace_period"] .btn-banner-action:hover {
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.45);
+}
+
+/* Expired / Cancelled Ã¢â‚¬â€ red */
+.subscription-banner[data-status="expired"],
+.subscription-banner[data-status="cancelled"] {
+  background: var(--sub-error-bg);
+  border-bottom-color: var(--sub-error-border);
+  box-shadow: var(--sub-error-glow);
+}
+.subscription-banner[data-status="expired"] .banner-status,
+.subscription-banner[data-status="cancelled"] .banner-status,
+.subscription-banner[data-status="expired"] .banner-icon,
+.subscription-banner[data-status="cancelled"] .banner-icon {
+  color: var(--sub-error-text);
+}
+.subscription-banner[data-status="expired"] .banner-icon,
+.subscription-banner[data-status="cancelled"] .banner-icon {
+  background: rgba(220, 38, 38, 0.20);
+}
+.subscription-banner[data-status="expired"] .btn-banner-action,
+.subscription-banner[data-status="cancelled"] .btn-banner-action {
+  background: linear-gradient(135deg, var(--red), var(--orange));
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.35);
+}
+.subscription-banner[data-status="expired"] .btn-banner-action:hover,
+.subscription-banner[data-status="cancelled"] .btn-banner-action:hover {
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.50);
+}
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Status icon glyphs (non-color indicators, WCAG 2.1 AA, REQ-13.9) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+.subscription-banner[data-status="trial"] .banner-icon::before,
+.subscription-banner[data-status="active"] .banner-icon::before,
+.subscription-banner[data-status="institution"] .banner-icon::before {
+  content: "\2713";
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+.subscription-banner[data-status="overdue"] .banner-icon::before,
+.subscription-banner[data-status="grace_period"] .banner-icon::before,
+.subscription-banner[data-status="expiring_soon"] .banner-icon::before {
+  content: "!";
+  font-weight: 800;
+  font-size: 1rem;
+}
+.subscription-banner[data-status="expired"] .banner-icon::before,
+.subscription-banner[data-status="cancelled"] .banner-icon::before {
+  content: "\2715";
+  font-weight: 800;
+  font-size: 0.95rem;
+}
+/* If a real <svg> is provided inside .banner-icon it overrides the
+   pseudo-glyph Ã¢â‚¬â€ hide the ::before so we don't double up. */
+.banner-icon:has(svg)::before { content: none; }
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Mobile-only "Details" toggle (REQ-13.3) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+.banner-details-toggle {
+  display: none; /* hidden on tablet/desktop */
+  background: transparent;
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 5px 10px;
+  color: var(--text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.banner-details-toggle:hover {
+  border-color: rgba(124, 58, 237, 0.4);
+  background: rgba(124, 58, 237, 0.06);
+}
+.banner-details-toggle:focus-visible {
+  outline: 2px solid var(--purple-l);
+  outline-offset: 2px;
+}
+
+/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+   RESPONSIVE BREAKPOINTS (REQ-13.1)
+   - Mobile:   < 768px   Ã¢â€ â€™ condensed banner, stacked actions
+   - Tablet:   768Ã¢â‚¬â€œ1023px Ã¢â€ â€™ standard layout, slightly tighter spacing
+   - Desktop:  Ã¢â€°Â¥ 1024px  Ã¢â€ â€™ full layout with comfortable padding
+   Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Mobile: < 768px (REQ-13.3) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+   Show a condensed banner with just status + remaining attempts and a
+   "Details" button to expand. Hide the verbose .banner-details span by
+   default; the JS layer toggles .expanded to reveal full info. */
+@media (max-width: 767px) {
+  .subscription-banner {
+    padding: 8px 14px;
+    gap: 8px;
+    font-size: 0.8rem;
+    max-height: 120px; /* allow expansion on small screens */
+  }
+
+  .banner-content {
+    flex: 1;
+    gap: 8px;
+  }
+
+  .banner-icon {
+    width: 24px;
+    height: 24px;
+    padding: 5px;
+  }
+
+  .banner-text {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .banner-status {
+    font-size: 0.82rem;
+  }
+
+  .banner-details {
+    font-size: 0.74rem;
+    max-width: 100%;
+    /* condensed: hide secondary details until expanded */
+    display: none;
+  }
+
+  .subscription-banner.expanded .banner-details {
+    display: block;
+    white-space: normal;
+  }
+
+  .banner-actions {
+    gap: 6px;
+  }
+
+  .banner-actions .btn-banner-action {
+    padding: 5px 10px;
+    font-size: 0.74rem;
+  }
+
+  .banner-actions .btn-collapse {
+    width: 24px;
+    height: 24px;
+    font-size: 0.9rem;
+  }
+
+  .banner-details-toggle {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* Extra-small phones: 320Ã¢â‚¬â€œ399px Ã¢â‚¬â€ keep banner usable */
+@media (max-width: 399px) {
+  .subscription-banner {
+    padding: 6px 10px;
+  }
+
+  .banner-status {
+    font-size: 0.78rem;
+  }
+
+  .banner-actions .btn-banner-action {
+    padding: 5px 8px;
+    font-size: 0.72rem;
+  }
+}
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Tablet: 768Ã¢â‚¬â€œ1023px Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .subscription-banner {
+    padding: 10px 20px;
+    font-size: 0.84rem;
+  }
+
+  .banner-text {
+    gap: 8px;
+  }
+
+  .banner-details {
+    font-size: 0.8rem;
+  }
+
+  /* Hide the mobile details toggle */
+  .banner-details-toggle {
+    display: none;
+  }
+}
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Desktop: Ã¢â€°Â¥ 1024px Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+@media (min-width: 1024px) {
+  .subscription-banner {
+    padding: 12px 32px;
+    font-size: 0.88rem;
+  }
+
+  .banner-text {
+    gap: 12px;
+  }
+
+  .banner-status {
+    font-size: 0.92rem;
+  }
+
+  .banner-details {
+    font-size: 0.85rem;
+  }
+
+  .banner-actions .btn-banner-action {
+    padding: 7px 16px;
+    font-size: 0.84rem;
+  }
+
+  /* Hide the mobile details toggle */
+  .banner-details-toggle {
+    display: none;
+  }
+}
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Reduced motion preference Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+@media (prefers-reduced-motion: reduce) {
+  .subscription-banner,
+  .subscription-banner.collapsed,
+  .banner-actions .btn-banner-action,
+  .banner-actions .btn-collapse {
+    transition: none;
+  }
+}
+
+/* Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â
+   TASK 17.1 Ã¢â‚¬â€ RESPONSIVE GRID LAYOUTS & TABLE WRAPPER
+   Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+   Adds responsive layout primitives used by:
+     - Subscription Selection Modal (.plan-cards-grid Ã¢â€ â€™ plan cards)
+     - Subscription Management Page billing history (.responsive-table-wrapper)
+     - Other future tables on student-side pages
+
+   Breakpoints (REQ-13.1):
+     - Mobile:   < 768px
+     - Tablet:   768px Ã¢â‚¬â€œ 1023px
+     - Desktop:  Ã¢â€°Â¥ 1024px
+
+   Existing banner-specific media queries above are intentionally untouched.
+   Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Plan Cards Grid (Subscription Selection Modal, REQ-13.2) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+   Wraps the Free Trial and Pro plan cards in a CSS grid that:
+     Ã¢â‚¬Â¢ stacks vertically on mobile (< 768px),
+     Ã¢â‚¬Â¢ renders side-by-side at tablet width with tighter gap,
+     Ã¢â‚¬Â¢ uses comfortable spacing on desktop.
+   Pairs with the existing `.plan-cards` flex container in the modal Ã¢â‚¬â€ either
+   class can be used; `.plan-cards-grid` is the preferred canonical class.
+   Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+.plan-cards-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 1fr;        /* mobile default Ã¢â‚¬â€ single column */
+  width: 100%;
+  align-items: stretch;
+}
+
+.plan-cards-grid > .plan-card {
+  width: 100%;
+  min-width: 0;                       /* prevent grid blow-out */
+}
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Responsive Table Wrapper Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+   Generic horizontal-scroll wrapper for any wide table that cannot fit on
+   small viewports (e.g. billing history). Wrap the <table> in
+   <div class="responsive-table-wrapper">Ã¢â‚¬Â¦</div> and the table will scroll
+   horizontally on mobile while remaining a normal table on desktop.
+   Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+.responsive-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border2) transparent;
+  border-radius: var(--rs, 10px);
+}
+
+.responsive-table-wrapper::-webkit-scrollbar {
+  height: 8px;
+}
+.responsive-table-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+.responsive-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 4px;
+}
+
+.responsive-table-wrapper > table {
+  width: 100%;
+  min-width: 600px;                   /* force scroll below 600px */
+  border-collapse: collapse;
+}
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Mobile: < 768px Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+   - Stack plan cards vertically (already the default for .plan-cards-grid,
+     stated explicitly here for documentation and future overrides).
+   - Activate the card-style billing layout if the markup includes a
+     companion `.billing-history-cards` block alongside the table.
+   Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+@media (max-width: 767px) {
+  .plan-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* If both a regular table and a card-list are provided in the markup,
+     prefer the card list on mobile and hide the wide table. */
+  .billing-history-table {
+    display: none;
+  }
+  .billing-history-cards {
+    display: block;
+  }
+
+  /* Tables that must stay visible on mobile use the wrapper for
+     horizontal scrolling. */
+  .responsive-table-wrapper > table {
+    font-size: 0.8rem;
+  }
+  .responsive-table-wrapper > table th,
+  .responsive-table-wrapper > table td {
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+}
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Tablet: 768px Ã¢â‚¬â€œ 1023px Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .plan-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  /* When card-list fallback is provided, hide it on tablet+ */
+  .billing-history-cards {
+    display: none;
+  }
+  .billing-history-table {
+    display: table;
+  }
+}
+
+/* Ã¢â€â‚¬Ã¢â€â‚¬ Desktop: Ã¢â€°Â¥ 1024px Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ */
+@media (min-width: 1024px) {
+  .plan-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+    max-width: 820px;
+    margin-inline: auto;
+  }
+
+  .billing-history-cards {
+    display: none;
+  }
+  .billing-history-table {
+    display: table;
+  }
+}
+
+
+/* Ã¢â€¢â€Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢â€”
+   Ã¢â€¢â€˜  Subscription Selection Modal (Task 3.1)                             Ã¢â€¢â€˜
+   Ã¢â€¢â€˜  MOVED TO: subscription-modal-premium.css                            Ã¢â€¢â€˜
+   Ã¢â€¢â€˜                                                                      Ã¢â€¢â€˜
+   Ã¢â€¢â€˜  The modal CSS has been moved to a dedicated file to match           Ã¢â€¢â€˜
+   Ã¢â€¢â€˜  the exact pricing page design without conflicts.                    Ã¢â€¢â€˜
+   Ã¢â€¢â€˜                                                                      Ã¢â€¢â€˜
+   Ã¢â€¢â€˜  See: frontend/css/subscription-modal-premium.css                    Ã¢â€¢â€˜
+   Ã¢â€¢Å¡Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â */
+
+
+
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   SUBSCRIPTION PAGE â€” PREMIUM UI LAYER
+   Works entirely within style.css variables. No conflicts.
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+
+/* â”€â”€ Plan accent tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+:root {
+  --pa-free:    #22d3ee;   /* cyan  */
+  --pa-trial:   #f59e0b;   /* amber */
+  --pa-monthly: #a855f7;   /* purple */
+  --pa-yearly:  #34d399;   /* green */
+}
+
+/* â”€â”€ Content area layout â€” full-width vertical stack â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+#subscriptionContent {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Hero card always spans full width â€” no side columns */
+.subscription-plan-card {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Colour strip at top of plan card */
+.subscription-plan-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--purple-l), var(--cyan-l));
+  pointer-events: none;
+}
+
+/* Plan-specific strip colours via data-plan on #subscriptionContent */
+#subscriptionContent[data-plan="free"]    .subscription-plan-card::after { background: linear-gradient(90deg, var(--pa-free), #67e8f9); }
+#subscriptionContent[data-plan="trial"]   .subscription-plan-card::after { background: linear-gradient(90deg, var(--pa-trial), #fde68a); }
+#subscriptionContent[data-plan="monthly"] .subscription-plan-card::after { background: linear-gradient(90deg, var(--pa-monthly), var(--blue-l)); }
+#subscriptionContent[data-plan="yearly"]  .subscription-plan-card::after { background: linear-gradient(90deg, var(--pa-yearly), #a7f3d0); }
+
+/* Plan-specific border + glow */
+#subscriptionContent[data-plan="free"]    .subscription-plan-card { border-color: rgba(34,211,238,0.22) !important; box-shadow: 0 0 28px rgba(34,211,238,0.08); }
+#subscriptionContent[data-plan="trial"]   .subscription-plan-card { border-color: rgba(245,158,11,0.22) !important; box-shadow: 0 0 28px rgba(245,158,11,0.08); }
+#subscriptionContent[data-plan="monthly"] .subscription-plan-card { border-color: rgba(168,85,247,0.22) !important; box-shadow: 0 0 28px rgba(168,85,247,0.08); }
+#subscriptionContent[data-plan="yearly"]  .subscription-plan-card { border-color: rgba(52,211,153,0.22) !important; box-shadow: 0 0 28px rgba(52,211,153,0.08); }
+
+/* â”€â”€ Plan name â€” big, gradient, impactful â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+#planName {
+  font-size: 1.4rem !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  background: linear-gradient(120deg, var(--text) 30%, var(--muted2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+#subscriptionContent[data-plan="free"]    #planName { background: linear-gradient(120deg, var(--pa-free), #a5f3fc); -webkit-background-clip: text; background-clip: text; }
+#subscriptionContent[data-plan="trial"]   #planName { background: linear-gradient(120deg, var(--pa-trial), #fde68a); -webkit-background-clip: text; background-clip: text; }
+#subscriptionContent[data-plan="monthly"] #planName { background: linear-gradient(120deg, var(--pa-monthly), var(--blue-l)); -webkit-background-clip: text; background-clip: text; }
+#subscriptionContent[data-plan="yearly"]  #planName { background: linear-gradient(120deg, var(--pa-yearly), #a7f3d0); -webkit-background-clip: text; background-clip: text; }
+
+/* â”€â”€ Status badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.plan-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.plan-status-badge.badge-active  { background: rgba(52,211,153,0.12); color: var(--green-l);  border: 1px solid rgba(52,211,153,0.25); }
+.plan-status-badge.badge-warning { background: rgba(251,191,36,0.12); color: var(--yellow-l); border: 1px solid rgba(251,191,36,0.25); }
+.plan-status-badge.badge-error   { background: rgba(248,113,113,0.12); color: var(--red-l);  border: 1px solid rgba(248,113,113,0.25); }
+.plan-status-badge.badge-muted   { background: var(--s2); color: var(--muted2); border: 1px solid var(--border); }
+
+.plan-status-badge.badge-active::before  { content: '\25CF'; font-size: 0.5rem; }
+.plan-status-badge.badge-warning::before { content: '\26A0'; font-size: 0.6rem; }
+.plan-status-badge.badge-error::before   { content: '\2715'; font-size: 0.65rem; }
+
+/* â”€â”€ Detail grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.plan-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px 28px;
+  margin-bottom: 22px;
+}
+
+.plan-detail-item.full-width { grid-column: 1 / -1; }
+
+.plan-detail-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.plan-detail-value {
+  font-size: 0.96rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+@media (max-width: 540px) {
+  .plan-details-grid { grid-template-columns: 1fr; gap: 14px; }
+}
+
+/* â”€â”€ Section body spacing â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.section-body { padding: 22px 24px 26px; }
+
+/* â”€â”€ Action buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.plan-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  margin-top: 4px;
+}
+
+.plan-actions .btn-primary,
+.plan-actions .btn-secondary,
+.plan-actions .btn-outline,
+.plan-actions a.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.87rem;
+  font-weight: 700;
+  border-radius: var(--rs);
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+
+.plan-actions .btn-primary:hover,
+.plan-actions .btn-secondary:hover {
+  transform: translateY(-1px);
+}
+
+.plan-actions svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+@media (max-width: 480px) {
+  .plan-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .plan-actions .btn-primary,
+  .plan-actions .btn-secondary,
+  .plan-actions .btn-outline,
+  .plan-actions a.btn-outline {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* â”€â”€ Below-hero row: features + CTA side by side â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.sub-right-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* Stack to single column on small screens */
+@media (max-width: 680px) {
+  .sub-right-col {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+/* â”€â”€ Features card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.sub-features-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+}
+
+.sub-features-card .sfcard-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sub-features-card .sfcard-header h3 {
+  font-size: 0.93rem;
+  font-weight: 800;
+  margin: 0;
+  color: var(--text);
+}
+
+.sub-features-card .sfcard-header p {
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 2px 0 0;
+}
+
+.sfcard-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: rgba(168,85,247,0.12);
+  color: var(--purple-l);
+}
+.sfcard-icon svg { width: 16px; height: 16px; }
+
+#subscriptionContent[data-plan="free"]    .sfcard-icon { background: rgba(34,211,238,0.12); color: var(--pa-free); }
+#subscriptionContent[data-plan="trial"]   .sfcard-icon { background: rgba(245,158,11,0.12); color: var(--pa-trial); }
+#subscriptionContent[data-plan="monthly"] .sfcard-icon { background: rgba(168,85,247,0.12); color: var(--pa-monthly); }
+#subscriptionContent[data-plan="yearly"]  .sfcard-icon { background: rgba(52,211,153,0.12); color: var(--pa-yearly); }
+
+.sub-features-card .sfcard-body {
+  padding: 16px 20px 20px;
+}
+
+.sf-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sf-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.83rem;
+  line-height: 1.3;
+}
+
+.sf-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 900;
+}
+
+.sf-item.sf-on  .sf-dot { background: rgba(52,211,153,0.15); color: var(--green-l); }
+.sf-item.sf-on  .sf-dot::before { content: '\2713'; }
+.sf-item.sf-on  { color: var(--text); }
+
+.sf-item.sf-off .sf-dot { background: rgba(100,116,139,0.1); color: var(--muted); }
+.sf-item.sf-off .sf-dot::before { content: '\2715'; }
+.sf-item.sf-off { color: var(--muted); }
+
+/* â”€â”€ CTA card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.sub-cta-card {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  position: relative;
+}
+
+.sub-cta-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 120% 80% at 100% 0%, rgba(124,58,237,0.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.sub-cta-inner {
+  padding: 22px 20px;
+  position: relative;
+}
+
+.cta-emoji { font-size: 1.7rem; margin-bottom: 10px; display: block; line-height: 1; }
+
+.cta-title {
+  font-size: 0.97rem;
+  font-weight: 800;
+  color: var(--text);
+  margin: 0 0 6px;
+  line-height: 1.3;
+}
+
+.cta-body {
+  font-size: 0.79rem;
+  color: var(--muted2);
+  margin: 0 0 18px;
+  line-height: 1.55;
+}
+
+.cta-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 10px 18px;
+  border-radius: var(--rs);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cta-btn:hover { transform: translateY(-1px); }
+
+.cta-btn.cta-upgrade {
+  background: linear-gradient(135deg, var(--purple), var(--blue));
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(124,58,237,0.28);
+}
+.cta-btn.cta-upgrade:hover { box-shadow: 0 6px 20px rgba(124,58,237,0.42); }
+
+.cta-btn.cta-yearly {
+  background: linear-gradient(135deg, var(--green), #10b981);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(5,150,105,0.28);
+}
+.cta-btn.cta-yearly:hover { box-shadow: 0 6px 20px rgba(5,150,105,0.40); }
+
+.cta-btn.cta-member {
+  background: linear-gradient(135deg, var(--pa-trial), #d97706);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(217,119,6,0.28);
+}
+
+.cta-btn.cta-neutral {
+  background: var(--s2);
+  color: var(--text);
+  border: 1px solid var(--border2);
+}
+.cta-btn.cta-neutral:hover { background: var(--s3); }
+
+/* â”€â”€ Billing section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.billing-loading,
+.billing-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.billing-error {
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.billing-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.billing-table th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.billing-table td {
+  padding: 13px 14px;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.billing-table tbody tr:last-child td { border-bottom: none; }
+
+.billing-table tbody tr:hover td { background: rgba(255,255,255,0.02); }
+
+.table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+.billing-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+.billing-status-badge.status-paid    { background: rgba(52,211,153,0.12); color: var(--green-l); }
+.billing-status-badge.status-pending { background: rgba(251,191,36,0.12); color: var(--yellow-l); }
+.billing-status-badge.status-failed  { background: rgba(248,113,113,0.12); color: var(--red-l); }
+
+/* â”€â”€ Pagination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.billing-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 18px 0 4px;
+}
+
+.pagination-info {
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* â”€â”€ Loading & empty states â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.loading-state {
+  text-align: center;
+  padding: 64px 24px;
+  color: var(--muted);
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--purple-l);
+  border-radius: 50%;
+  animation: sp 0.8s linear infinite;
+  margin: 0 auto 14px;
+}
+.loading-spinner.small { width: 20px; height: 20px; border-width: 2px; margin-bottom: 8px; }
+
+@keyframes sp { to { transform: rotate(360deg); } }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+}
+.empty-icon { font-size: 2.8rem; margin-bottom: 14px; display: block; }
+.empty-state h3 { font-size: 1.15rem; font-weight: 800; margin: 0 0 8px; }
+.empty-state p  { color: var(--muted); font-size: 0.88rem; margin: 0 0 24px; }
+.empty-actions  { display: flex; justify-content: center; gap: 10px; }
+
+/* â”€â”€ Reduced motion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+@media (prefers-reduced-motion: reduce) {
+  .cta-btn, .plan-actions .btn-primary,
+  .plan-actions .btn-secondary { transition: none; }
+  .loading-spinner { animation: none; }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   PHASE 2: Plan Selection Cards (Task 2)
+   ──────────────────────────────────────────────────────────────────────
+   Renders plan selection grid with dynamic button states (enabled/disabled/current).
+   - 2-column grid on desktop, 1 column on mobile
+   - Button states: blue (enabled), gray (disabled), green (current)
+   - Min 44px button height for accessibility
+   - Smooth transitions and hover effects
+   ────────────────────────────────────────────────────────────────────── */
+
+/* Plan Selection Card Container */
+.sub-plan-selection-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  margin-top: 16px;
+}
+
+.sub-plan-selection-card .sfcard-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.sub-plan-selection-card .sfcard-header h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 2px;
+}
+
+.sub-plan-selection-card .sfcard-header p {
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+}
+
+.sub-plan-selection-card .sfcard-icon {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(168, 85, 247, 0.15);
+  border-radius: 6px;
+}
+
+.sub-plan-selection-card .sfcard-icon.purple {
+  color: #a855f7;
+}
+
+.sub-plan-selection-card .sfcard-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Plan Grid Layout */
+.plan-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Individual Plan Option Card */
+.plan-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.plan-option:hover {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.plan-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex-grow: 1;
+  justify-content: center;
+  width: 100%;
+}
+
+.plan-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+}
+
+.plan-price {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+}
+
+/* Plan Button Base Styles */
+.plan-btn {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 2px solid;
+  border-radius: 6px;
+  font-size: 0.77rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Enabled State - Blue */
+.plan-btn.btn-enabled {
+  background: linear-gradient(135deg, #667eea 0%, #5568d3 100%);
+  border-color: #667eea;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.25);
+}
+
+.plan-btn.btn-enabled:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5568d3 0%, #4657c2 100%);
+  border-color: #5568d3;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  transform: translateY(-1px);
+}
+
+.plan-btn.btn-enabled:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+}
+
+/* Disabled State - Gray */
+.plan-btn.btn-disabled {
+  background: #f5f5f5;
+  border-color: #e5e5e5;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.plan-btn.btn-disabled:hover {
+  background: #f5f5f5;
+  border-color: #e5e5e5;
+}
+
+/* Current Plan State - Green */
+.plan-btn.btn-current {
+  background: linear-gradient(135deg, #28a745 0%, #228e3d 100%);
+  border-color: #28a745;
+  color: #fff;
+  cursor: not-allowed;
+  opacity: 0.85;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.25);
+}
+
+.plan-btn.btn-current:hover {
+  background: linear-gradient(135deg, #28a745 0%, #228e3d 100%);
+  border-color: #28a745;
+}
+
+/* Loading State */
+.plan-btn.is-loading {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.plan-btn.is-loading::after {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-left: 4px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Focus Styles for Accessibility */
+.plan-btn:focus-visible {
+  outline: 2px solid #667eea;
+  outline-offset: 2px;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Responsive: Mobile (max-width: 767px)
+   ──────────────────────────────────────────────────────────────────────*/
+@media (max-width: 767px) {
+  .plan-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .plan-option {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .plan-btn {
+    min-height: 38px;
+    padding: 7px 10px;
+    font-size: 0.75rem;
+  }
+
+  .sub-plan-selection-card {
+    padding: 16px;
+    margin-top: 12px;
+  }
+
+  .plan-name {
+    font-size: 0.8rem;
+  }
+
+  .plan-price {
+    font-size: 0.72rem;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Responsive: Extra Small Phones (max-width: 399px)
+   ──────────────────────────────────────────────────────────────────────*/
+@media (max-width: 399px) {
+  .plan-grid {
+    gap: 8px;
+  }
+
+  .plan-option {
+    padding: 10px;
+    gap: 6px;
+  }
+
+  .plan-btn {
+    min-height: 36px;
+    padding: 6px 8px;
+    font-size: 0.72rem;
+  }
+
+  .sub-plan-selection-card {
+    padding: 12px;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Reduced Motion
+   ──────────────────────────────────────────────────────────────────────*/
+@media (prefers-reduced-motion: reduce) {
+  .plan-option,
+  .plan-btn {
+    transition: none;
+  }
+
+  .plan-btn:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .plan-btn.is-loading::after {
+    animation: none;
+  }
+}

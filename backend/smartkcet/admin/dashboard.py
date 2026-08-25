@@ -13,12 +13,14 @@ needs:
 """
 
 from __future__ import annotations
+import os
 
 import logging
 from datetime import datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -29,14 +31,15 @@ from ..middleware.rbac import require_admin
 
 logger = logging.getLogger("smartkcet.admin.dashboard")
 
-router = APIRouter()
+router = Blueprint("admin_dashboard", __name__)
 
 
-@router.get("/dashboard")
-def get_admin_dashboard(
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/dashboard", methods=["GET"])
+def get_admin_dashboard()-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Return all KPI metrics for the platform admin dashboard."""
 
     now = datetime.utcnow()

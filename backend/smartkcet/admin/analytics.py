@@ -34,11 +34,13 @@ frontend can render the empty-state message instead of empty charts
 """
 
 from __future__ import annotations
+import os
 
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Query, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -47,7 +49,7 @@ from ..db.models import Exam, ExamSet, Submission, Subject, User
 from ..db.session import get_async_session as get_session
 from ..middleware.rbac import require_admin, require_authenticated
 
-router = APIRouter()
+router = Blueprint("admin_analytics", __name__)
 
 _DEFAULT_LIMIT = 100
 _MAX_LIMIT = 500
@@ -58,16 +60,16 @@ _MAX_LIMIT = 500
 # ---------------------------------------------------------------------------
 
 
-def _validation_error(message: str, field: Optional[str] = None) -> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None)-> JSONResponse:
     """Return a 400 envelope identical in shape to other admin endpoints."""
 
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=body)
+    return JSONResponse(status_code=400, content=body)
 
 
-def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
+def _normalise_subject(value: Optional[str])-> Optional[Subject]:
     """Return the matching :class:`Subject` enum or ``None`` for invalid input."""
 
     if not isinstance(value, str):
@@ -86,17 +88,41 @@ def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/analytics")
-def get_analytics(
-    subject: Optional[str] = Query(default=None),
-    student: Optional[str] = Query(default=None),
-    set: Optional[str] = Query(default=None, alias="set"),
-    status_filter: Optional[str] = Query(default=None, alias="status"),
-    limit: int = Query(default=_DEFAULT_LIMIT, ge=1),
-    offset: int = Query(default=0, ge=0),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_authenticated),
-) -> Any:
+@router.route("/analytics", methods=["GET"])
+def get_analytics()-> Any:    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    student = request.args.get("student", None)
+    from flask import request
+    set = request.args.get("set", None)
+    from flask import request
+    status_filter = request.args.get("status", None)
+    from flask import request
+    limit = int(request.args.get("limit", _DEFAULT_LIMIT))
+    from flask import request
+    offset = int(request.args.get("offset", 0))
+    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    student = request.args.get("student", None)
+    from flask import request
+    set = request.args.get("set", None)
+    from flask import request
+    status_filter = request.args.get("status", None)
+    from flask import request
+    limit = int(request.args.get("limit", _DEFAULT_LIMIT))
+    from flask import request
+    offset = int(request.args.get("offset", 0))
     """Return aggregate analytics across all students with optional filters.
 
     The response shape matches the ``submissions`` array that
@@ -113,13 +139,10 @@ def get_analytics(
     # Require admin role (platform_admin or institution_admin)
     admin_role = _admin.get("role")
     if admin_role not in ("platform_admin", "institution_admin"):
-        return JSONResponse(
-            status_code=status.HTTP_403_FORBIDDEN,
-            content={
+        return make_response(jsonify({
                 "error": "forbidden",
                 "message": "Admin access required",
-            },
-        )
+            }), 403)
 
     # --- Validate filters ---------------------------------------------------
 

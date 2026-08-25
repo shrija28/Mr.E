@@ -8,12 +8,14 @@ while Pro and Institutional students get full access.
 """
 
 from __future__ import annotations
+import os
 
 import logging
 from typing import Any, Dict, List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request, HTTPException
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -23,7 +25,7 @@ from ..db.subscription_models import Subscription, SubscriptionPlan
 from ..middleware.rbac import require_student, current_user
 from ..subscription.dependencies import get_access_control
 
-router = APIRouter()
+router = Blueprint("student_recommendations", __name__)
 logger = logging.getLogger("smartkcet.student.recommendations")
 
 # A realistic catalog of 19 major Karnataka engineering colleges.
@@ -168,7 +170,7 @@ COLLEGES = [
 ]
 
 
-def redact_string(s: str) -> str:
+def redact_string(s: str)-> str:
     """Obscure/redact words in a string, preserving first and last characters."""
     words = s.split()
     redacted_words = []
@@ -180,7 +182,7 @@ def redact_string(s: str) -> str:
     return " ".join(redacted_words)
 
 
-def map_score_to_rank_and_tier(score: float) -> tuple[int, str, str]:
+def map_score_to_rank_and_tier(score: float)-> tuple[int, str, str]:
     """Map average score percentage (0-100) to projected rank and display values.
     
     Returns:
@@ -215,7 +217,7 @@ def map_score_to_rank_and_tier(score: float) -> tuple[int, str, str]:
     return projected_rank, rank_range, student_tier
 
 
-def calculate_match_type(projected_rank: int, cutoff_rank: int) -> str:
+def calculate_match_type(projected_rank: int, cutoff_rank: int)-> str:
     """Categorize college match type based on projected rank and cutoff rank.
     
     Match logic:
@@ -231,12 +233,12 @@ def calculate_match_type(projected_rank: int, cutoff_rank: int) -> str:
         return "reach"
 
 
-@router.get("/college-recommendations")
-async def get_college_recommendations(
-    request: Request,
-    payload: Dict[str, Any] = Depends(require_student),
-    db: Session = Depends(get_session),
-) -> Dict[str, Any]:
+@router.route("/college-recommendations", methods=["GET"])
+def get_college_recommendations()-> Dict[str, Any]:    
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Retrieve college recommendations based on student's average exam scores.
     
     Supports lock-state preview for Free Trial subscribers and full access
@@ -346,13 +348,12 @@ async def get_college_recommendations(
     }
 
 
-@router.get("/rank-booster-suggestions")
-async def get_rank_booster_suggestions(
-    request: Request,
-    target_rank: int = 5000,
-    payload: Dict[str, Any] = Depends(require_student),
-    db: Session = Depends(get_session),
-) -> Dict[str, Any]:
+@router.route("/rank-booster-suggestions", methods=["GET"])
+def get_rank_booster_suggestions(target_rank: int = 5000)-> Dict[str, Any]:    
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Provide personalized study guide and action items to improve KCET rank."""
     user = current_user(request, db)
     if not user:

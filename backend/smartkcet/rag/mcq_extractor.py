@@ -82,7 +82,7 @@ _PHYSICS_TERMS = {
 }
 
 
-def is_valid_question(q_text: str, options: List[str], subject: str = "General") -> bool:
+def is_valid_question(q_text: str, options: List[str], subject: str = "General")-> bool:
     """Return True if question text and options represent a valid, complete, clean question."""
     if not q_text or not isinstance(q_text, str):
         return False
@@ -142,7 +142,7 @@ def is_valid_question(q_text: str, options: List[str], subject: str = "General")
     return True
 
 
-def is_valid_physics_question(q_text: str, options: List[str]) -> bool:
+def is_valid_physics_question(q_text: str, options: List[str])-> bool:
     return is_valid_question(q_text, options, subject="Physics")
 
 
@@ -443,7 +443,7 @@ BIOLOGY_BANK: List[dict] = [
 ]
 
 
-def _option_index(letter: str) -> int:
+def _option_index(letter: str)-> int:
     """Convert A/B/C/D or 1/2/3/4 to 0-based index."""
     letter = letter.upper()
     if letter in "ABCD":
@@ -453,7 +453,7 @@ def _option_index(letter: str) -> int:
     return 0
 
 
-def _extract_answer_keys(text: str) -> dict[int, int]:
+def _extract_answer_keys(text: str)-> dict[int, int]:
     """Try to find an answer key section at the end of the text."""
     answer_section_markers = [
         r"answer\s*key",
@@ -478,7 +478,7 @@ def _extract_answer_keys(text: str) -> dict[int, int]:
     return keys
 
 
-def extract_mcqs_from_text(text: str, topic: str = "General") -> List[dict]:
+def extract_mcqs_from_text(text: str, topic: str = "General")-> List[dict]:
     """Extract structured MCQ questions from raw text."""
     if not text or not text.strip():
         return []
@@ -584,7 +584,7 @@ def extract_mcqs_from_text(text: str, topic: str = "General") -> List[dict]:
     return questions
 
 
-def generate_fallback_mcqs(text: str, topic: str = "General", max_questions: int = 20) -> List[dict]:
+def generate_fallback_mcqs(text: str, topic: str = "General", max_questions: int = 20)-> List[dict]:
     """Generate high-quality fallback questions from curated subject question banks.
 
     Ensures NO pseudo-questions ('Which statement about ...') or random OMR lines are EVER generated!
@@ -614,11 +614,7 @@ def generate_fallback_mcqs(text: str, topic: str = "General", max_questions: int
     return results
 
 
-def extract_or_generate_mcqs(
-    text: str,
-    topic: str = "General",
-    min_questions: int = 20,
-) -> List[dict]:
+def extract_or_generate_mcqs(text: str, topic: str = "General", min_questions: int = 20)-> List[dict]:
     """Extract MCQs from uploaded text via pattern matching or Groq LLM RAG extraction."""
     extracted = extract_mcqs_from_text(text, topic=topic)
     extracted = [q for q in extracted if is_valid_question(q["q"], q["opts"], subject=topic)]

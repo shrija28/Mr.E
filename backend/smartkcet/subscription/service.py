@@ -34,7 +34,7 @@ class SubscriptionService:
         """
         self.db = db
 
-    def activate_free(self, user_id: UUID) -> Subscription:
+    def activate_free(self, user_id: UUID)-> Subscription:
         """Activate Free plan (₹0) for a student.
         
         Only allowed when no active subscription exists (all are expired/cancelled).
@@ -124,9 +124,7 @@ class SubscriptionService:
         
         return subscription
 
-    def activate_trial(
-        self, user_id: UUID, duration_days: int = 7
-    ) -> Subscription:
+    def activate_trial(self, user_id: UUID, duration_days: int = 7)-> Subscription:
         """Create a Free Trial subscription.
         
         If user already has an active Free subscription, deactivate it first.
@@ -240,9 +238,7 @@ class SubscriptionService:
         
         return subscription
 
-    def activate_pro(
-        self, user_id: UUID, billing_period: BillingPeriod
-    ) -> Subscription:
+    def activate_pro(self, user_id: UUID, billing_period: BillingPeriod)-> Subscription:
         """Create a Pro subscription with the given billing period.
         
         If user already has an active Free/Trial subscription, deactivate it first.
@@ -338,9 +334,7 @@ class SubscriptionService:
         
         return subscription
 
-    def activate_institution_plan(
-        self, institution_id: UUID, plan_id: UUID
-    ) -> Subscription:
+    def activate_institution_plan(self, institution_id: UUID, plan_id: UUID)-> Subscription:
         """Activate an institution subscription plan.
 
         Creates a new Subscription if none exists, or upgrades/renews an
@@ -424,7 +418,7 @@ class SubscriptionService:
         self.db.refresh(subscription)
         return subscription
 
-    def get_effective_status(self, user_id: UUID) -> EffectiveSubscriptionStatus:
+    def get_effective_status(self, user_id: UUID)-> EffectiveSubscriptionStatus:
         """Single round-trip query for a user's current subscription state.
         
         For institution-linked students (student_subtype == 'institution_linked'),
@@ -556,9 +550,7 @@ class SubscriptionService:
             institution_name=institution.name if institution else None,
         )
 
-    def process_renewal(
-        self, subscription_id: UUID, payment_confirmed: bool
-    ) -> Subscription:
+    def process_renewal(self, subscription_id: UUID, payment_confirmed: bool)-> Subscription:
         """Handle renewal: extend on payment, enter grace period otherwise.
         
         Args:
@@ -644,7 +636,7 @@ class SubscriptionService:
         
         return subscription
 
-    def cancel_subscription(self, subscription_id: UUID) -> Subscription:
+    def cancel_subscription(self, subscription_id: UUID)-> Subscription:
         """Mark subscription for cancellation at end of current billing period.
         
         Args:
@@ -691,9 +683,7 @@ class SubscriptionService:
         
         return subscription
 
-    def reactivate(
-        self, user_id: UUID, billing_period: BillingPeriod
-    ) -> Subscription:
+    def reactivate(self, user_id: UUID, billing_period: BillingPeriod)-> Subscription:
         """Create new active subscription for a previously expired user.
         
         Args:
@@ -777,9 +767,7 @@ class SubscriptionService:
         
         return subscription
 
-    def upgrade_trial_to_pro(
-        self, user_id: UUID, billing_period: BillingPeriod
-    ) -> Subscription:
+    def upgrade_trial_to_pro(self, user_id: UUID, billing_period: BillingPeriod)-> Subscription:
         """Convert trial to Pro, preserving history.
         
         Args:
@@ -858,7 +846,7 @@ class SubscriptionService:
         
         return trial_subscription
 
-    def check_pending_renewals(self) -> int:
+    def check_pending_renewals(self)-> int:
         """Batch job: process all subscriptions past their renewal date.
         
         Returns:
@@ -869,7 +857,7 @@ class SubscriptionService:
             "check_pending_renewals will be implemented in Task 3.4"
         )
 
-    def can_change_subscription(self, user_id: UUID) -> tuple[bool, str | None]:
+    def can_change_subscription(self, user_id: UUID)-> tuple[bool, str | None]:
         """Check if user is allowed to change/upgrade their subscription plan.
         
         Business Rules:
@@ -944,7 +932,7 @@ class SubscriptionService:
         
         return (False, error_msg)
 
-    def needs_subscription_selection(self, user_id: UUID) -> bool:
+    def needs_subscription_selection(self, user_id: UUID)-> bool:
         """Check if user must select a subscription plan via popup.
         
         Returns True ONLY if:
@@ -994,7 +982,7 @@ class SubscriptionService:
         # Return True if NO active subscription exists
         return active_subscription is None
 
-    def get_available_plans_for_selection(self) -> list[dict]:
+    def get_available_plans_for_selection(self)-> list[dict]:
         """Get the 4 subscription plans available for popup selection.
         
         Returns plans in this order:
@@ -1058,7 +1046,7 @@ class SubscriptionService:
     # PHASE 2: Subscription Management - Button State Logic
     # ─────────────────────────────────────────────────────────────────────
 
-    def get_subscription_management_status(self, user_id: UUID) -> dict:
+    def get_subscription_management_status(self, user_id: UUID)-> dict:
         """Get subscription status and button states for plan management page.
         
         Returns current subscription info and the state of each plan button
@@ -1151,12 +1139,7 @@ class SubscriptionService:
             "available_plans": available_plans
         }
 
-    def _get_button_state(
-        self,
-        current_plan_name: str,
-        target_plan_name: str,
-        subscription_status: str
-    ) -> str:
+    def _get_button_state(self, current_plan_name: str, target_plan_name: str, subscription_status: str)-> str:
         """Calculate button state for a plan given current subscription status.
         
         Returns: "enabled", "disabled", or "current"
@@ -1204,7 +1187,7 @@ class SubscriptionService:
         # Default: disabled (safety)
         return "disabled"
 
-    def _get_button_label(self, button_state: str) -> str:
+    def _get_button_label(self, button_state: str)-> str:
         """Get user-facing button label for a button state.
         
         Args:
@@ -1220,7 +1203,7 @@ class SubscriptionService:
         else:
             return "✅ Select Plan"
 
-    def _get_all_individual_plans(self) -> list[SubscriptionPlan]:
+    def _get_all_individual_plans(self)-> list[SubscriptionPlan]:
         """Get all 4 individual subscription plans in standard order.
         
         Order: Free, 7-Day Trial, Pro Monthly, Pro Yearly (by price ascending)
@@ -1263,12 +1246,7 @@ class SubscriptionService:
         # Sort by price to ensure consistent ordering
         return sorted(plans, key=lambda p: (float(p.price), p.name))
 
-    def _plan_to_response_dict(
-        self,
-        plan: SubscriptionPlan,
-        button_state: str,
-        button_label: str
-    ) -> dict:
+    def _plan_to_response_dict(self, plan: SubscriptionPlan, button_state: str, button_label: str)-> dict:
         """Convert SubscriptionPlan to API response dict with button state.
         
         Args:

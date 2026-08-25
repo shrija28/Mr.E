@@ -9,25 +9,29 @@ Returns:
 """
 
 from __future__ import annotations
+import os
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Query
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from sqlalchemy.orm import Session
 
 from ..db.session import get_async_session as get_session
 from ..leaderboard.service import get_leaderboard
 from ..middleware.rbac import require_admin
 
-router = APIRouter()
+router = Blueprint("admin_leaderboard", __name__)
 
 
-@router.get("/leaderboard")
-def admin_leaderboard(
-    subject: Optional[str] = Query(default=None, description="Optional subject filter"),
-    payload: Dict[str, Any] = Depends(require_admin),
-    session: Session = Depends(get_session),
-) -> Dict[str, Any]:
+@router.route("/leaderboard", methods=["GET"])
+def admin_leaderboard()-> Dict[str, Any]:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
     """Return the full ranked leaderboard with optional subject filter.
 
     When *subject* is provided, only submissions for that subject are

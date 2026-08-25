@@ -71,7 +71,7 @@ _IMPROVE_THRESHOLD = 40
 _PASS_THRESHOLD = 40
 
 
-def _pct(earned: int, total: int) -> int:
+def _pct(earned: int, total: int)-> int:
     """Round earned/total to a percentage, returning 0 when total is 0."""
 
     if total <= 0:
@@ -79,7 +79,7 @@ def _pct(earned: int, total: int) -> int:
     return round((earned / total) * 100)
 
 
-def _normalised_marks(value: Any) -> int:
+def _normalised_marks(value: Any)-> int:
     """Coerce a question's ``marks`` field to a positive int (default 1)."""
 
     if isinstance(value, bool):  # bool is a subclass of int — exclude.
@@ -91,7 +91,7 @@ def _normalised_marks(value: Any) -> int:
     return 1
 
 
-def _is_correct_answer(given: Any, ans: Any, opts: Any = None) -> bool:
+def _is_correct_answer(given: Any, ans: Any, opts: Any = None)-> bool:
     """Robustly check if student's given answer matches the correct option."""
     if given is None or str(given).strip() == "":
         return False
@@ -141,10 +141,7 @@ def _is_correct_answer(given: Any, ans: Any, opts: Any = None) -> bool:
     return False
 
 
-def score_submission(
-    questions: Iterable[Mapping[str, Any]],
-    answers: Mapping[str, Any],
-) -> dict[str, Any]:
+def score_submission(questions: Iterable[Mapping[str, Any]], answers: Mapping[str, Any])-> dict[str, Any]:
     """Score one submission and return the full result envelope.
 
     See module docstring for input/output shape.

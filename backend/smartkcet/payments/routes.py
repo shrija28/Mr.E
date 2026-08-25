@@ -17,6 +17,7 @@ Design goals
 """
 
 from __future__ import annotations
+import os
 
 import json
 import logging
@@ -25,7 +26,8 @@ import uuid
 from collections import defaultdict
 from typing import Annotated, Any, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Request, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -45,7 +47,7 @@ from .service import (
 
 logger = logging.getLogger("smartkcet.payments.routes")
 
-router = APIRouter(prefix="/api/payments", tags=["payments"])
+router = Blueprint("payments_routes", __name__)
 
 
 # ---------------------------------------------------------------------------
@@ -58,13 +60,13 @@ _RATE_WINDOW  = 60   # seconds
 _RATE_MAX_REQ = 5    # max order creations per window per IP
 
 
-def _check_rate_limit(request: Request) -> None:
+def _check_rate_limit()-> None:
     ip  = request.client.host if request.client else "unknown"
     now = time.monotonic()
     _rate_store[ip] = [t for t in _rate_store[ip] if now - t < _RATE_WINDOW]
     if len(_rate_store[ip]) >= _RATE_MAX_REQ:
         raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            status_code=429,
             detail={
                 "error": "rate_limited",
                 "message": f"Too many order creation requests. Please wait {_RATE_WINDOW}s.",
@@ -94,8 +96,15 @@ class VerifyPaymentRequest(BaseModel):
 # GET /api/payments/plans  — public, both institution and student plans
 # ---------------------------------------------------------------------------
 
-@router.get("/plans")
-async def list_plans(db: Session = Depends(get_session)) -> Any:
+@router.route("/plans", methods=["GET"])
+def list_plans()-> Any:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Return all active subscription plans (both institution and individual)."""
     plans = (
         db.query(SubscriptionPlan)
@@ -110,8 +119,15 @@ async def list_plans(db: Session = Depends(get_session)) -> Any:
     }
 
 
-@router.get("/plans/student")
-async def list_student_plans(db: Session = Depends(get_session)) -> Any:
+@router.route("/plans/student", methods=["GET"])
+def list_student_plans()-> Any:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Return active individual (student) subscription plans."""
     plans = (
         db.query(SubscriptionPlan)
@@ -129,8 +145,15 @@ async def list_student_plans(db: Session = Depends(get_session)) -> Any:
     }
 
 
-@router.get("/plans/institution")
-async def list_institution_plans(db: Session = Depends(get_session)) -> Any:
+@router.route("/plans/institution", methods=["GET"])
+def list_institution_plans()-> Any:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Return active institution subscription plans."""
     plans = (
         db.query(SubscriptionPlan)
@@ -148,7 +171,7 @@ async def list_institution_plans(db: Session = Depends(get_session)) -> Any:
     }
 
 
-def _serialize_plan(p: SubscriptionPlan) -> dict:
+def _serialize_plan(p: SubscriptionPlan)-> dict:
     return {
         "id":                           str(p.id),
         "name":                         p.name,
@@ -167,13 +190,12 @@ def _serialize_plan(p: SubscriptionPlan) -> dict:
 # POST /api/payments/create-order  — institution_admin or student
 # ---------------------------------------------------------------------------
 
-@router.post("/create-order")
-async def create_order(
-    request: Request,
-    body: CreateOrderRequest,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-) -> Any:
+@router.route("/create-order", methods=["POST"])
+def create_order()-> Any:    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Create a Razorpay order. Works for both institution admins and students.
 
     Rate-limited to 5 orders per minute per IP to prevent abuse.
@@ -215,7 +237,7 @@ async def create_order(
         logger.error(f"[create-order] UUID parsing failed: {e}")
         logger.error(f"[create-order] Attempted to parse: {body.plan_id}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail={"error": "validation_error", "message": f"Invalid plan_id: {str(e)}"},
         )
 
@@ -226,7 +248,7 @@ async def create_order(
             institution_id_str = payload.get("institution_id", "")
             if not institution_id_str:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=400,
                     detail={"error": "validation_error", "message": "institution_id missing from token"},
                 )
             institution_id = uuid.UUID(institution_id_str)
@@ -239,7 +261,7 @@ async def create_order(
             user = current_user(request, db)
             if user is None:
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED, 
+                    status_code=401, 
                     detail={"error": "auth_required", "message": "User not found"}
                 )
             
@@ -248,7 +270,7 @@ async def create_order(
             
         else:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=403,
                 detail={"error": "forbidden", "message": "Only students and institution admins can create orders"},
             )
         return result
@@ -260,7 +282,7 @@ async def create_order(
         logger.error(f"[create-order] Traceback: {traceback.format_exc()}")
         
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail={"error": "invalid_plan", "message": str(exc)},
         )
     except HTTPException:
@@ -268,7 +290,7 @@ async def create_order(
     except Exception as exc:
         logger.exception("create-order failed: %s", exc)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail={"error": "order_creation_failed", "message": str(exc)},
         )
 
@@ -277,13 +299,12 @@ async def create_order(
 # POST /api/payments/verify  — institution_admin or student
 # ---------------------------------------------------------------------------
 
-@router.post("/verify")
-async def verify_payment(
-    request: Request,
-    body: VerifyPaymentRequest,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-) -> Any:
+@router.route("/verify", methods=["POST"])
+def verify_payment()-> Any:    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Verify payment signature from frontend Razorpay success callback.
 
     This does NOT activate the subscription.
@@ -306,7 +327,7 @@ async def verify_payment(
         print(f"[VERIFY] ❌ SIGNATURE VERIFICATION FAILED")
         logger.warning("Frontend payment verification FAILED for order %s", body.razorpay_order_id)
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail={
                 "error": "signature_invalid",
                 "message": "Payment signature verification failed. Contact support with your order ID.",
@@ -351,12 +372,17 @@ async def verify_payment(
 # POST /api/payments/webhook  — Razorpay server → our backend
 # ---------------------------------------------------------------------------
 
-@router.post("/webhook")
-async def razorpay_webhook(
-    request: Request,
-    db: Session = Depends(get_session),
-    x_razorpay_signature: str = Header(default=""),
-) -> Any:
+@router.route("/webhook", methods=["POST"])
+def razorpay_webhook()-> Any:    
+    from flask import request
+    x_razorpay_signature = request.headers.get("X-Razorpay-Signature", "")
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Authoritative payment event handler from Razorpay.
 
     Security:
@@ -368,13 +394,13 @@ async def razorpay_webhook(
     Production setup: configure this URL in Razorpay dashboard as webhook endpoint.
     Test mode: mock webhooks can be sent via Razorpay test dashboard.
     """
-    raw_body = await request.body()
+    raw_body = request.body()
 
     # Signature verification
     if not gateway.verify_webhook_signature(raw_body, x_razorpay_signature):
         logger.warning("Webhook signature FAILED — rejecting")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail={"error": "invalid_signature"},
         )
 
@@ -416,7 +442,7 @@ async def razorpay_webhook(
     except Exception as exc:
         logger.exception("Webhook processing error: %s", exc)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail={"error": "webhook_processing_failed"},
         )
 
@@ -425,12 +451,12 @@ async def razorpay_webhook(
 # GET /api/payments/history  — institution or student
 # ---------------------------------------------------------------------------
 
-@router.get("/history")
-async def payment_history(
-    request: Request,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-) -> Any:
+@router.route("/history", methods=["GET"])
+def payment_history()-> Any:    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Return billing / payment history for the authenticated user.
 
     Works for both institution admins (institution billing) and students (personal billing).

@@ -53,7 +53,7 @@ class PlatformAdminService:
     # -------------------------------------------------------------------------
 
     @staticmethod
-    def get_admin_credentials() -> Optional[tuple[str, str]]:
+    def get_admin_credentials()-> Optional[tuple[str, str]]:
         """Get admin credentials from environment variables.
         
         Returns:
@@ -72,7 +72,7 @@ class PlatformAdminService:
         return (admin_email, admin_password_hash)
 
     @staticmethod
-    def is_admin_configured() -> bool:
+    def is_admin_configured()-> bool:
         """Check if Platform Admin credentials are configured.
         
         Returns:
@@ -80,7 +80,7 @@ class PlatformAdminService:
         """
         return PlatformAdminService.get_admin_credentials() is not None
 
-    def verify_admin_credentials(self, email: str, password_hash: str) -> bool:
+    def verify_admin_credentials(self, email: str, password_hash: str)-> bool:
         """Verify admin credentials against environment variables.
         
         Args:
@@ -102,16 +102,7 @@ class PlatformAdminService:
     # Subscription Plan CRUD
     # -------------------------------------------------------------------------
 
-    def create_subscription_plan(
-        self,
-        name: str,
-        plan_type: str,
-        billing_period: str,
-        price: Decimal,
-        max_test_attempts_per_period: Optional[int] = None,
-        max_student_seats: Optional[int] = None,
-        feature_flags: Optional[Dict[str, Any]] = None,
-    ) -> SubscriptionPlan:
+    def create_subscription_plan(self, name: str, plan_type: str, billing_period: str, price: Decimal, max_test_attempts_per_period: Optional[int] = None, max_student_seats: Optional[int] = None, feature_flags: Optional[Dict[str, Any]] = None)-> SubscriptionPlan:
         """Create a new subscription plan.
         
         Args:
@@ -171,7 +162,7 @@ class PlatformAdminService:
         
         return plan
 
-    def get_subscription_plan(self, plan_id: UUID) -> Optional[SubscriptionPlan]:
+    def get_subscription_plan(self, plan_id: UUID)-> Optional[SubscriptionPlan]:
         """Get a subscription plan by ID.
         
         Args:
@@ -184,11 +175,7 @@ class PlatformAdminService:
             SubscriptionPlan.id == plan_id
         ).first()
 
-    def list_subscription_plans(
-        self,
-        plan_type: Optional[str] = None,
-        is_active: Optional[bool] = None,
-    ) -> List[SubscriptionPlan]:
+    def list_subscription_plans(self, plan_type: Optional[str] = None, is_active: Optional[bool] = None)-> List[SubscriptionPlan]:
         """List all subscription plans with optional filters.
         
         Args:
@@ -208,16 +195,7 @@ class PlatformAdminService:
         
         return query.all()
 
-    def update_subscription_plan(
-        self,
-        plan_id: UUID,
-        name: Optional[str] = None,
-        price: Optional[Decimal] = None,
-        max_test_attempts_per_period: Optional[int] = None,
-        max_student_seats: Optional[int] = None,
-        feature_flags: Optional[Dict[str, Any]] = None,
-        is_active: Optional[bool] = None,
-    ) -> SubscriptionPlan:
+    def update_subscription_plan(self, plan_id: UUID, name: Optional[str] = None, price: Optional[Decimal] = None, max_test_attempts_per_period: Optional[int] = None, max_student_seats: Optional[int] = None, feature_flags: Optional[Dict[str, Any]] = None, is_active: Optional[bool] = None)-> SubscriptionPlan:
         """Update a subscription plan.
         
         Args:
@@ -275,7 +253,7 @@ class PlatformAdminService:
         
         return plan
 
-    def delete_subscription_plan(self, plan_id: UUID) -> None:
+    def delete_subscription_plan(self, plan_id: UUID)-> None:
         """Delete a subscription plan.
         
         Rejects deletion if the plan has active subscribers.
@@ -315,7 +293,7 @@ class PlatformAdminService:
     # Institution Management
     # -------------------------------------------------------------------------
 
-    def activate_institution(self, institution_id: UUID) -> Institution:
+    def activate_institution(self, institution_id: UUID)-> Institution:
         """Activate an institution.
         
         Args:
@@ -353,7 +331,7 @@ class PlatformAdminService:
         
         return institution
 
-    def suspend_institution(self, institution_id: UUID) -> Institution:
+    def suspend_institution(self, institution_id: UUID)-> Institution:
         """Suspend an institution.
         
         Args:
@@ -391,7 +369,7 @@ class PlatformAdminService:
         
         return institution
 
-    def remove_institution(self, institution_id: UUID) -> None:
+    def remove_institution(self, institution_id: UUID)-> None:
         """Remove an institution.
         
         This will cascade delete all related data (subscriptions, invitations, etc.)
@@ -421,10 +399,7 @@ class PlatformAdminService:
             details={"institution_name": institution_name}
         )
 
-    def list_institutions(
-        self,
-        subscription_status: Optional[str] = None,
-    ) -> List[Institution]:
+    def list_institutions(self, subscription_status: Optional[str] = None)-> List[Institution]:
         """List all institutions with optional filters.
         
         Args:
@@ -444,7 +419,7 @@ class PlatformAdminService:
     # Aggregate Analytics
     # -------------------------------------------------------------------------
 
-    def get_active_users_count(self) -> Dict[str, int]:
+    def get_active_users_count(self)-> Dict[str, int]:
         """Get count of active users by role and subscription status.
         
         Returns:
@@ -498,7 +473,7 @@ class PlatformAdminService:
             "dual_subscribers": dual_subscribers,
         }
 
-    def get_subscription_distribution(self) -> Dict[str, Any]:
+    def get_subscription_distribution(self)-> Dict[str, Any]:
         """Get subscription distribution statistics.
         
         Returns:
@@ -538,7 +513,7 @@ class PlatformAdminService:
             "by_plan": {plan_name: count for plan_name, count in plan_distribution},
         }
 
-    def get_exam_attempts_statistics(self) -> Dict[str, Any]:
+    def get_exam_attempts_statistics(self)-> Dict[str, Any]:
         """Get exam attempt statistics.
         
         Returns:
@@ -592,7 +567,7 @@ class PlatformAdminService:
             "pro_attempts": pro_attempts,
         }
 
-    def get_revenue_statistics(self) -> Dict[str, Any]:
+    def get_revenue_statistics(self)-> Dict[str, Any]:
         """Get revenue statistics.
         
         Returns:
@@ -640,7 +615,7 @@ class PlatformAdminService:
             "failed_revenue": str(failed_revenue),
         }
 
-    def get_aggregate_analytics(self) -> Dict[str, Any]:
+    def get_aggregate_analytics(self)-> Dict[str, Any]:
         """Get all aggregate analytics in a single call.
         
         Returns:
@@ -658,12 +633,7 @@ class PlatformAdminService:
     # Audit Logging
     # -------------------------------------------------------------------------
 
-    def _log_write_operation(
-        self,
-        operation_type: str,
-        target_id: str,
-        details: Optional[Dict[str, Any]] = None,
-    ) -> None:
+    def _log_write_operation(self, operation_type: str, target_id: str, details: Optional[Dict[str, Any]] = None)-> None:
         """Log a write operation for audit purposes.
         
         Args:

@@ -26,14 +26,16 @@ Currently mounted:
 
 Future tasks (7.x exam authoring, 11.x analytics) follow the same
 pattern: define a sub-router in its own module and call
-``router.include_router(...)`` here.
+``router.register_blueprint(...)`` here.
 """
 
 from __future__ import annotations
+import os
 
 from typing import Any
 
-from fastapi import APIRouter, Depends
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 
 from ..middleware.rbac import require_admin
 from .analytics import router as analytics_router
@@ -46,30 +48,30 @@ from .questions import router as questions_router
 from .upload import router as upload_router
 from .syllabus import router as syllabus_router
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+router = Blueprint("admin___init__", __name__)
 
 
-@router.get("/ping")
-def admin_ping(payload: dict[str, Any] = Depends(require_admin)) -> dict[str, Any]:
-    """Smoke-test endpoint — confirms the admin RBAC dependency is wired."""
+@router.route("/ping", methods=["GET"])
+def admin_ping()-> Any:    
+    _admin = require_admin()
+    """Smoke-test endpoint - confirms the admin RBAC dependency is wired."""
 
-    return {"status": "ok", "role": payload.get("role"), "sub": payload.get("sub")}
+    return make_response(jsonify({"status": "ok", "role": _admin.get("role"), "sub": _admin.get("sub")}), 200)
 
 
 # Mount the upload sub-router under the same ``/api/admin`` prefix.  The
 # sub-router declares relative paths (``/upload``) and applies its own
 # ``Depends(require_admin)`` per endpoint so the RBAC contract from
 # design.md §1.6 is enforced at the endpoint level.
-router.include_router(upload_router)
-router.include_router(generate_router)
-router.include_router(questions_router)
-router.include_router(exams_router)
-router.include_router(leaderboard_router)
-router.include_router(analytics_router)
-router.include_router(dashboard_router)
-router.include_router(dashboard_router)
-router.include_router(platform_admin_router)
-router.include_router(syllabus_router)
+router.register_blueprint(upload_router)
+router.register_blueprint(generate_router)
+router.register_blueprint(questions_router)
+router.register_blueprint(exams_router)
+router.register_blueprint(leaderboard_router)
+router.register_blueprint(analytics_router)
+router.register_blueprint(dashboard_router)
+router.register_blueprint(platform_admin_router)
+router.register_blueprint(syllabus_router)
 
 
 __all__ = ["router"]

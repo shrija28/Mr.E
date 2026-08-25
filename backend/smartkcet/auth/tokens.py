@@ -38,7 +38,7 @@ ALGORITHM = "HS256"
 TOKEN_ISSUE_INVOKED: Counter = Counter()
 
 
-def reset_token_counter() -> None:
+def reset_token_counter()-> None:
     """Reset the :data:`TOKEN_ISSUE_INVOKED` counter (used by tests)."""
 
     TOKEN_ISSUE_INVOKED.clear()
@@ -56,7 +56,7 @@ def reset_token_counter() -> None:
 _DEV_JWT_SECRET = "smartkcet-dev-secret-do-not-use-in-prod"
 
 
-def _secret() -> str:
+def _secret()-> str:
     return os.getenv("JWT_SECRET") or _DEV_JWT_SECRET
 
 
@@ -68,7 +68,7 @@ def _secret() -> str:
 Role = Literal["platform_admin", "institution_admin", "student"]
 
 
-def _ttl_for(role: Role) -> int:
+def _ttl_for(role: Role)-> int:
     if role == "student":
         return STUDENT_TOKEN_TTL_SEC
     if role in ("platform_admin", "institution_admin"):
@@ -76,14 +76,7 @@ def _ttl_for(role: Role) -> int:
     raise ValueError(f"unknown role: {role!r}")
 
 
-def issue_token(
-    *,
-    sub: str,
-    role: Role,
-    student_subtype: str | None = None,
-    institution_id: str | None = None,
-    subscription_status: str | None = None,
-) -> tuple[str, str, int, int]:
+def issue_token(*, sub: str, role: Role, student_subtype: str | None = None, institution_id: str | None = None, subscription_status: str | None = None)-> tuple[str, str, int, int]:
     """Mint a new Session_Token with extended claims.
 
     Parameters
@@ -157,7 +150,7 @@ class TokenError(Exception):
     """Raised when a Session_Token fails validation."""
 
 
-def decode_token(raw: str) -> dict:
+def decode_token(raw: str)-> dict:
     """Decode and signature-verify ``raw``; raise :class:`TokenError` on failure."""
 
     if not isinstance(raw, str) or not raw:
@@ -170,7 +163,7 @@ def decode_token(raw: str) -> dict:
         raise TokenError("invalid token") from exc
 
 
-def is_revoked(session: Session, jti: str) -> bool:
+def is_revoked(session: Session, jti: str)-> bool:
     """Return ``True`` iff ``jti`` has been logged out."""
 
     if not jti:
@@ -178,7 +171,7 @@ def is_revoked(session: Session, jti: str) -> bool:
     return session.get(RevokedToken, jti) is not None
 
 
-def validate_token(session: Session, raw: str) -> dict:
+def validate_token(session: Session, raw: str)-> dict:
     """Decode ``raw`` and reject revoked ``jti`` values.
 
     This is the helper that RBAC middleware (task 3.3) and the logout
@@ -192,7 +185,7 @@ def validate_token(session: Session, raw: str) -> dict:
     return payload
 
 
-def revoke_token(session: Session, jti: str, expires_at: datetime | None = None) -> bool:
+def revoke_token(session: Session, jti: str, expires_at: datetime | None = None)-> bool:
     """Record ``jti`` in the revocation table.
 
     Returns ``True`` when a new row was inserted, ``False`` when the
@@ -207,7 +200,7 @@ def revoke_token(session: Session, jti: str, expires_at: datetime | None = None)
     return True
 
 
-def revoke_user_tokens(session: Session, user_id: uuid.UUID) -> int:
+def revoke_user_tokens(session: Session, user_id: uuid.UUID)-> int:
     """Revoke all active tokens for a user (used when subtype/institution changes).
 
     This is called when a student's subtype or institution linkage changes,

@@ -1,3 +1,4 @@
+import os
 """Platform Admin API routes.
 
 This module defines FastAPI routes for Platform Admin operations including:
@@ -12,7 +13,8 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -33,7 +35,7 @@ from .platform_admin_service import PlatformAdminService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/platform", tags=["Platform Admin"])
+router = Blueprint("admin_platform_admin_routes", __name__)
 
 
 # -----------------------------------------------------------------------------
@@ -41,8 +43,15 @@ router = APIRouter(prefix="/platform", tags=["Platform Admin"])
 # -----------------------------------------------------------------------------
 
 
-@router.post("/check-config", response_model=AdminLoginResponse)
-def check_admin_config(db: Session = Depends(get_session)) -> AdminLoginResponse:
+@router.route("/check-config", methods=["POST"])
+def check_admin_config()-> AdminLoginResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Check if Platform Admin is configured.
     
     This endpoint checks if ADMIN_EMAIL and ADMIN_PASSWORD_HASH environment
@@ -70,12 +79,15 @@ def check_admin_config(db: Session = Depends(get_session)) -> AdminLoginResponse
 # -----------------------------------------------------------------------------
 
 
-@router.post("/subscription-plans", response_model=SubscriptionPlanResponse, status_code=status.HTTP_201_CREATED)
-def create_subscription_plan(
-    request: CreateSubscriptionPlanRequest,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-) -> SubscriptionPlanResponse:
+@router.route("/subscription-plans", methods=["POST"])
+def create_subscription_plan()-> SubscriptionPlanResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Create a new subscription plan.
     
     Requires Platform Admin authentication.
@@ -95,17 +107,20 @@ def create_subscription_plan(
         return SubscriptionPlanResponse.model_validate(plan)
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail=str(e),
         )
 
 
-@router.get("/subscription-plans/{plan_id}", response_model=SubscriptionPlanResponse)
-def get_subscription_plan(
-    plan_id: UUID,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-) -> SubscriptionPlanResponse:
+@router.route("/subscription-plans/<plan_id>", methods=["GET"])
+def get_subscription_plan(plan_id: UUID)-> SubscriptionPlanResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get a subscription plan by ID.
     
     Requires Platform Admin authentication.
@@ -115,20 +130,22 @@ def get_subscription_plan(
     
     if not plan:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail=f"Subscription plan {plan_id} not found",
         )
     
     return SubscriptionPlanResponse.model_validate(plan)
 
 
-@router.get("/subscription-plans", response_model=List[SubscriptionPlanResponse])
-def list_subscription_plans(
-    plan_type: Optional[str] = None,
-    is_active: Optional[bool] = None,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-) -> List[SubscriptionPlanResponse]:
+@router.route("/subscription-plans", methods=["GET"])
+def list_subscription_plans(plan_type: Optional[str] = None, is_active: Optional[bool] = None)-> List[SubscriptionPlanResponse]:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """List all subscription plans with optional filters.
     
     Requires Platform Admin authentication.
@@ -320,13 +337,15 @@ def list_subscription_plans(
     return [SubscriptionPlanResponse.model_validate(plan) for plan in plans]
 
 
-@router.patch("/subscription-plans/{plan_id}", response_model=SubscriptionPlanResponse)
-def update_subscription_plan(
-    plan_id: UUID,
-    request: UpdateSubscriptionPlanRequest,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-) -> SubscriptionPlanResponse:
+@router.route("/subscription-plans/<plan_id>", methods=["PATCH"])
+def update_subscription_plan(plan_id: UUID)-> SubscriptionPlanResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Update a subscription plan.
     
     Requires Platform Admin authentication.
@@ -346,17 +365,20 @@ def update_subscription_plan(
         return SubscriptionPlanResponse.model_validate(plan)
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail=str(e),
         )
 
 
-@router.delete("/subscription-plans/{plan_id}", response_model=SuccessResponse)
-def delete_subscription_plan(
-    plan_id: UUID,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-) -> SuccessResponse:
+@router.route("/subscription-plans/<plan_id>", methods=["DELETE"])
+def delete_subscription_plan(plan_id: UUID)-> SuccessResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Delete a subscription plan.
     
     Rejects deletion if the plan has active subscribers.
@@ -372,7 +394,7 @@ def delete_subscription_plan(
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail=str(e),
         )
 
@@ -382,12 +404,15 @@ def delete_subscription_plan(
 # -----------------------------------------------------------------------------
 
 
-@router.post("/institutions/{institution_id}/activate", response_model=InstitutionResponse)
-def activate_institution(
-    institution_id: UUID,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-) -> InstitutionResponse:
+@router.route("/institutions/<institution_id>/activate", methods=["POST"])
+def activate_institution(institution_id: UUID)-> InstitutionResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Activate an institution.
     
     Requires Platform Admin authentication.
@@ -399,17 +424,20 @@ def activate_institution(
         return InstitutionResponse.model_validate(institution)
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail=str(e),
         )
 
 
-@router.post("/institutions/{institution_id}/suspend", response_model=InstitutionResponse)
-def suspend_institution(
-    institution_id: UUID,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-) -> InstitutionResponse:
+@router.route("/institutions/<institution_id>/suspend", methods=["POST"])
+def suspend_institution(institution_id: UUID)-> InstitutionResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Suspend an institution.
     
     Requires Platform Admin authentication.
@@ -421,17 +449,20 @@ def suspend_institution(
         return InstitutionResponse.model_validate(institution)
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail=str(e),
         )
 
 
-@router.delete("/institutions/{institution_id}", response_model=SuccessResponse)
-def remove_institution(
-    institution_id: UUID,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-) -> SuccessResponse:
+@router.route("/institutions/<institution_id>", methods=["DELETE"])
+def remove_institution(institution_id: UUID)-> SuccessResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Remove an institution.
     
     This will cascade delete all related data (subscriptions, invitations, etc.)
@@ -447,17 +478,20 @@ def remove_institution(
         )
     except ValueError as e:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail=str(e),
         )
 
 
-@router.get("/institutions", response_model=InstitutionListResponse)
-async def list_institutions(
-    subscription_status: Optional[str] = None,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-) -> InstitutionListResponse:
+@router.route("/institutions", methods=["GET"])
+def list_institutions(subscription_status: Optional[str] = None)-> InstitutionListResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """List all institutions with optional filters.
     
     Requires Platform Admin authentication.
@@ -532,13 +566,16 @@ async def list_institutions(
 # -----------------------------------------------------------------------------
 
 
-@router.get("/students")
-async def list_students(
-    student_type: Optional[str] = None,  # 'direct' or 'institution' or None for all
-    institution_id: Optional[UUID] = None,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-):
+@router.route("/students", methods=["GET"])
+def list_students(student_type: Optional[str] = None, # 'direct' or 'institution' or None for all
+    institution_id: Optional[UUID] = None):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """List all students with optional filters.
     
     Requires Platform Admin authentication.
@@ -607,14 +644,15 @@ async def list_students(
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@router.post("/seed/students")
-def seed_test_students(
-    direct_count: int = 5,
-    institution_count: int = 3,
-    students_per_institution: int = 5,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-):
+@router.route("/seed/students", methods=["POST"])
+def seed_test_students(direct_count: int = 5, institution_count: int = 3, students_per_institution: int = 5):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Seed test student accounts for development/testing.
     
     Creates:
@@ -644,7 +682,7 @@ def seed_test_students(
     except Exception as e:
         logger.error(f"Error seeding students: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Error seeding students: {str(e)}",
         )
 
@@ -654,12 +692,15 @@ def seed_test_students(
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/direct-subscriptions")
-def list_direct_subscriptions(
-    subscription_status: Optional[str] = None,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-):
+@router.route("/direct-subscriptions", methods=["GET"])
+def list_direct_subscriptions(subscription_status: Optional[str] = None):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """List all direct subscriber students with their subscriptions (if any).
     
     Shows ALL direct subscriber students, including those without active subscriptions.
@@ -732,11 +773,15 @@ def list_direct_subscriptions(
 # -----------------------------------------------------------------------------
 
 
-@router.get("/analytics", response_model=AggregateAnalyticsResponse)
-def get_aggregate_analytics(
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-) -> AggregateAnalyticsResponse:
+@router.route("/analytics", methods=["GET"])
+def get_aggregate_analytics()-> AggregateAnalyticsResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get aggregate analytics for the entire platform.
     
     Includes:
@@ -761,12 +806,15 @@ __all__ = ["router"]
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@router.post("/subscriptions/{subscription_id}/renew")
-def renew_subscription(
-    subscription_id: UUID,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-):
+@router.route("/subscriptions/<subscription_id>/renew", methods=["POST"])
+def renew_subscription(subscription_id: UUID):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Renew a subscription (extend for another billing period).
     
     Requires Platform Admin authentication.
@@ -780,13 +828,13 @@ def renew_subscription(
     
     if not subscription:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail=f"Subscription {subscription_id} not found",
         )
     
     if subscription.status == 'cancelled':
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail="Cannot renew a cancelled subscription",
         )
     
@@ -814,17 +862,20 @@ def renew_subscription(
         db.rollback()
         logger.error(f"Error renewing subscription: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Error renewing subscription: {str(e)}",
         )
 
 
-@router.post("/subscriptions/{subscription_id}/cancel")
-def cancel_subscription(
-    subscription_id: UUID,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-):
+@router.route("/subscriptions/<subscription_id>/cancel", methods=["POST"])
+def cancel_subscription(subscription_id: UUID):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Cancel a subscription.
     
     Requires Platform Admin authentication.
@@ -837,13 +888,13 @@ def cancel_subscription(
     
     if not subscription:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail=f"Subscription {subscription_id} not found",
         )
     
     if subscription.status == 'cancelled':
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail="Subscription is already cancelled",
         )
     
@@ -864,7 +915,7 @@ def cancel_subscription(
         db.rollback()
         logger.error(f"Error cancelling subscription: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Error cancelling subscription: {str(e)}",
         )
 
@@ -876,13 +927,15 @@ class StudentSubscriptionManageRequest(BaseModel):
     renew_from: Optional[str] = None
 
 
-@router.post("/students/{user_id}/subscription/manage")
-def manage_student_subscription(
-    user_id: UUID,
-    data: StudentSubscriptionManageRequest,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-):
+@router.route("/students/<user_id>/subscription/manage", methods=["POST"])
+def manage_student_subscription(user_id: UUID):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Update or remove/cancel a student's subscription.
     
     Setting status to 'cancelled' sets the account's subscription status to INACTIVE.
@@ -895,7 +948,7 @@ def manage_student_subscription(
     user = db.query(User).filter(User.id == user_id, User.role == 'student').first()
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail=f"Student {user_id} not found",
         )
 
@@ -943,7 +996,7 @@ def manage_student_subscription(
         plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == data.plan_id).first()
         if not plan:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=404,
                 detail=f"Plan {data.plan_id} not found",
             )
 
@@ -1012,7 +1065,7 @@ def manage_student_subscription(
         db.rollback()
         logger.error(f"Error managing student subscription: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Error managing student subscription: {str(e)}",
         )
 
@@ -1032,13 +1085,15 @@ class PasswordResetRequest(BaseModel):
     )
 
 
-@router.post("/students/{user_id}/reset-password")
-def reset_student_password(
-    user_id: UUID,
-    data: PasswordResetRequest,
-    db: Session = Depends(get_session),
-    _: dict = Depends(require_platform_admin),
-):
+@router.route("/students/<user_id>/reset-password", methods=["POST"])
+def reset_student_password(user_id: UUID):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Reset a direct subscriber student's password.
     
     Allows platform admins to set a new password for students who forgot theirs.
@@ -1066,14 +1121,14 @@ def reset_student_password(
         
         if not user:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=404,
                 detail="Student not found or is not a direct subscriber"
             )
         
         # Validate password
         if len(data.password) < 8:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=400,
                 detail="Password must be at least 8 characters"
             )
         
@@ -1099,6 +1154,6 @@ def reset_student_password(
         db.rollback()
         logger.error(f"Error resetting password: {e}", exc_info=True)
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail="Error resetting password"
         )

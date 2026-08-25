@@ -39,12 +39,14 @@ Endpoints
 """
 
 from __future__ import annotations
+import os
 
 import logging
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Path, Query, Request, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -56,7 +58,7 @@ from ..middleware.rbac import require_admin
 
 logger = logging.getLogger("smartkcet.admin.questions")
 
-router = APIRouter()
+router = Blueprint("admin_questions", __name__)
 
 
 # REQ-6.1 — fixed page size.  Defined as a module-level constant so the
@@ -75,16 +77,16 @@ INSUFFICIENT_THRESHOLD = 20
 # ---------------------------------------------------------------------------
 
 
-def _validation_error(message: str, field: Optional[str] = None) -> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None)-> JSONResponse:
     """Return a 400 envelope identical in shape to other admin endpoints."""
 
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=body)
+    return JSONResponse(status_code=400, content=body)
 
 
-def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
+def _normalise_subject(value: Optional[str])-> Optional[Subject]:
     """Return the matching :class:`Subject` enum or ``None`` for invalid input."""
 
     if not isinstance(value, str):
@@ -98,7 +100,7 @@ def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
         return None
 
 
-def _serialise_question(row: Question) -> dict[str, Any]:
+def _serialise_question(row: Question)-> dict[str, Any]:
     """Map a :class:`Question` ORM row to the admin-list JSON shape."""
 
     created_at = row.created_at
@@ -118,7 +120,7 @@ def _serialise_question(row: Question) -> dict[str, Any]:
     }
 
 
-def _counts_by_subject(session: Session) -> dict[str, int]:
+def _counts_by_subject(session: Session)-> dict[str, int]:
     """Return a ``{subject_value: count}`` map for platform-wide (admin) questions only.
 
     Only counts questions with ``institution_id IS NULL`` so institution-uploaded
@@ -141,11 +143,12 @@ def _counts_by_subject(session: Session) -> dict[str, int]:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/questions/counts")
-def list_counts(
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/questions/counts", methods=["GET"])
+def list_counts()-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Return per-subject totals + ``insufficient`` flags + the threshold.
 
     REQ-6.4: a subject is "insufficient" when its total question count
@@ -170,14 +173,25 @@ def list_counts(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/questions")
-def list_questions(
-    request: Request,
-    subject: Optional[str] = Query(default=None),
-    page: int = Query(default=1, ge=1),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/questions", methods=["GET"])
+def list_questions()-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    page = int(request.args.get("page", 1))
+    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    page = int(request.args.get("page", 1))
     """List questions with optional subject filter and stable pagination.
 
     Query parameters
@@ -267,12 +281,12 @@ def list_questions(
 # ---------------------------------------------------------------------------
 
 
-@router.delete("/questions/{question_id}")
-def delete_question(
-    question_id: uuid.UUID = Path(...),
-    session: Session = Depends(get_session),
-    _admin: dict = Depends(require_admin),
-) -> Any:
+@router.route("/questions/<question_id>", methods=["DELETE"])
+def delete_question(question_id: uuid.UUID)-> Any:    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Delete a single question, reporting DB-level success or failure.
 
     REQ-6.2 / REQ-6.5 — the response's ``deleted`` flag mirrors the
@@ -299,10 +313,7 @@ def delete_question(
             # Nothing to commit — release the transactional state so the
             # session is reusable.
             session.rollback()
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={"deleted": False, "error": "not_found", "id": qid_str},
-            )
+            return make_response(jsonify({"deleted": False, "error": "not_found", "id": qid_str}), 404)
         session.commit()
     except SQLAlchemyError as exc:
         session.rollback()
@@ -311,10 +322,7 @@ def delete_question(
         # diagnostic without leaking the raw SQL message.
         error_name = type(exc).__name__ or "database_error"
         logger.warning("DELETE /api/admin/questions/%s failed: %s", qid_str, exc)
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"deleted": False, "error": error_name, "id": qid_str},
-        )
+        return make_response(jsonify({"deleted": False, "error": error_name, "id": qid_str}), 500)
 
     return {"deleted": True, "id": qid_str}
 

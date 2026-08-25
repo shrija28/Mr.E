@@ -52,25 +52,19 @@ class AccessLevel(str, Enum):
 class AccessCheckResult:
     """Result of an access control check."""
     
-    def __init__(
-        self,
-        access: AccessLevel,
-        reason: Optional[str] = None,
-        remaining_attempts: Optional[int] = None,
-        upgrade_url: Optional[str] = None,
-    ):
+    def __init__(self, access: AccessLevel, reason: Optional[str] = None, remaining_attempts: Optional[int] = None, upgrade_url: Optional[str] = None):
         self.access = access
         self.reason = reason
         self.remaining_attempts = remaining_attempts
         self.upgrade_url = upgrade_url
     
     @property
-    def is_granted(self) -> bool:
+    def is_granted(self)-> bool:
         """Check if access is granted."""
         return self.access == AccessLevel.GRANTED
     
     @property
-    def requires_upgrade(self) -> bool:
+    def requires_upgrade(self)-> bool:
         """Check if upgrade is required."""
         return self.access == AccessLevel.UPGRADE_REQUIRED
 
@@ -93,7 +87,7 @@ class SubscriptionAccessControl:
         self.db = db
         self.usage_tracker = UsageTracker(db)
     
-    def check_exam_access(self, user_id: UUID) -> AccessCheckResult:
+    def check_exam_access(self, user_id: UUID)-> AccessCheckResult:
         """Check if user can start an exam.
         
         Implements Task 5.3 (Free Trial restrictions) and Task 5.4 (Pro permissions).
@@ -150,7 +144,7 @@ class SubscriptionAccessControl:
             remaining_attempts=usage_result.remaining_attempts,
         )
     
-    def check_analytics_access(self, user_id: UUID) -> AccessCheckResult:
+    def check_analytics_access(self, user_id: UUID)-> AccessCheckResult:
         """Check analytics access level for user.
         
         Implements Task 5.3 (Free Trial restrictions) and Task 5.4 (Pro permissions).
@@ -206,20 +200,18 @@ class SubscriptionAccessControl:
             .first()
         )
 
-        if plan and plan.name.lower() != "free":
+        # Pro subscription or paid plan active: grant full analytics
+        if plan and plan.name not in ["Free", "Free Trial"] and plan.price > 0 and subscription.status in ["active", "grace_period"]:
             return AccessCheckResult(access=AccessLevel.GRANTED, reason=None)
         
-        if subscription.status in ["active", "trial", "grace_period"]:
-            return AccessCheckResult(access=AccessLevel.GRANTED, reason=None)
-        
-        # Default: basic analytics only
+        # Free Tier / Free Trial: basic score analytics only (total score, pass/fail, percentage)
         return AccessCheckResult(
             access=AccessLevel.UPGRADE_REQUIRED,
-            reason="Full analytics require Pro subscription",
+            reason="Full topic analytics, AI recommendations, and weak-topic analysis require a Pro subscription.",
             upgrade_url="/api/subscription/upgrade",
         )
     
-    def check_leaderboard_access(self, user_id: UUID) -> AccessCheckResult:
+    def check_leaderboard_access(self, user_id: UUID)-> AccessCheckResult:
         """Check leaderboard access level for user.
         
         Implements Task 5.3 (Free Trial restrictions) and Task 5.4 (Pro permissions).
@@ -293,7 +285,7 @@ class SubscriptionAccessControl:
             upgrade_url="/api/subscription/upgrade",
         )
     
-    def get_remaining_attempts(self, user_id: UUID) -> dict:
+    def get_remaining_attempts(self, user_id: UUID)-> dict:
         """Get remaining exam attempts for display on dashboard.
         
         Implements Task 5.3 requirement to display remaining attempts.
@@ -317,7 +309,7 @@ class SubscriptionAccessControl:
             "period_end": remaining.period_end.isoformat() if remaining.period_end else None,
         }
     
-    def calculate_medal_tier(self, rank: int, total_ranked: int) -> Optional[str]:
+    def calculate_medal_tier(self, rank: int, total_ranked: int)-> Optional[str]:
         """Calculate medal tier based on rank percentile.
         
         Implements Task 5.4 medal indicators for Pro subscribers.
@@ -351,7 +343,7 @@ class SubscriptionAccessControl:
         else:
             return None
     
-    def filter_analytics_data(self, analytics_data: dict, user_id: UUID) -> dict:
+    def filter_analytics_data(self, analytics_data: dict, user_id: UUID)-> dict:
         """Filter analytics data based on subscription tier.
         
         Implements Task 5.3 analytics restrictions for Free Trial users.
@@ -374,15 +366,20 @@ class SubscriptionAccessControl:
             # Pro subscription: return full analytics
             return analytics_data
         
-        # Free Trial: return analytics data with is_premium_subscriber = False
+        # Free Trial / Free Plan: return basic analytics data with is_premium_subscriber = False
         res = dict(analytics_data)
         res["is_premium_subscriber"] = False
         res["upgrade_required"] = True
         res["upgrade_url"] = access_result.upgrade_url
         res["upgrade_message"] = access_result.reason
+        res["topic_breakdown"] = None
+        res["topicScores"] = None
+        res["weak_topics"] = None
+        res["ai_recommendations"] = None
+        res["rank_suggestions"] = None
         return res
     
-    def filter_leaderboard_data(self, leaderboard_data: dict, user_id: UUID) -> dict:
+    def filter_leaderboard_data(self, leaderboard_data: dict, user_id: UUID)-> dict:
         """Filter leaderboard data based on subscription tier.
         
         Implements Task 5.3 leaderboard restrictions for Free Trial users.

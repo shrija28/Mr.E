@@ -25,11 +25,13 @@ Endpoints
 """
 
 from __future__ import annotations
+import os
 
 import uuid
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Path, Query, Request, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
@@ -39,7 +41,7 @@ from ..db.session import get_async_session as get_session
 from ..middleware.rbac import current_user, require_student
 from ..subscription.dependencies import get_access_control
 
-router = APIRouter()
+router = Blueprint("student_submissions", __name__)
 
 
 _DEFAULT_LIMIT = 50
@@ -51,14 +53,14 @@ _MAX_LIMIT = 200
 # ---------------------------------------------------------------------------
 
 
-def _validation_error(message: str, field: Optional[str] = None) -> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None)-> JSONResponse:
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=body)
+    return JSONResponse(status_code=400, content=body)
 
 
-def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
+def _normalise_subject(value: Optional[str])-> Optional[Subject]:
     if not isinstance(value, str):
         return None
     stripped = value.strip()
@@ -70,9 +72,7 @@ def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
         return None
 
 
-def _summary_row(
-    submission: Submission, exam_set: ExamSet, exam: Exam
-) -> dict[str, Any]:
+def _summary_row(submission: Submission, exam_set: ExamSet, exam: Exam)-> dict[str, Any]:
     """Map a join row to the dashboard summary shape."""
 
     submitted_at = submission.submitted_at
@@ -97,16 +97,33 @@ def _summary_row(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/submissions")
-def list_submissions(
-    request: Request,
-    subject: Optional[str] = Query(default=None),
-    limit: int = Query(default=_DEFAULT_LIMIT, ge=1),
-    offset: int = Query(default=0, ge=0),
-    session: Session = Depends(get_session),
-    _student: dict = Depends(require_student),
-    access_control = Depends(get_access_control),
-) -> Any:
+@router.route("/submissions", methods=["GET"])
+def list_submissions()-> Any:    
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import g
+    access_control = getattr(g, "access_control", None)
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    limit = int(request.args.get("limit", _DEFAULT_LIMIT))
+    from flask import request
+    offset = int(request.args.get("offset", 0))
+    
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import g
+    access_control = getattr(g, "access_control", None)
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    limit = int(request.args.get("limit", _DEFAULT_LIMIT))
+    from flask import request
+    offset = int(request.args.get("offset", 0))
     """List the authenticated student's submissions, newest first.
     
     **Subscription Integration (REQ-2.4):**
@@ -115,13 +132,10 @@ def list_submissions(
 
     user = current_user(request, session)
     if user is None or user.role != "student":
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={
+        return make_response(jsonify({
                 "error": "auth_required",
                 "message": "Authenticated student account not found.",
-            },
-        )
+            }), 401)
 
     selected_subject: Optional[Subject] = None
     if subject is not None:
@@ -197,14 +211,14 @@ def list_submissions(
 # ---------------------------------------------------------------------------
 
 
-@router.get("/submissions/{submission_id}")
-def get_submission(
-    request: Request,
-    submission_id: uuid.UUID = Path(...),
-    session: Session = Depends(get_session),
-    _student: dict = Depends(require_student),
-    access_control = Depends(get_access_control),
-) -> Any:
+@router.route("/submissions/<submission_id>", methods=["GET"])
+def get_submission(submission_id: uuid.UUID)-> Any:    
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import g
+    access_control = getattr(g, "access_control", None)
     """Return the full submission record (with question review).
 
     A 403 is returned when the submission belongs to a different
@@ -213,13 +227,10 @@ def get_submission(
 
     user = current_user(request, session)
     if user is None or user.role != "student":
-        return JSONResponse(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            content={
+        return make_response(jsonify({
                 "error": "auth_required",
                 "message": "Authenticated student account not found.",
-            },
-        )
+            }), 401)
 
     submission = session.execute(
         select(Submission)
@@ -228,21 +239,15 @@ def get_submission(
     ).scalar_one_or_none()
 
     if submission is None:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={
+        return make_response(jsonify({
                 "error": "not_found",
                 "resource": "submission",
                 "value": str(submission_id),
-            },
-        )
+            }), 404)
 
     if submission.user_id != user.id:
         # REQ-4.5: forbidden, with no submission data in the body.
-        return JSONResponse(
-            status_code=status.HTTP_403_FORBIDDEN,
-            content={"error": "forbidden", "message": "Access denied."},
-        )
+        return make_response(jsonify({"error": "forbidden", "message": "Access denied."}), 403)
 
     exam_set = submission.exam_set
     exam = exam_set.exam if exam_set is not None else None

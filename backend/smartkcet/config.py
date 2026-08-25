@@ -59,11 +59,11 @@ class Settings:
     port: int
 
     @property
-    def has_groq(self) -> bool:
+    def has_groq(self)-> bool:
         return bool(self.groq_api_key)
 
 
-def load_settings() -> Settings:
+def load_settings()-> Settings:
     """Build a :class:`Settings` snapshot from the current process env."""
 
     return Settings(
@@ -73,7 +73,7 @@ def load_settings() -> Settings:
     )
 
 
-def require_groq_api_key() -> str:
+def require_groq_api_key()-> str:
     """Return the Groq API key or raise the same error the legacy app raised."""
 
     api_key = os.getenv("GROQ_API_KEY")
@@ -146,13 +146,13 @@ class StartupConfigError(ValueError):
     """
 
 
-def _truthy(value: Optional[str]) -> bool:
+def _truthy(value: Optional[str])-> bool:
     if value is None:
         return False
     return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _validate_admin_email(value: Optional[str]) -> str:
+def _validate_admin_email(value: Optional[str])-> str:
     """Return the normalised admin email or raise."""
 
     email = (value or "").strip()
@@ -167,7 +167,7 @@ def _validate_admin_email(value: Optional[str]) -> str:
     return email.lower()
 
 
-def _validate_admin_password_hash(value: Optional[str]) -> str:
+def _validate_admin_password_hash(value: Optional[str])-> str:
     """Return the admin password hash or raise."""
 
     pw_hash = (value or "").strip()
@@ -181,7 +181,7 @@ def _validate_admin_password_hash(value: Optional[str]) -> str:
     return pw_hash
 
 
-def _validate_jwt_secret(value: Optional[str], *, dev_mode: bool) -> str:
+def _validate_jwt_secret(value: Optional[str], *, dev_mode: bool)-> str:
     """Return the JWT secret or raise.
 
     In dev mode a missing or short secret is replaced with the development
@@ -219,7 +219,7 @@ def _validate_jwt_secret(value: Optional[str], *, dev_mode: bool) -> str:
     )
 
 
-def _validate_database_url(value: Optional[str]) -> Optional[str]:
+def _validate_database_url(value: Optional[str])-> Optional[str]:
     """Return the database URL or raise.
 
     DATABASE_URL is optional — when unset the SQLite default in
@@ -238,7 +238,7 @@ def _validate_database_url(value: Optional[str]) -> Optional[str]:
     return stripped
 
 
-def _collect_validation_errors(env: Optional[dict[str, str]] = None) -> StartupConfig:
+def _collect_validation_errors(env: Optional[dict[str, str]] = None)-> StartupConfig:
     """Validate the four env vars and return a :class:`StartupConfig`.
 
     Raises :class:`StartupConfigError` on the first failing field.  Used
@@ -268,7 +268,7 @@ def _collect_validation_errors(env: Optional[dict[str, str]] = None) -> StartupC
     )
 
 
-def validate_startup_config(*, force: bool = False) -> StartupConfig:
+def validate_startup_config(*, force: bool = False)-> StartupConfig:
     """Validate startup configuration and return a :class:`StartupConfig`.
 
     On any validation failure this logs a fatal error and calls
@@ -330,7 +330,7 @@ def validate_startup_config(*, force: bool = False) -> StartupConfig:
     return cfg
 
 
-def reset_startup_config_cache() -> None:
+def reset_startup_config_cache()-> None:
     """Drop the cached :class:`StartupConfig` (test helper)."""
 
     global _cached_config

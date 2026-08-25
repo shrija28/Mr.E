@@ -121,16 +121,19 @@ The platform enforces a tiered subscription access model. Access pre-exam gates 
 
 | Plan Tier | Price | Badge / Tag | Included Features (✅) | Excluded Features / Limits (❌) |
 | :--- | :--- | :--- | :--- | :--- |
-| **Free** | **₹0 /mo** | Starter | • 3–5 mock tests<br/>• Limited question bank access<br/>• Basic score analytics | • No unlimited mock tests<br/>• No full topic analytics<br/>• No AI recommendations<br/>• No weak-topic analysis |
-| **7-Day Premium Trial** | **₹99 /wk** | Most Popular | • Unlimited mock tests<br/>• KCET premium question bank access<br/>• Topic-wise analytics<br/>• Weak-topic analysis<br/>• AI recommendations<br/>• Performance reports<br/>• Leaderboard ranking | • Valid for 7 days of full premium access |
-| **Pro Monthly** | **₹349 /mo** | Best Value | • Unlimited mock tests<br/>• KCET premium question bank access<br/>• Topic-wise analytics<br/>• Weak-topic analysis<br/>• AI recommendations<br/>• Performance reports<br/>• Leaderboard ranking + medals | • Billed monthly |
-| **Pro Yearly** | **₹2,999 /yr** | Best Value (Save ₹1,189/yr) | • Everything in Pro Monthly<br/>• 12 months full access<br/>• Unlimited mock tests<br/>• KCET premium question bank<br/>• AI recommendations<br/>• Advanced performance reports<br/>• Priority feature access | • Billed annually |
+| **Free** | **₹0 /mo** | Starter | • 3–5 mock tests• Limited question bank access• Basic score analytics | • No unlimited mock tests• No full topic analytic• No AI recommendations• No weak-topic analysis |
+| **7-Day Premium Trial** | **₹99 /wk** | Most Popular | • Unlimited mock tests• KCET premium question bank access• Topic-wise analytics• Weak-topic analysis• AI recommendations• Performance reports• Leaderboard ranking | • Valid for 7 days of full premium access |
+| **Pro Monthly** | **₹349 /mo** | Best Value | • Unlimited mock tests• KCET premium question bank access• Topic-wise analytics• Weak-topic analysis• AI recommendations• Performance reports• Leaderboard ranking| • Billed monthly |
+| **Pro Yearly** | **₹2,999 /yr** | Best Value (Save ₹1,189/yr) | • 12 months full access<br/>• Unlimited mock tests• KCET premium question bank• AI recommendations• Performance reports• Leaderboard ranking| • Billed annually |
 
-#### 5.2 Institutional License Tier
+#### 5.2 Institutional Subscription Plans
 
-| Plan Tier | Target User | Pricing Model | Feature Access & Benefits |
+| Plan Tier | Price | Subtitle / Target | Included Features (✅) |
 | :--- | :--- | :--- | :--- |
-| **Coaching Institution Bundle** | Coaching Institutes & PU Colleges | Annual Institutional License (₹9,999/yr up to 100 students) | • Bulk student enrollment via custom institution codes (e.g. `KCET_AC_001`)<br/>• **Custom Question Paper Extraction** based on specific subject/topic requirements<br/>• Automatic distribution of 4 shuffled paper sets (Sets A, B, C, D) to class cohort<br/>• Class/Cohort performance analytics dashboard for instructors<br/>• Anti-cheating violation logs & integrity audit reports |
+| **Starter** | **₹1,499 /month** | Perfect for small institutions | • Up to 50 students<br/>• Institution uploads<br/>• Chapter-wise tests<br/>• Basic analytics<br/>• Admin KCET question bank access |
+| **Basic** | **₹2,999 /month** | Great for growing institutions | • Up to 100 students<br/>• Institution uploads<br/>• Analytics<br/>• Suggestions and guidance |
+| **Premium** | **₹7,999 /month** | Best for large institutions *(Most Popular)* | • **Unlimited students**<br/>• Time taken analysis for each question<br/>• **Unlimited test generation**<br/>• **Unlimited tests taken per day** |
+| **Enterprise** | **Custom Pricing** | For multi-campus institutions | • Multi-campus support<br/>• Custom pricing & features<br/>• Dedicated account manager<br/>• Custom integrations<br/>• SLA support |
 
 
 ### FR-6: React Exam Engine & Automated Evaluation

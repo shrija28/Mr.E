@@ -32,13 +32,13 @@ _DEFAULT_SQLITE_PATH = Path(__file__).resolve().parents[2] / "smartkcet.db"
 _DEFAULT_DATABASE_URL = f"sqlite:///{_DEFAULT_SQLITE_PATH.as_posix()}"
 
 
-def _resolve_database_url() -> str:
+def _resolve_database_url()-> str:
     """Read ``DATABASE_URL`` from the environment, falling back to SQLite."""
 
     return os.getenv("DATABASE_URL", _DEFAULT_DATABASE_URL)
 
 
-def _build_engine(database_url: str) -> Engine:
+def _build_engine(database_url: str)-> Engine:
     """Create an :class:`Engine` with backend-appropriate connect args."""
 
     connect_args: dict[str, object] = {}
@@ -60,7 +60,7 @@ SessionLocal: sessionmaker[Session] = sessionmaker(
 )
 
 
-def _create_tables() -> None:
+def _create_tables()-> None:
     """Auto-create any missing tables (safe with checkfirst=True).
 
     Imports models to ensure they are registered with Base.metadata
@@ -77,7 +77,7 @@ def _create_tables() -> None:
     _add_missing_columns()
 
 
-def _add_missing_columns() -> None:
+def _add_missing_columns()-> None:
     """Add columns introduced after initial schema creation (SQLite-safe)."""
     from sqlalchemy import inspect, text
 
@@ -94,7 +94,7 @@ def _add_missing_columns() -> None:
 _create_tables()
 
 
-def get_session() -> Iterator[Session]:
+def get_session()-> Iterator[Session]:
     """FastAPI dependency / direct call that yields a request-scoped :class:`Session`."""
     session = SessionLocal()
     try:
@@ -107,7 +107,7 @@ def get_session() -> Iterator[Session]:
         session.close()
 
 
-async def get_async_session() -> AsyncGenerator[Session, None]:
+def get_async_session()-> AsyncGenerator[Session, None]:
     """Async FastAPI dependency for async route handlers.
 
     Use this in ``Depends(get_async_session)`` for async routes to avoid
@@ -124,10 +124,30 @@ async def get_async_session() -> AsyncGenerator[Session, None]:
         session.close()
 
 
+def get_db() -> Session:
+    """Return a request-scoped database session attached to Flask g context."""
+    from flask import g
+    if "db" not in g:
+        g.db = SessionLocal()
+    return g.db
+
+
+def teardown_db(exception=None) -> None:
+    """Close the request-scoped database session on Flask app teardown."""
+    from flask import g
+    db = g.pop("db", None)
+    if db is not None:
+        if exception is not None:
+            db.rollback()
+        db.close()
+
+
 __all__ = [
     "DATABASE_URL",
     "engine",
     "SessionLocal",
     "get_session",
     "get_async_session",
+    "get_db",
+    "teardown_db",
 ]

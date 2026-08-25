@@ -1,13 +1,15 @@
+import os
 """Contact API endpoints - for user support requests."""
 
-from fastapi import APIRouter, Depends, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
 from .db.session import get_session
 from sqlalchemy.orm import Session
 import logging
 
-router = APIRouter(prefix="/api", tags=["contact"])
+router = Blueprint("smartkcet_contact", __name__)
 logger = logging.getLogger("smartkcet.contact")
 
 
@@ -30,11 +32,15 @@ CONTACT_SUPPORT_EMAIL = "support@smartkcet.com"
 CONTACT_INFO_EMAIL = "info@smartkcet.com"
 
 
-@router.post("/contact", response_model=ContactMessageResponse, status_code=status.HTTP_201_CREATED)
-async def submit_contact_message(
-    data: ContactMessageRequest,
-    db: Session = Depends(get_session),
-):
+@router.route("/contact", methods=["POST"])
+def submit_contact_message():    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Submit a contact message.
     
     This endpoint accepts contact form submissions from authenticated users

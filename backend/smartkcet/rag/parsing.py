@@ -21,7 +21,7 @@ from docx import Document as DocxDocument
 logger = logging.getLogger("smartkcet.rag.parsing")
 
 
-def preprocess_for_ocr(img: Image.Image) -> Image.Image:
+def preprocess_for_ocr(img: Image.Image)-> Image.Image:
     """Apply denoising and adaptive thresholding for better OCR accuracy."""
 
     try:
@@ -42,7 +42,7 @@ def preprocess_for_ocr(img: Image.Image) -> Image.Image:
         return img
 
 
-def _process_groq_vision(img_str: str, page_num: int) -> str:
+def _process_groq_vision(img_str: str, page_num: int)-> str:
     from ..rag.groq_client import get_groq_client
     try:
         client = get_groq_client()
@@ -64,7 +64,7 @@ def _process_groq_vision(img_str: str, page_num: int) -> str:
         logger.warning(f"Groq Vision failed on page {page_num+1}: {groq_exc}")
         return ""
 
-def extract_text_from_pdf(file_bytes: bytes) -> str:
+def extract_text_from_pdf(file_bytes: bytes)-> str:
     """Extract text from a PDF; fall back to OCR for pages with little text."""
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
@@ -158,20 +158,20 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     return total_text
 
 
-def extract_text_from_docx(file_bytes: bytes) -> str:
+def extract_text_from_docx(file_bytes: bytes)-> str:
     doc = DocxDocument(io.BytesIO(file_bytes))
     text = "\n".join(p.text for p in doc.paragraphs if p.text.strip())
     logger.info("DOCX extraction: %d chars from %d paragraphs", len(text), len(doc.paragraphs))
     return text
 
 
-def extract_text_from_txt(file_bytes: bytes) -> str:
+def extract_text_from_txt(file_bytes: bytes)-> str:
     text = file_bytes.decode("utf-8", errors="ignore")
     logger.info("TXT extraction: %d chars", len(text))
     return text
 
 
-def chunk_text(text: str, size: int = 400, overlap: int = 80) -> List[str]:
+def chunk_text(text: str, size: int = 400, overlap: int = 80)-> List[str]:
     """Split ``text`` into overlapping word-windows ready for embedding."""
 
     words = text.split()

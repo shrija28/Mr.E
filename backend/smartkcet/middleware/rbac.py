@@ -82,7 +82,7 @@ from ..db.session import get_async_session as get_session
 # ---------------------------------------------------------------------------
 
 
-def _read_token(request: Request) -> Optional[str]:
+def _read_token()-> Optional[str]:
     """Return the raw Session_Token from the cookie, or ``None``."""
 
     raw = request.cookies.get(SESSION_COOKIE_NAME)
@@ -91,20 +91,20 @@ def _read_token(request: Request) -> Optional[str]:
     return raw
 
 
-def _unauthorized() -> HTTPException:
+def _unauthorized()-> HTTPException:
     """401 used for missing/malformed/expired tokens on protected endpoints."""
 
     return HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
+        status_code=401,
         detail={"error": "auth_required", "message": "Authentication required."},
     )
 
 
-def _forbidden() -> HTTPException:
+def _forbidden()-> HTTPException:
     """403 used for role mismatch and cross-student data access."""
 
     return HTTPException(
-        status_code=status.HTTP_403_FORBIDDEN,
+        status_code=403,
         detail={"error": "forbidden", "message": "Access denied."},
     )
 
@@ -114,10 +114,14 @@ def _forbidden() -> HTTPException:
 # ---------------------------------------------------------------------------
 
 
-async def require_authenticated(
-    request: Request,
-    session: Session = Depends(get_session),
-) -> dict[str, Any]:
+def require_authenticated()-> dict[str, Any]:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Require any authenticated user."""
     raw = _read_token(request)
     if raw is None:
@@ -129,36 +133,40 @@ async def require_authenticated(
     return payload
 
 
-async def require_student(
-    payload: dict[str, Any] = Depends(require_authenticated),
-) -> dict[str, Any]:
+def require_student()-> dict[str, Any]:    
+    payload = require_authenticated()
+    
+    payload = require_authenticated()
     """Require a student-role Session_Token."""
     if payload.get("role") != "student":
         raise _forbidden()
     return payload
 
 
-async def require_admin(
-    payload: dict[str, Any] = Depends(require_authenticated),
-) -> dict[str, Any]:
+def require_admin()-> dict[str, Any]:    
+    payload = require_authenticated()
+    
+    payload = require_authenticated()
     """Require a platform_admin-role Session_Token."""
     if payload.get("role") != "platform_admin":
         raise _forbidden()
     return payload
 
 
-async def require_platform_admin(
-    payload: dict[str, Any] = Depends(require_authenticated),
-) -> dict[str, Any]:
+def require_platform_admin()-> dict[str, Any]:    
+    payload = require_authenticated()
+    
+    payload = require_authenticated()
     """Require a platform_admin-role Session_Token. Alias for require_admin."""
     if payload.get("role") != "platform_admin":
         raise _forbidden()
     return payload
 
 
-async def require_institution_admin(
-    payload: dict[str, Any] = Depends(require_authenticated),
-) -> dict[str, Any]:
+def require_institution_admin()-> dict[str, Any]:    
+    payload = require_authenticated()
+    
+    payload = require_authenticated()
     """Require an institution_admin-role Session_Token."""
     if payload.get("role") != "institution_admin":
         raise _forbidden()
@@ -170,9 +178,7 @@ async def require_institution_admin(
 # ---------------------------------------------------------------------------
 
 
-def resolve_payload(
-    request: Request, session: Session
-) -> Optional[dict[str, Any]]:
+def resolve_payload(session: Session)-> Optional[dict[str, Any]]:
     """Return the decoded JWT payload, or ``None`` on any failure.
 
     HTML route handlers (task 3.5) call this to choose between rendering
@@ -188,7 +194,7 @@ def resolve_payload(
         return None
 
 
-def current_user_id(request: Request) -> Optional[str]:
+def current_user_id()-> Optional[str]:
     """Return the ``sub`` claim from the cookie token, or ``None``.
 
     For student tokens this is the ``KCET_Student_ID`` and is the value
@@ -219,7 +225,7 @@ def current_user_id(request: Request) -> Optional[str]:
     return sub if isinstance(sub, str) else None
 
 
-def current_user(request: Request, session: Session) -> Optional[User]:
+def current_user(session: Session)-> Optional[User]:
     """Resolve the cookie token to a :class:`User` ORM row, or ``None``.
 
     The lookup column depends on role:
@@ -250,9 +256,10 @@ def current_user(request: Request, session: Session) -> Optional[User]:
     return session.execute(stmt).scalar_one_or_none()
 
 
-def require_active_subscription(
-    payload: dict[str, Any] = Depends(require_authenticated),
-) -> dict[str, Any]:
+def require_active_subscription()-> dict[str, Any]:    
+    payload = require_authenticated()
+    
+    payload = require_authenticated()
     """Require student with active subscription.
 
     Raises
@@ -268,7 +275,7 @@ def require_active_subscription(
     subscription_status = payload.get("subscription_status")
     if subscription_status not in ("trial", "active", "grace_period"):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={
                 "error": "subscription_required",
                 "message": "Active subscription required.",
@@ -279,11 +286,7 @@ def require_active_subscription(
     return payload
 
 
-def check_feature_access(
-    payload: dict[str, Any],
-    feature: str,
-    session: Session | None = None,
-) -> bool:
+def check_feature_access(payload: dict[str, Any], feature: str, session: Session | None = None)-> bool:
     """Evaluate access control matrix for a specific feature.
     
     Implements the access control matrix defined in design.md, evaluating

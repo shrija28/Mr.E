@@ -7,11 +7,13 @@ persistence land in later tasks (3.x, 4.x, 5.x, 7.x, 8.x).
 """
 
 from __future__ import annotations
+import os
 
 import uuid
 from typing import List
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from pydantic import BaseModel
 
 # Graceful degradation for Python 3.14 compatibility
@@ -43,28 +45,28 @@ except (ImportError, TimeoutError):
 from ..rag.store import store
 from ..submissions.scoring import score_submission
 
-router = APIRouter()
+router = Blueprint("routes_legacy", __name__)
 
 
-@router.get("/health")
-def health() -> dict:
+@router.route("/health", methods=["GET"])
+def health()-> dict:
     return {"status": "ok", "chunks_indexed": len(store.chunks)}
 
 
-@router.get("/debug")
-def debug() -> dict:
+@router.route("/debug", methods=["GET"])
+def debug()-> dict:
     return {"chunks_indexed": len(store.chunks), "sample": store.chunks[:2]}
 
 
-@router.post("/upload")
-async def upload(files: List[UploadFile] = File(...)) -> dict:
+@router.route("/upload", methods=["POST"])
+def upload(files: List[UploadFile])-> dict:
     if len(files) > 10:
         raise HTTPException(400, "Maximum 10 files allowed")
     store.reset()
     doc_ids: List[str] = []
     total_chunks = 0
     for f in files:
-        content = await f.read()
+        content = f.read()
         name = (f.filename or "").lower()
         if name.endswith(".pdf"):
             text = extract_text_from_pdf(content)
@@ -95,8 +97,8 @@ class GenerateRequest(BaseModel):
     num_sets: int = 4
 
 
-@router.post("/generate")
-def generate(req: GenerateRequest) -> dict:
+@router.route("/generate", methods=["POST"])
+def generate()-> dict:
     if not store.chunks:
         raise HTTPException(400, "No documents uploaded yet.")
     subject = req.subject
@@ -122,8 +124,8 @@ class AnalyzeRequest(BaseModel):
     student: dict = {}
 
 
-@router.post("/analyze")
-def analyze(req: AnalyzeRequest) -> dict:
+@router.route("/analyze", methods=["POST"])
+def analyze()-> dict:
     """Score a submission via the shared :func:`score_submission` helper.
 
     The legacy ``/analyze`` route is now a thin wrapper around

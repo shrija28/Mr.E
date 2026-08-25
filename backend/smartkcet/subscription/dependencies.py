@@ -14,10 +14,14 @@ from ..middleware.rbac import current_user
 from .access_control import AccessLevel, SubscriptionAccessControl
 
 
-def require_exam_access(
-    request: Request,
-    db: Session = Depends(get_session),
-) -> dict:
+def require_exam_access()-> dict:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Dependency to require exam access using effective subscription status.
 
     Correctly handles both personal and institution students:
@@ -33,7 +37,7 @@ def require_exam_access(
 
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={
                 "error": "auth_required",
                 "message": "Authentication required",
@@ -48,7 +52,7 @@ def require_exam_access(
         effective = service.get_effective_status(user.id)
     except Exception:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "subscription_verification_failed",
                 "message": "Unable to verify subscription status. Please retry.",
@@ -58,7 +62,7 @@ def require_exam_access(
 
     if not effective.has_subscription or not effective.is_active:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={
                 "error": "subscription_required",
                 "message": "No active subscription.",
@@ -74,10 +78,14 @@ def require_exam_access(
     }
 
 
-def require_full_analytics_access(
-    request: Request,
-    db: Session = Depends(get_session),
-) -> dict:
+def require_full_analytics_access()-> dict:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Dependency to require full analytics access (Pro only).
     
     Checks if the authenticated user has permission to view full analytics:
@@ -102,7 +110,7 @@ def require_full_analytics_access(
     
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={
                 "error": "auth_required",
                 "message": "Authentication required",
@@ -114,7 +122,7 @@ def require_full_analytics_access(
     
     if not access_result.is_granted:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={
                 "error": "forbidden",
                 "message": access_result.reason,
@@ -128,10 +136,14 @@ def require_full_analytics_access(
     }
 
 
-def require_leaderboard_access(
-    request: Request,
-    db: Session = Depends(get_session),
-) -> dict:
+def require_leaderboard_access()-> dict:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Dependency to require leaderboard rank access (Pro only).
     
     Checks if the authenticated user has permission to view leaderboard rank:
@@ -156,7 +168,7 @@ def require_leaderboard_access(
     
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={
                 "error": "auth_required",
                 "message": "Authentication required",
@@ -168,7 +180,7 @@ def require_leaderboard_access(
     
     if not access_result.is_granted:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={
                 "error": "forbidden",
                 "message": access_result.reason,
@@ -182,7 +194,14 @@ def require_leaderboard_access(
     }
 
 
-def get_access_control(db: Session = Depends(get_session)) -> SubscriptionAccessControl:
+def get_access_control()-> SubscriptionAccessControl:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Dependency to get SubscriptionAccessControl instance.
     
     Provides access to the access control service for manual checks in route handlers.

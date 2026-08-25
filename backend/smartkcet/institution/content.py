@@ -20,6 +20,7 @@ GET    /content/analytics           – institution student analytics
 """
 
 from __future__ import annotations
+import os
 
 import hashlib
 import logging
@@ -28,7 +29,8 @@ import uuid
 from typing import Annotated, Any, List, Optional
 from pydantic import BaseModel
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Path, Query, UploadFile, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import SQLAlchemyError
@@ -70,7 +72,7 @@ from ..rag.store import stores
 
 logger = logging.getLogger("smartkcet.institution.content")
 
-router = APIRouter()
+router = Blueprint("institution_content", __name__)
 
 # Limits (mirrors admin limits)
 MAX_FILE_SIZE_MB = 20
@@ -89,7 +91,7 @@ FEATURE_AI_ANALYTICS = "ai_analytics"
 FEATURE_ADVANCED_ANALYTICS = "advanced_analytics"
 
 
-def _get_active_plan(db: Session, institution_id: uuid.UUID) -> Optional[SubscriptionPlan]:
+def _get_active_plan(db: Session, institution_id: uuid.UUID)-> Optional[SubscriptionPlan]:
     """Return the active SubscriptionPlan for the institution, or None."""
     sub = (
         db.query(Subscription)
@@ -104,7 +106,7 @@ def _get_active_plan(db: Session, institution_id: uuid.UUID) -> Optional[Subscri
     return db.query(SubscriptionPlan).filter(SubscriptionPlan.id == sub.plan_id).first()
 
 
-def _has_feature(plan: Optional[SubscriptionPlan], feature: str) -> bool:
+def _has_feature(plan: Optional[SubscriptionPlan], feature: str)-> bool:
     """Check if a plan's feature_flags grants access to a specific feature.
 
     If the plan is None (no subscription) → all features denied.
@@ -119,17 +121,12 @@ def _has_feature(plan: Optional[SubscriptionPlan], feature: str) -> bool:
     return bool(flags.get(feature, True))  # Missing key → allowed
 
 
-def _require_feature(
-    db: Session,
-    institution_id: uuid.UUID,
-    feature: str,
-    feature_label: str = "This feature",
-) -> None:
+def _require_feature(db: Session, institution_id: uuid.UUID, feature: str, feature_label: str = "This feature")-> None:
     """Raise 403 if institution's plan does not include the given feature flag."""
     plan = _get_active_plan(db, institution_id)
     if not _has_feature(plan, feature):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={
                 "error": "feature_not_included",
                 "feature": feature,
@@ -151,17 +148,18 @@ QUESTIONS_PER_EXAM = QUESTIONS_PER_SET * len(SET_LABELS)  # 80
 # Auth dependency
 # ---------------------------------------------------------------------------
 
-def require_institution_admin(
-    payload: Annotated[dict, Depends(require_authenticated)],
-) -> dict:
+def require_institution_admin()-> dict:    
+    payload = require_authenticated()
+    
+    payload = require_authenticated()
     if payload.get("role") != "institution_admin":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={"error": "forbidden", "message": "Institution admin access required"},
         )
     if "institution_id" not in payload:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={"error": "forbidden", "message": "Institution ID not found in token"},
         )
     return payload
@@ -171,23 +169,23 @@ def require_institution_admin(
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _institution_id(payload: dict) -> uuid.UUID:
+def _institution_id(payload: dict)-> uuid.UUID:
     return uuid.UUID(payload["institution_id"])
 
 
-def check_subscription_active(db: Session, institution_id: uuid.UUID) -> bool:
+def check_subscription_active(db: Session, institution_id: uuid.UUID)-> bool:
     # Bypass subscription check globally for institution uploads
     return True
 
 
-def _validation_error(message: str, field: Optional[str] = None) -> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None)-> JSONResponse:
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=status.HTTP_400_BAD_REQUEST, content=body)
+    return JSONResponse(status_code=400, content=body)
 
 
-def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
+def _normalise_subject(value: Optional[str])-> Optional[Subject]:
     if not isinstance(value, str):
         return None
     stripped = value.strip()
@@ -199,7 +197,7 @@ def _normalise_subject(value: Optional[str]) -> Optional[Subject]:
         return None
 
 
-def _extract_text(filename: str, content: bytes) -> Optional[str]:
+def _extract_text(filename: str, content: bytes)-> Optional[str]:
     lowered = filename.lower()
     if lowered.endswith(".pdf"):
         return extract_text_from_pdf(content)
@@ -210,13 +208,11 @@ def _extract_text(filename: str, content: bytes) -> Optional[str]:
     return None
 
 
-def _compute_file_hash(content: bytes) -> str:
+def _compute_file_hash(content: bytes)-> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def _check_duplicate(
-    db: Session, subject: str, file_hash: str, institution_id: uuid.UUID
-) -> Optional[IndexedFile]:
+def _check_duplicate(db: Session, subject: str, file_hash: str, institution_id: uuid.UUID)-> Optional[IndexedFile]:
     """Check if this institution already indexed this exact file for the subject."""
     stmt = select(IndexedFile).where(
         IndexedFile.subject == subject,
@@ -226,16 +222,7 @@ def _check_duplicate(
     return db.execute(stmt).scalar_one_or_none()
 
 
-def _record_indexed_file(
-    db: Session,
-    subject: str,
-    filename: str,
-    file_hash: str,
-    file_size: int,
-    chunk_count: int,
-    institution_id: uuid.UUID,
-    file_type: str = "question_paper",
-) -> IndexedFile:
+def _record_indexed_file(db: Session, subject: str, filename: str, file_hash: str, file_size: int, chunk_count: int, institution_id: uuid.UUID, file_type: str = "question_paper")-> IndexedFile:
     record = IndexedFile(
         subject=subject,
         filename=filename,
@@ -251,13 +238,7 @@ def _record_indexed_file(
     return record
 
 
-def _store_mcqs_in_db(
-    db: Session,
-    mcqs: List[dict],
-    subject: str,
-    batch_id: uuid.UUID,
-    institution_id: uuid.UUID,
-) -> int:
+def _store_mcqs_in_db(db: Session, mcqs: List[dict], subject: str, batch_id: uuid.UUID, institution_id: uuid.UUID)-> int:
     stored = 0
     for mcq in mcqs:
         q_text = mcq.get("q", "").strip()
@@ -288,7 +269,7 @@ def _store_mcqs_in_db(
     return stored
 
 
-def _serialise_question(row: Question) -> dict[str, Any]:
+def _serialise_question(row: Question)-> dict[str, Any]:
     return {
         "id": str(row.id),
         "subject": row.subject,
@@ -301,7 +282,7 @@ def _serialise_question(row: Question) -> dict[str, Any]:
     }
 
 
-def _counts_by_subject(session: Session, institution_id: uuid.UUID) -> dict[str, int]:
+def _counts_by_subject(session: Session, institution_id: uuid.UUID)-> dict[str, int]:
     rows = session.execute(
         select(Question.subject, func.count(Question.id))
         .where(Question.institution_id == institution_id)
@@ -315,20 +296,18 @@ def _counts_by_subject(session: Session, institution_id: uuid.UUID) -> dict[str,
 # POST /content/upload/single  (per-file progress, mirrors admin)
 # ---------------------------------------------------------------------------
 
-@router.post("/content/upload/single")
-async def upload_single_file(
-    subject: Optional[str] = Form(default=None),
-    file_type: str = Form(default="question_paper"),
-    file: UploadFile = File(...),
-    payload: Annotated[dict, Depends(require_institution_admin)] = None,
-    db: Session = Depends(get_session),
-) -> Any:
+@router.route("/content/upload/single", methods=["POST"])
+def upload_single_file(subject: Optional[str], file_type: str, file: UploadFile)-> Any:    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Upload a single file and return per-file status for progress tracking."""
     inst_id = _institution_id(payload)
 
     if not check_subscription_active(db, inst_id):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={
                 "error": "subscription_inactive",
                 "message": "Institution subscription must be active to upload content.",
@@ -343,7 +322,7 @@ async def upload_single_file(
         )
 
     filename = file.filename or ""
-    content = await file.read()
+    content = file.read()
     file_size = len(content)
 
     if file_size > MAX_FILE_SIZE_BYTES:
@@ -432,20 +411,18 @@ async def upload_single_file(
 # POST /content/upload  (batch upload, mirrors admin)
 # ---------------------------------------------------------------------------
 
-@router.post("/content/upload")
-async def upload_institution_content(
-    subject: Optional[str] = Form(default=None),
-    file_type: str = Form(default="question_paper"),
-    files: List[UploadFile] = File(default_factory=list),
-    payload: Annotated[dict, Depends(require_institution_admin)] = None,
-    db: Session = Depends(get_session),
-) -> Any:
+@router.route("/content/upload", methods=["POST"])
+def upload_institution_content(subject: Optional[str], file_type: str, files: List[UploadFile])-> Any:    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Batch upload question papers to the institution's question bank."""
     inst_id = _institution_id(payload)
 
     if not check_subscription_active(db, inst_id):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={
                 "error": "subscription_inactive",
                 "message": "Institution subscription must be active to upload content.",
@@ -473,7 +450,7 @@ async def upload_institution_content(
 
     for upload_file in files:
         filename = upload_file.filename or ""
-        content = await upload_file.read()
+        content = upload_file.read()
         file_size = len(content)
 
         if file_size > MAX_FILE_SIZE_BYTES:
@@ -549,12 +526,14 @@ async def upload_institution_content(
 # GET /content/upload/files  (mirrors admin, scoped to institution)
 # ---------------------------------------------------------------------------
 
-@router.get("/content/upload/files")
-async def list_institution_indexed_files(
-    subject: str = Query(...),
-    payload: Annotated[dict, Depends(require_institution_admin)] = None,
-    db: Session = Depends(get_session),
-) -> Any:
+@router.route("/content/upload/files", methods=["GET"])
+def list_institution_indexed_files()-> Any:    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
     """Return files previously indexed by this institution for a subject."""
     inst_id = _institution_id(payload)
 
@@ -596,11 +575,12 @@ async def list_institution_indexed_files(
 # GET /content/questions/counts  (institution question bank counts)
 # ---------------------------------------------------------------------------
 
-@router.get("/content/questions/counts")
-def get_question_counts(
-    payload: Annotated[dict, Depends(require_institution_admin)] = None,
-    session: Session = Depends(get_session),
-) -> Any:
+@router.route("/content/questions/counts", methods=["GET"])
+def get_question_counts()-> Any:    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Return per-subject question counts for this institution's bank."""
     inst_id = _institution_id(payload)
     counts = _counts_by_subject(session, inst_id)
@@ -617,13 +597,25 @@ def get_question_counts(
 # GET /content/questions  (paginated institution question bank)
 # ---------------------------------------------------------------------------
 
-@router.get("/content/questions")
-def list_institution_questions(
-    subject: Optional[str] = Query(default=None),
-    page: int = Query(default=1, ge=1),
-    payload: Annotated[dict, Depends(require_institution_admin)] = None,
-    session: Session = Depends(get_session),
-) -> Any:
+@router.route("/content/questions", methods=["GET"])
+def list_institution_questions()-> Any:    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    page = int(request.args.get("page", 1))
+    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    page = int(request.args.get("page", 1))
     """Paginated list of questions in this institution's bank."""
     inst_id = _institution_id(payload)
 
@@ -664,12 +656,12 @@ def list_institution_questions(
 # DELETE /content/questions/{question_id}
 # ---------------------------------------------------------------------------
 
-@router.delete("/content/questions/{question_id}")
-def delete_institution_question(
-    question_id: uuid.UUID = Path(...),
-    payload: Annotated[dict, Depends(require_institution_admin)] = None,
-    session: Session = Depends(get_session),
-) -> Any:
+@router.route("/content/questions/<question_id>", methods=["DELETE"])
+def delete_institution_question(question_id: uuid.UUID)-> Any:    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Delete a question from this institution's bank."""
     inst_id = _institution_id(payload)
     qid_str = str(question_id)
@@ -684,18 +676,12 @@ def delete_institution_question(
         rows_affected = int(result.rowcount or 0)
         if rows_affected <= 0:
             session.rollback()
-            return JSONResponse(
-                status_code=status.HTTP_404_NOT_FOUND,
-                content={"deleted": False, "error": "not_found", "id": qid_str},
-            )
+            return make_response(jsonify({"deleted": False, "error": "not_found", "id": qid_str}), 404)
         session.commit()
     except SQLAlchemyError as exc:
         session.rollback()
         logger.warning("DELETE /content/questions/%s failed: %s", qid_str, exc)
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"deleted": False, "error": type(exc).__name__, "id": qid_str},
-        )
+        return make_response(jsonify({"deleted": False, "error": type(exc).__name__, "id": qid_str}), 500)
     return {"deleted": True, "id": qid_str}
 
 
@@ -703,19 +689,31 @@ def delete_institution_question(
 # POST /content/exams  (institution-scoped exam creation)
 # ---------------------------------------------------------------------------
 
-@router.post("/content/exams", status_code=status.HTTP_201_CREATED)
-def create_institution_exam(
-    subject: Optional[str] = Query(default=None),
-    exam_name: Optional[str] = Query(default=None),
-    payload: Annotated[dict, Depends(require_institution_admin)] = None,
-    session: Session = Depends(get_session),
-) -> Any:
+@router.route("/content/exams", methods=["POST"])
+def create_institution_exam()-> Any:    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    exam_name = request.args.get("exam_name", None)
+    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    exam_name = request.args.get("exam_name", None)
     """Create an exam from this institution's question bank."""
     inst_id = _institution_id(payload)
 
     if not check_subscription_active(session, inst_id):
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={
                 "error": "subscription_inactive",
                 "message": "Institution subscription must be active to create exams.",
@@ -744,9 +742,7 @@ def create_institution_exam(
 
     # We need at least 4 questions to create 4 sets (A, B, C, D)
     if available < 4:
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
+        return make_response(jsonify({
                 "error": "insufficient_questions",
                 "subject": selected.value,
                 "count": available,
@@ -756,8 +752,7 @@ def create_institution_exam(
                     f"Found {available}, need at least 4. "
                     f"Please upload more question papers first."
                 ),
-            },
-        )
+            }), 422)
 
     id_rows = session.execute(
         select(Question.id).where(
@@ -776,16 +771,13 @@ def create_institution_exam(
     questions_per_set = exam_size // num_sets
 
     if exam_size < 4:
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
+        return make_response(jsonify({
                 "error": "insufficient_questions",
                 "subject": selected.value,
                 "count": len(all_ids),
                 "required": 4,
                 "message": "Not enough unique questions to form 4 sets."
-            },
-        )
+            }), 422)
 
     drawn = random.sample(all_ids, exam_size)
     partitions = [
@@ -820,10 +812,7 @@ def create_institution_exam(
     except (SQLAlchemyError, Exception) as exc:
         session.rollback()
         logger.warning("POST /institution/content/exams failed: %s", exc)
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={"error": "exam_creation_failed", "message": str(exc)},
-        )
+        return make_response(jsonify({"error": "exam_creation_failed", "message": str(exc)}), 500)
 
     created_at = exam.created_at
     return {
@@ -840,12 +829,14 @@ def create_institution_exam(
 # GET /content/exams  (list institution exams)
 # ---------------------------------------------------------------------------
 
-@router.get("/content/exams")
-def list_institution_exams(
-    subject: Optional[str] = Query(default=None),
-    payload: Annotated[dict, Depends(require_institution_admin)] = None,
-    session: Session = Depends(get_session),
-) -> Any:
+@router.route("/content/exams", methods=["GET"])
+def list_institution_exams()-> Any:    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
     """List all exams created by this institution."""
     inst_id = _institution_id(payload)
 
@@ -894,13 +885,12 @@ def list_institution_exams(
 class PublishExamRequest(BaseModel):
     is_published: bool
 
-@router.patch("/content/exams/{exam_id}")
-def patch_institution_exam(
-    payload_body: PublishExamRequest,
-    exam_id: uuid.UUID = Path(...),
-    payload: Annotated[dict, Depends(require_institution_admin)] = None,
-    session: Session = Depends(get_session),
-) -> Any:
+@router.route("/content/exams/<exam_id>", methods=["PATCH"])
+def patch_institution_exam(exam_id: uuid.UUID)-> Any:    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Publish or unpublish an institution exam."""
     inst_id = _institution_id(payload)
 
@@ -909,10 +899,7 @@ def patch_institution_exam(
 
     exam = session.get(Exam, exam_id)
     if exam is None or exam.institution_id != inst_id:
-        return JSONResponse(
-            status_code=status.HTTP_404_NOT_FOUND,
-            content={"error": "not_found", "exam_id": str(exam_id)},
-        )
+        return make_response(jsonify({"error": "not_found", "exam_id": str(exam_id)}), 404)
 
     if exam.is_published != payload_body.is_published:
         exam.is_published = payload_body.is_published
@@ -920,10 +907,7 @@ def patch_institution_exam(
             session.commit()
         except SQLAlchemyError as exc:
             session.rollback()
-            return JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={"error": "update_failed", "message": str(exc)},
-            )
+            return make_response(jsonify({"error": "update_failed", "message": str(exc)}), 500)
 
     return {"exam_id": str(exam.id), "is_published": exam.is_published}
 
@@ -932,11 +916,12 @@ def patch_institution_exam(
 # GET /content/analytics  (institution student analytics)
 # ---------------------------------------------------------------------------
 
-@router.get("/content/analytics")
-async def get_institution_content_analytics(
-    payload: Annotated[dict, Depends(require_institution_admin)] = None,
-    db: Session = Depends(get_session),
-) -> Any:
+@router.route("/content/analytics", methods=["GET"])
+def get_institution_content_analytics()-> Any:    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Analytics for institution students on institution exams."""
     inst_id = _institution_id(payload)
 
@@ -1004,13 +989,25 @@ __all__ = ["router"]
 # GET /content/admin-questions — access admin KCET question bank (Premium gate)
 # ---------------------------------------------------------------------------
 
-@router.get("/content/admin-questions")
-def get_admin_questions_for_institution(
-    subject: Optional[str] = Query(default=None),
-    page: int = Query(default=1, ge=1),
-    payload: Annotated[dict, Depends(require_institution_admin)] = None,
-    session: Session = Depends(get_session),
-) -> Any:
+@router.route("/content/admin-questions", methods=["GET"])
+def get_admin_questions_for_institution()-> Any:    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    page = int(request.args.get("page", 1))
+    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    subject = request.args.get("subject", None)
+    from flask import request
+    page = int(request.args.get("page", 1))
     """Return platform-wide (admin) KCET questions for use in institution exams.
 
     This endpoint is gated by the 'admin_question_bank' feature flag.
@@ -1061,11 +1058,12 @@ def get_admin_questions_for_institution(
 # GET /content/feature-access — check which features this institution has
 # ---------------------------------------------------------------------------
 
-@router.get("/content/feature-access")
-def get_feature_access(
-    payload: Annotated[dict, Depends(require_institution_admin)] = None,
-    session: Session = Depends(get_session),
-) -> Any:
+@router.route("/content/feature-access", methods=["GET"])
+def get_feature_access()-> Any:    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Return the feature access matrix for this institution's current plan.
 
     Frontend uses this to show/hide UI elements (e.g., Admin Question Bank tab).

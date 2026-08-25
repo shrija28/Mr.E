@@ -1,3 +1,4 @@
+import os
 """FastAPI routes for institution management.
 
 This module defines the API endpoints for institution operations:
@@ -13,7 +14,8 @@ This module defines the API endpoints for institution operations:
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from sqlalchemy.orm import Session
 
 from ..db.models import User
@@ -42,15 +44,16 @@ from .service import (
 # Import content management router
 from . import content
 
-router = APIRouter(prefix="/api/institution", tags=["institution"])
+router = Blueprint("institution_routes", __name__)
 
 # Include content management routes
-router.include_router(content.router, tags=["institution-content"])
+router.register_blueprint(content.router, tags=["institution-content"])
 
 
-def require_institution_admin(
-    payload: Annotated[dict, Depends(require_authenticated)],
-) -> dict:
+def require_institution_admin()-> dict:    
+    payload = require_authenticated()
+    
+    payload = require_authenticated()
     """Require institution_admin role and inject institution_id.
     
     Raises:
@@ -58,7 +61,7 @@ def require_institution_admin(
     """
     if payload.get("role") != "institution_admin":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={
                 "error": "forbidden",
                 "message": "Institution admin access required",
@@ -68,7 +71,7 @@ def require_institution_admin(
     # Ensure institution_id is present in payload
     if "institution_id" not in payload:
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={
                 "error": "forbidden",
                 "message": "Institution ID not found in token",
@@ -78,15 +81,16 @@ def require_institution_admin(
     return payload
 
 
-@router.post(
-    "/register",
-    response_model=InstitutionRegistrationResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def register_institution(
-    data: InstitutionRegistrationData,
-    db: Session = Depends(get_session),
-):
+@router.route(
+    "/register", methods=["POST"])
+def register_institution(data: InstitutionRegistrationData):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Register a new institution with an institution admin account.
     
     **Requirements:** 6.1, 6.2, 6.7, 6.8, 6.9
@@ -120,7 +124,7 @@ async def register_institution(
         return result
     except ValidationError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail={
                 "error": "validation_error",
                 "field": e.field,
@@ -129,7 +133,7 @@ async def register_institution(
         )
     except DuplicateEmailError as e:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
+            status_code=409,
             detail={
                 "error": "duplicate_email",
                 "message": "Email is already registered",
@@ -138,7 +142,7 @@ async def register_institution(
         )
     except DatabaseUnavailableError as e:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": str(e),
@@ -147,7 +151,7 @@ async def register_institution(
         )
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail={
                 "error": "internal_error",
                 "message": "An unexpected error occurred during registration",
@@ -159,16 +163,13 @@ async def register_institution(
 # The auth service handles institution_admin role tokens
 
 
-@router.post(
-    "/invite",
-    response_model=InvitationCodeResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def generate_invitation(
-    data: InvitationCreate,
-    payload: Annotated[dict, Depends(require_institution_admin)],
-    db: Session = Depends(get_session),
-):
+@router.route(
+    "/invite", methods=["POST"])
+def generate_invitation(data: InvitationCreate):    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Generate an invitation code for student onboarding.
     
     **Requirements:** 9.1
@@ -199,14 +200,14 @@ async def generate_invitation(
     except InstitutionServiceError as e:
         if "Maximum pending invitations" in str(e):
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
+                status_code=409,
                 detail={
                     "error": "max_invitations_reached",
                     "message": str(e),
                 },
             )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail={
                 "error": "internal_error",
                 "message": str(e),
@@ -214,7 +215,7 @@ async def generate_invitation(
         )
     except DatabaseUnavailableError as e:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": str(e),
@@ -223,12 +224,12 @@ async def generate_invitation(
         )
 
 
-@router.post("/accept-invite", status_code=status.HTTP_204_NO_CONTENT)
-async def accept_invitation(
-    data: InvitationAccept,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/accept-invite", methods=["POST"])
+def accept_invitation(data: InvitationAccept):    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Accept an institution invitation and link student to institution.
     
     **Requirements:** 9.2, 9.3, 9.4, 9.5
@@ -251,7 +252,7 @@ async def accept_invitation(
     # Ensure user is a student
     if payload.get("role") != "student":
         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
+            status_code=403,
             detail={
                 "error": "forbidden",
                 "message": "Only students can accept invitations",
@@ -267,7 +268,7 @@ async def accept_invitation(
         user = db.query(User).filter(User.email == sub_claim).first()
     if not user:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={"error": "user_not_found", "message": "Could not identify your account."},
         )
     student_id = user.id
@@ -281,7 +282,7 @@ async def accept_invitation(
         # Determine appropriate status code based on error message
         if "Invalid invitation" in error_msg or "expired" in error_msg:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=400,
                 detail={
                     "error": "invalid_invitation",
                     "message": error_msg,
@@ -289,7 +290,7 @@ async def accept_invitation(
             )
         elif "seat quota full" in error_msg:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
+                status_code=409,
                 detail={
                     "error": "seats_full",
                     "message": error_msg,
@@ -297,7 +298,7 @@ async def accept_invitation(
             )
         elif "already linked" in error_msg:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
+                status_code=409,
                 detail={
                     "error": "already_linked",
                     "message": error_msg,
@@ -305,7 +306,7 @@ async def accept_invitation(
             )
         else:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=500,
                 detail={
                     "error": "internal_error",
                     "message": error_msg,
@@ -313,7 +314,7 @@ async def accept_invitation(
             )
     except DatabaseUnavailableError as e:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": str(e),
@@ -322,12 +323,12 @@ async def accept_invitation(
         )
 
 
-@router.delete("/students/{student_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_student(
-    student_id: UUID,
-    payload: Annotated[dict, Depends(require_institution_admin)],
-    db: Session = Depends(get_session),
-):
+@router.route("/students/<student_id>", methods=["DELETE"])
+def remove_student(student_id: UUID):    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Remove a student from the institution.
     
     **Requirements:** 9.6
@@ -357,7 +358,7 @@ async def remove_student(
         
         if "not found" in error_msg or "not linked" in error_msg:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=404,
                 detail={
                     "error": "student_not_found",
                     "message": error_msg,
@@ -365,7 +366,7 @@ async def remove_student(
             )
         else:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=500,
                 detail={
                     "error": "internal_error",
                     "message": error_msg,
@@ -373,7 +374,7 @@ async def remove_student(
             )
     except DatabaseUnavailableError as e:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": str(e),
@@ -382,11 +383,12 @@ async def remove_student(
         )
 
 
-@router.get("/students", response_model=InstitutionStudentsResponse)
-async def get_institution_students(
-    payload: Annotated[dict, Depends(require_institution_admin)],
-    db: Session = Depends(get_session),
-):
+@router.route("/students", methods=["GET"])
+def get_institution_students():    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """List all students linked to the institution.
     
     **Requirements:** 7.4, 9.1
@@ -419,7 +421,7 @@ async def get_institution_students(
         
         if not institution:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=404,
                 detail={
                     "error": "institution_not_found",
                     "message": f"Institution {institution_id} not found",
@@ -454,7 +456,7 @@ async def get_institution_students(
         
     except InstitutionServiceError as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail={
                 "error": "internal_error",
                 "message": str(e),
@@ -462,7 +464,7 @@ async def get_institution_students(
         )
     except DatabaseUnavailableError as e:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": str(e),
@@ -471,11 +473,12 @@ async def get_institution_students(
         )
 
 
-@router.get("/analytics")
-async def get_institution_analytics(
-    payload: Annotated[dict, Depends(require_institution_admin)],
-    db: Session = Depends(get_session),
-):
+@router.route("/analytics", methods=["GET"])
+def get_institution_analytics():    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get analytics for the institution's students.
     
     **Requirements:** 7.4, 9.6
@@ -515,7 +518,7 @@ async def get_institution_analytics(
         
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail={
                 "error": "internal_error",
                 "message": str(e),
@@ -523,16 +526,13 @@ async def get_institution_analytics(
         )
 
 
-@router.post(
-    "/subscription/select",
-    response_model=SubscriptionResponse,
-    status_code=status.HTTP_201_CREATED,
-)
-async def select_subscription_plan(
-    data: InstitutionPlanSelect,
-    payload: Annotated[dict, Depends(require_institution_admin)],
-    db: Session = Depends(get_session),
-):
+@router.route(
+    "/subscription/select", methods=["POST"])
+def select_subscription_plan(data: InstitutionPlanSelect):    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Select and activate an institution subscription plan.
     
     **Requirements:** 8.1, 8.2, 8.3
@@ -571,7 +571,7 @@ async def select_subscription_plan(
         
         if "not found" in error_msg or "inactive" in error_msg:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=400,
                 detail={
                     "error": "invalid_plan",
                     "message": error_msg,
@@ -579,7 +579,7 @@ async def select_subscription_plan(
             )
         elif "already has an active subscription" in error_msg:
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
+                status_code=409,
                 detail={
                     "error": "active_subscription_exists",
                     "message": error_msg,
@@ -587,7 +587,7 @@ async def select_subscription_plan(
             )
         else:
             raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                status_code=500,
                 detail={
                     "error": "internal_error",
                     "message": error_msg,
@@ -595,7 +595,7 @@ async def select_subscription_plan(
             )
     except DatabaseUnavailableError as e:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": str(e),
@@ -604,11 +604,12 @@ async def select_subscription_plan(
         )
 
 
-@router.get("/dashboard")
-async def get_institution_dashboard(
-    payload: Annotated[dict, Depends(require_institution_admin)],
-    db: Session = Depends(get_session),
-):
+@router.route("/dashboard", methods=["GET"])
+def get_institution_dashboard():    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Institution dashboard — KPI tiles, recent activity, subscription status."""
     from ..db.models import Submission
     from sqlalchemy import select as sa_select, desc
@@ -753,16 +754,17 @@ async def get_institution_dashboard(
             "Dashboard endpoint error: %s", str(e), exc_info=True
         )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail={"error": "internal_error", "message": "Unable to load dashboard data"}
         )
 
 
-@router.get("/subscription")
-async def get_institution_subscription(
-    payload: Annotated[dict, Depends(require_institution_admin)],
-    db: Session = Depends(get_session),
-):
+@router.route("/subscription", methods=["GET"])
+def get_institution_subscription():    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get institution subscription details."""
     institution_id = UUID(payload["institution_id"])
 
@@ -821,11 +823,12 @@ async def get_institution_subscription(
     }
 
 
-@router.get("/invitations")
-async def list_invitations(
-    payload: Annotated[dict, Depends(require_institution_admin)],
-    db: Session = Depends(get_session),
-):
+@router.route("/invitations", methods=["GET"])
+def list_invitations():    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """List pending invitations for the institution."""
     from ..db.subscription_models import Invitation
 
@@ -854,12 +857,12 @@ async def list_invitations(
         return {"invitations": []}
 
 
-@router.get("/invite/{code}")
-async def get_invitation_details(
-    code: str,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/invite/<code>", methods=["GET"])
+def get_invitation_details(code: str):    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get invitation details by code (for student acceptance page)."""
     from ..db.subscription_models import Invitation
     from datetime import datetime
@@ -892,12 +895,12 @@ async def get_invitation_details(
     }
 
 
-@router.post("/invite/{code}/accept", status_code=status.HTTP_200_OK)
-async def accept_invitation_by_code(
-    code: str,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/invite/<code>/accept", methods=["POST"])
+def accept_invitation_by_code(code: str):    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Accept an invitation by code (student-facing endpoint)."""
     if payload.get("role") != "student":
         raise HTTPException(
@@ -942,12 +945,12 @@ async def accept_invitation_by_code(
         raise HTTPException(status_code=500, detail={"error": "internal_error", "message": error_msg})
 
 
-@router.delete("/invite/{code}", status_code=status.HTTP_200_OK)
-async def revoke_invitation(
-    code: str,
-    payload: Annotated[dict, Depends(require_institution_admin)],
-    db: Session = Depends(get_session),
-):
+@router.route("/invite/<code>", methods=["DELETE"])
+def revoke_invitation(code: str):    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Revoke a pending invitation."""
     from ..db.subscription_models import Invitation
     import logging
@@ -996,11 +999,12 @@ async def revoke_invitation(
 # Institution Student Platform API
 # ---------------------------------------------------------------------------
 
-@router.get("/student/me")
-async def get_institution_student_profile(
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/student/me", methods=["GET"])
+def get_institution_student_profile():    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get institution student profile — name, IDs, institution details, access status.
     
     Called by the institution student dashboard on load.
@@ -1062,11 +1066,12 @@ async def get_institution_student_profile(
     }
 
 
-@router.get("/student/exams")
-async def get_institution_student_exams(
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/student/exams", methods=["GET"])
+def get_institution_student_exams():    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get institution-specific exams available to the student.
 
     Institution students see ONLY exams belonging to their institution.
@@ -1127,11 +1132,12 @@ async def get_institution_student_exams(
     }
 
 
-@router.get("/student/leaderboard")
-async def get_institution_student_leaderboard(
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/student/leaderboard", methods=["GET"])
+def get_institution_student_leaderboard():    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Institution-scoped leaderboard — top students within the institution."""
     if payload.get("role") != "student" or payload.get("student_subtype") != "institution_linked":
         raise HTTPException(status_code=403, detail={"error": "forbidden", "message": "Institution students only"})
@@ -1190,11 +1196,12 @@ async def get_institution_student_leaderboard(
     }
 
 
-@router.get("/student/performance")
-async def get_institution_student_performance(
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/student/performance", methods=["GET"])
+def get_institution_student_performance():    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Personal performance analytics for institution student."""
     if payload.get("role") != "student" or payload.get("student_subtype") != "institution_linked":
         raise HTTPException(status_code=403, detail={"error": "forbidden", "message": "Institution students only"})
@@ -1247,11 +1254,12 @@ async def get_institution_student_performance(
 # GET /api/institution/students
 # ─────────────────────────────────────────────────────────────
 
-@router.get("/students")
-async def get_all_students(
-    auth: dict = Depends(require_institution_admin),
-    db: Session = Depends(get_session),
-):
+@router.route("/students", methods=["GET"])
+def get_all_students():    
+    payload = require_institution_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get all students: institution-linked students + direct subscribers.
     
     Returns:
@@ -1290,7 +1298,7 @@ async def get_all_students(
         
         if not institution:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=404,
                 detail={"error": "institution_not_found", "message": "Institution not found"}
             )
         
@@ -1346,7 +1354,7 @@ async def get_all_students(
             "Error fetching students: %s", e
         )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail={"error": "server_error", "message": "Failed to fetch students"}
         )
 

@@ -35,7 +35,7 @@ from smartkcet.leaderboard.score import (
 )
 
 
-def _std_dev(scores: List[float]) -> float:
+def _std_dev(scores: List[float])-> float:
     """Compute the population standard deviation of *scores*.
 
     Returns 0.0 when the list has fewer than 2 elements.
@@ -47,10 +47,7 @@ def _std_dev(scores: List[float]) -> float:
     return math.sqrt(variance)
 
 
-def _gather_student_stats(
-    session: Session,
-    subject: Optional[str] = None,
-) -> Dict[str, StudentStats]:
+def _gather_student_stats(session: Session, subject: Optional[str] = None)-> Dict[str, StudentStats]:
     """Query the database and build per-student stats.
 
     When *subject* is provided, only submissions for exams of that subject
@@ -124,10 +121,7 @@ def _gather_student_stats(
     return result
 
 
-def _get_user_info(
-    session: Session,
-    user_ids: List[str],
-) -> Dict[str, tuple]:
+def _get_user_info(session: Session, user_ids: List[str])-> Dict[str, tuple]:
     """Fetch display_name and kcet_student_id for the given user IDs.
 
     Returns a dict mapping user_id (str) to (display_name, kcet_student_id).
@@ -149,10 +143,7 @@ def _get_user_info(
     }
 
 
-def get_leaderboard(
-    session: Session,
-    subject: Optional[str] = None,
-) -> List[RankedEntry]:
+def get_leaderboard(session: Session, subject: Optional[str] = None)-> List[RankedEntry]:
     """Compute and return the ranked leaderboard.
 
     Args:

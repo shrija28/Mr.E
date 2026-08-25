@@ -1,11 +1,13 @@
 """APIs for student rank suggestions."""
 
 from __future__ import annotations
+import os
 
 import math
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Query, Request, HTTPException
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -15,10 +17,10 @@ from ..db.models import User, Submission, Exam, ExamSet
 from ..db.subscription_models import Subscription, SubscriptionPlan
 from ..leaderboard.service import get_leaderboard
 
-router = APIRouter()
+router = Blueprint("student_rank_suggestions", __name__)
 
 
-def redact_string(s: str) -> str:
+def redact_string(s: str)-> str:
     """Obscure/redact words in a string, preserving first and last characters."""
     words = s.split()
     redacted_words = []
@@ -30,7 +32,7 @@ def redact_string(s: str) -> str:
     return " ".join(redacted_words)
 
 
-def calculate_std_dev(scores: list[float]) -> float:
+def calculate_std_dev(scores: list[float])-> float:
     """Compute the population standard deviation of scores."""
     if len(scores) < 2:
         return 0.0
@@ -39,20 +41,7 @@ def calculate_std_dev(scores: list[float]) -> float:
     return math.sqrt(variance)
 
 
-def generate_personalized_suggestions(
-    current_rank: Optional[int],
-    desired_rank: int,
-    avg_score: float,
-    attempts: int,
-    scores: list[float],
-    std_dev: float,
-    subject_scores: dict[str, float],
-    weak_topics: list[tuple[str, float]],
-    max_attempts_in_cohort: int,
-    current_composite: float,
-    target_composite: float,
-    is_locked: bool
-) -> list[str]:
+def generate_personalized_suggestions(current_rank: Optional[int], desired_rank: int, avg_score: float, attempts: int, scores: list[float], std_dev: float, subject_scores: dict[str, float], weak_topics: list[tuple[str, float]], max_attempts_in_cohort: int, current_composite: float, target_composite: float, is_locked: bool)-> list[str]:
     suggestions = []
 
     if attempts == 0:
@@ -159,13 +148,21 @@ def generate_personalized_suggestions(
     return suggestions
 
 
-@router.get("/rank-suggestions")
-def get_rank_suggestions(
-    request: Request,
-    desired_rank: int = Query(..., description="The desired rank for suggestions."),
-    payload: dict[str, Any] = Depends(require_student),
-    db: Session = Depends(get_session),
-):
+@router.route("/rank-suggestions", methods=["GET"])
+def get_rank_suggestions():    
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    desired_rank = int(request.args.get("desired_rank", None))
+    
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import request
+    desired_rank = int(request.args.get("desired_rank", None))
     """
     Provide personalized suggestions to a student on how to achieve a desired rank.
     """

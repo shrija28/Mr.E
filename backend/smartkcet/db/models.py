@@ -59,7 +59,7 @@ class Subject(str, enum.Enum):
     Mathematics = "Mathematics"
 
     @classmethod
-    def _missing_(cls, value: object) -> "Subject | None":
+    def _missing_(cls, value: object)-> "Subject | None":
         if isinstance(value, str):
             val_lower = value.lower()
             if val_lower in ("maths", "math"):
@@ -79,7 +79,7 @@ _SUBJECT_CHECK_SQL = f"subject IN ({_SUBJECT_VALUES})"
 # ---------------------------------------------------------------------------
 
 
-def _uuid_pk() -> Mapped[uuid.UUID]:
+def _uuid_pk()-> Mapped[uuid.UUID]:
     """Standard UUID primary-key column (Python-side default)."""
 
     return mapped_column(Uuid, primary_key=True, default=uuid.uuid4)

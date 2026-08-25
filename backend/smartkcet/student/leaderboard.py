@@ -15,10 +15,12 @@ Access Control (Tasks 5.3, 5.4):
 """
 
 from __future__ import annotations
+import os
 
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Request
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from sqlalchemy.orm import Session
 
 from ..db.session import get_async_session as get_session
@@ -26,16 +28,17 @@ from ..leaderboard.service import get_leaderboard
 from ..middleware.rbac import current_user, require_student
 from ..subscription.dependencies import get_access_control
 
-router = APIRouter()
+router = Blueprint("student_leaderboard", __name__)
 
 
-@router.get("/leaderboard/me")
-def student_leaderboard_me(
-    request: Request,
-    payload: Dict[str, Any] = Depends(require_student),
-    session: Session = Depends(get_session),
-    access_control = Depends(get_access_control),
-) -> Dict[str, Any]:
+@router.route("/leaderboard/me", methods=["GET"])
+def student_leaderboard_me()-> Dict[str, Any]:    
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import g
+    access_control = getattr(g, "access_control", None)
     """Return the student's rank, top-3 medals, and total ranked count.
 
     The student is identified by the ``sub`` claim in the JWT payload,

@@ -10,7 +10,8 @@ This module defines the API endpoints for subscription operations:
 import logging
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
@@ -28,7 +29,7 @@ from .service import SubscriptionService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/subscription", tags=["subscription"])
+router = Blueprint("subscription_routes", __name__)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -36,12 +37,12 @@ router = APIRouter(prefix="/api/subscription", tags=["subscription"])
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-@router.get("/user/subscription-status", status_code=status.HTTP_200_OK)
-async def check_subscription_status(
-    request: Request,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/user/subscription-status", methods=["GET"])
+def check_subscription_status():    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Check if current user needs to select a subscription plan.
     
     This endpoint is called after login to determine if the subscription
@@ -65,7 +66,7 @@ async def check_subscription_status(
     user = current_user(request, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={"error": "auth_required", "message": "User not found"},
         )
     
@@ -130,7 +131,7 @@ async def check_subscription_status(
         logger.error(f"Database error checking subscription status: {e}")
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": "Could not retrieve subscription status. Please retry.",
@@ -139,12 +140,12 @@ async def check_subscription_status(
         ) from e
 
 
-@router.get("/subscription-plans", status_code=status.HTTP_200_OK)
-async def get_available_plans(
-    request: Request,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/subscription-plans", methods=["GET"])
+def get_available_plans():    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get available subscription plans for selection popup.
     
     Returns the 4 standard subscription plans (Free, Trial, Pro Monthly, Pro Yearly)
@@ -159,7 +160,7 @@ async def get_available_plans(
     user = current_user(request, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={"error": "auth_required", "message": "User not found"},
         )
     
@@ -174,7 +175,7 @@ async def get_available_plans(
         logger.error(f"Database error retrieving subscription plans: {e}")
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": "Could not retrieve subscription plans. Please retry.",
@@ -183,13 +184,12 @@ async def get_available_plans(
         ) from e
 
 
-@router.post("/user/subscribe", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
-async def activate_subscription_plan(
-    request: Request,
-    data: SubscriptionCreate,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/user/subscribe", methods=["POST"])
+def activate_subscription_plan(data: SubscriptionCreate):    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Activate a selected subscription plan for the current user.
     
     This endpoint is called when a user selects a plan from the subscription
@@ -211,7 +211,7 @@ async def activate_subscription_plan(
     user = current_user(request, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={"error": "auth_required", "message": "User not found"},
         )
     
@@ -222,7 +222,7 @@ async def activate_subscription_plan(
         if not service.needs_subscription_selection(user.id):
             logger.warning(f"User {user.id} attempted subscription activation but doesn't need one")
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=403,
                 detail={
                     "error": "forbidden",
                     "message": "User does not require subscription selection",
@@ -239,7 +239,7 @@ async def activate_subscription_plan(
             # Activate Pro subscription
             if not data.billing_period:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=400,
                     detail={
                         "error": "validation_error",
                         "field": "billing_period",
@@ -264,7 +264,7 @@ async def activate_subscription_plan(
         # Trial abuse detection
         if "once per account" in error_msg or "already" in error_msg.lower():
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
+                status_code=409,
                 detail={
                     "error": "trial_already_used",
                     "message": error_msg,
@@ -273,7 +273,7 @@ async def activate_subscription_plan(
         
         # Other validation errors
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail={
                 "error": "validation_error",
                 "message": error_msg,
@@ -288,7 +288,7 @@ async def activate_subscription_plan(
         logger.error(f"Database error during subscription activation: {e}")
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": "Could not complete subscription activation. Please retry.",
@@ -297,13 +297,12 @@ async def activate_subscription_plan(
         ) from e
 
 
-@router.post("/select", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
-async def select_subscription_plan(
-    request: Request,
-    data: SubscriptionCreate,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/select", methods=["POST"])
+def select_subscription_plan(data: SubscriptionCreate):    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Select and activate a subscription plan (trial or pro) for the authenticated user.
     
     This endpoint handles initial subscription selection when a user first logs in.
@@ -334,7 +333,7 @@ async def select_subscription_plan(
     user = current_user(request, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={"error": "auth_required", "message": "User not found"},
         )
     
@@ -347,7 +346,7 @@ async def select_subscription_plan(
             can_change, error_msg = service.can_change_subscription(user.id)
             if not can_change:
                 raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
+                    status_code=409,
                     detail={
                         "error": "active_subscription_exists",
                         "message": error_msg,
@@ -364,7 +363,7 @@ async def select_subscription_plan(
             # Activate Pro subscription
             if not data.billing_period:
                 raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
+                    status_code=400,
                     detail={
                         "error": "validation_error",
                         "field": "billing_period",
@@ -378,7 +377,7 @@ async def select_subscription_plan(
         
         else:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=400,
                 detail={
                     "error": "validation_error",
                     "field": "plan_type",
@@ -395,14 +394,14 @@ async def select_subscription_plan(
         # Trial already used — return 409 Conflict with a clear message
         if "once per account" in msg or "already" in msg.lower():
             raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
+                status_code=409,
                 detail={
                     "error": "trial_already_used",
                     "message": msg,
                 },
             ) from e
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail={
                 "error": "validation_error",
                 "message": msg,
@@ -414,7 +413,7 @@ async def select_subscription_plan(
         logger.error(f"Database error during subscription activation: {e}")
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": "Could not complete subscription activation. Please retry.",
@@ -423,12 +422,12 @@ async def select_subscription_plan(
         ) from e
 
 
-@router.post("/activate-free", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
-async def activate_free_plan(
-    request: Request,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/activate-free", methods=["POST"])
+def activate_free_plan():    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Activate Free plan (₹0) for a personal student.
 
     Business rules:
@@ -457,7 +456,7 @@ async def activate_free_plan(
     user = current_user(request, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={"error": "auth_required", "message": "User not found"},
         )
 
@@ -480,7 +479,7 @@ async def activate_free_plan(
             f"exists (status={existing_active.status})"
         )
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail={
                 "error": "subscription_active",
                 "message": (
@@ -502,7 +501,7 @@ async def activate_free_plan(
         msg = str(e)
         logger.warning(f"Free plan activation validation error for user {user.id}: {msg}")
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=404,
             detail={
                 "error": "plan_not_found",
                 "message": msg,
@@ -513,7 +512,7 @@ async def activate_free_plan(
         logger.error(f"Database error during free plan activation: {e}")
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": "Could not complete free plan activation. Please retry.",
@@ -522,12 +521,12 @@ async def activate_free_plan(
         ) from e
 
 
-@router.get("/status", response_model=EffectiveSubscriptionStatus)
-async def get_subscription_status(
-    request: Request,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/status", methods=["GET"])
+def get_subscription_status():    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get the effective subscription status for the authenticated user.
     
     Returns comprehensive subscription information including:
@@ -555,7 +554,7 @@ async def get_subscription_status(
     user = current_user(request, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={"error": "auth_required", "message": "User not found"},
         )
     
@@ -571,7 +570,7 @@ async def get_subscription_status(
         logger.error(f"Database error retrieving subscription status: {e}")
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": "Could not retrieve subscription status. Please retry.",
@@ -580,13 +579,12 @@ async def get_subscription_status(
         ) from e
 
 
-@router.post("/upgrade", response_model=SubscriptionResponse)
-async def upgrade_subscription(
-    request: Request,
-    data: SubscriptionUpgrade,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/upgrade", methods=["POST"])
+def upgrade_subscription(data: SubscriptionUpgrade):    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Upgrade from trial to Pro subscription.
     
     Converts the user's current Free Trial subscription to a Pro subscription
@@ -614,7 +612,7 @@ async def upgrade_subscription(
     user = current_user(request, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={"error": "auth_required", "message": "User not found"},
         )
     
@@ -637,7 +635,7 @@ async def upgrade_subscription(
         else:
             # In production, upgrades go through the payment flow
             raise HTTPException(
-                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                status_code=402,
                 detail={
                     "error": "payment_required",
                     "message": "Please use the subscription pricing page to upgrade your plan.",
@@ -650,7 +648,7 @@ async def upgrade_subscription(
         # Service-level errors (e.g., no trial subscription found)
         logger.warning(f"Upgrade failed for user {user.id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail={
                 "error": "upgrade_failed",
                 "message": str(e),
@@ -662,7 +660,7 @@ async def upgrade_subscription(
         logger.error(f"Database error during subscription upgrade: {e}")
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": "Could not complete subscription upgrade. Please retry.",
@@ -671,12 +669,12 @@ async def upgrade_subscription(
         ) from e
 
 
-@router.post("/cancel", response_model=SubscriptionResponse)
-async def cancel_subscription(
-    request: Request,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/cancel", methods=["POST"])
+def cancel_subscription():    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Cancel the authenticated user's subscription.
     
     The subscription will be marked for cancellation but will remain active
@@ -702,7 +700,7 @@ async def cancel_subscription(
     user = current_user(request, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={"error": "auth_required", "message": "User not found"},
         )
     
@@ -723,7 +721,7 @@ async def cancel_subscription(
         
         if not active_subscription:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
+                status_code=404,
                 detail={
                     "error": "subscription_not_found",
                     "message": "No active subscription found to cancel",
@@ -742,7 +740,7 @@ async def cancel_subscription(
         # Service-level errors
         logger.warning(f"Cancellation failed for user {user.id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail={
                 "error": "cancellation_failed",
                 "message": str(e),
@@ -754,7 +752,7 @@ async def cancel_subscription(
         logger.error(f"Database error during subscription cancellation: {e}")
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": "Could not complete subscription cancellation. Please retry.",
@@ -763,13 +761,12 @@ async def cancel_subscription(
         ) from e
 
 
-@router.post("/reactivate", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
-async def reactivate_subscription(
-    request: Request,
-    data: SubscriptionReactivate,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/reactivate", methods=["POST"])
+def reactivate_subscription(data: SubscriptionReactivate):    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Reactivate an expired or cancelled subscription.
     
     Creates a new active Pro subscription for users who previously had a
@@ -797,7 +794,7 @@ async def reactivate_subscription(
     user = current_user(request, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={"error": "auth_required", "message": "User not found"},
         )
     
@@ -812,7 +809,7 @@ async def reactivate_subscription(
             logger.info(f"DEV MODE — reactivated subscription ({data.billing_period.value}) for user {user.id}")
         else:
             raise HTTPException(
-                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                status_code=402,
                 detail={
                     "error": "payment_required",
                     "message": "Please use the subscription pricing page to reactivate your plan.",
@@ -825,7 +822,7 @@ async def reactivate_subscription(
         # Service-level errors (e.g., already has active subscription)
         logger.warning(f"Reactivation failed for user {user.id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail={
                 "error": "reactivation_failed",
                 "message": str(e),
@@ -837,7 +834,7 @@ async def reactivate_subscription(
         logger.error(f"Database error during subscription reactivation: {e}")
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": "Could not complete subscription reactivation. Please retry.",
@@ -850,12 +847,12 @@ async def reactivate_subscription(
 # PHASE 2: Subscription Management - Button State Endpoint
 # ─────────────────────────────────────────────────────────────────────────
 
-@router.get("/user/subscription-management")
-async def get_subscription_management_status(
-    request: Request,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/user/subscription-management", methods=["GET"])
+def get_subscription_management_status():    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get subscription management status with button states for plan cards.
     
     Returns the current subscription status and button enable/disable states
@@ -885,7 +882,7 @@ async def get_subscription_management_status(
     user = current_user(request, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={"error": "auth_required", "message": "User not found"},
         )
     
@@ -900,7 +897,7 @@ async def get_subscription_management_status(
         # Validation errors
         logger.warning(f"Validation error retrieving management status for user {user.id}: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=400,
             detail={
                 "error": "validation_error",
                 "message": str(e),
@@ -912,7 +909,7 @@ async def get_subscription_management_status(
         logger.error(f"Database error retrieving subscription management status: {e}")
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": "Could not retrieve subscription status. Please retry.",
@@ -921,12 +918,12 @@ async def get_subscription_management_status(
         ) from e
 
 
-@router.get("/remaining-attempts")
-async def get_remaining_attempts(
-    request: Request,
-    payload: Annotated[dict, Depends(require_authenticated)],
-    db: Session = Depends(get_session),
-):
+@router.route("/remaining-attempts", methods=["GET"])
+def get_remaining_attempts():    
+    payload = require_authenticated()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get remaining exam attempts for the authenticated user.
     
     Returns information about exam attempt quota for display on dashboard
@@ -950,7 +947,7 @@ async def get_remaining_attempts(
     user = current_user(request, db)
     if user is None:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
+            status_code=401,
             detail={"error": "auth_required", "message": "User not found"},
         )
     
@@ -968,7 +965,7 @@ async def get_remaining_attempts(
         logger.error(f"Database error retrieving remaining attempts: {e}")
         db.rollback()
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            status_code=503,
             detail={
                 "error": "service_unavailable",
                 "message": "Could not retrieve remaining attempts. Please retry.",

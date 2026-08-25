@@ -239,7 +239,21 @@
      * show the subscription modal instead of redirecting to dashboard.
      */
     function _handleStudentLoginSuccess(result) {
-      var decision = window.Mr.ELoginFlow.resolveStudentLoginDecision(result, _safeReturnUrl);
+      window.Mr = window.Mr || {};
+      var loginFlow = window.Mr.ELoginFlow || {
+        resolveStudentLoginDecision: function(res, urlFn) {
+          var data = (res && res.data) || {};
+          var retUrl = typeof urlFn === 'function' ? urlFn() : null;
+          if (retUrl) return { mode: 'redirect', redirectUrl: retUrl };
+          if (data.student_subtype === 'institution_linked') return { mode: 'redirect', redirectUrl: '/student/institution/dashboard' };
+          return { mode: 'redirect', redirectUrl: data.redirect || '/dashboard' };
+        },
+        buildStudentLoginFallback: function(opts) {
+          return { mode: 'redirect', redirectUrl: (opts && opts.redirectUrl) || '/dashboard', message: (opts && opts.message) || '' };
+        }
+      };
+
+      var decision = loginFlow.resolveStudentLoginDecision(result, _safeReturnUrl);
 
       if (decision.mode === 'redirect') {
         console.log('[login] Redirecting student to:', decision.redirectUrl);
@@ -261,7 +275,7 @@
           return;
         }
 
-        var fallback = window.Mr.ELoginFlow.buildStudentLoginFallback({
+        var fallback = loginFlow.buildStudentLoginFallback({
           redirectUrl: decision.redirectUrl,
           message: 'Subscription options are unavailable right now. Redirecting you to your dashboard.'
         });
@@ -322,7 +336,8 @@
         }
       } catch (err) {
         console.error('[login] Login error:', err);
-        showError('Network error. Please try again.');
+        var msg = (err && err.message && err.message !== 'Failed to fetch') ? err.message : 'Network error. Please try again.';
+        showError(msg);
       } finally {
         loginBtn.disabled = false;
         loginBtn.textContent = 'Sign In';

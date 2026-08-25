@@ -1,21 +1,24 @@
+import os
 """Admin API endpoints for managing direct subscriber students."""
 
 from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from sqlalchemy.orm import Session
 
 from ..db.models import User
 from ..db.session import get_async_session as get_session
 from ..middleware.rbac import require_admin
 
-router = APIRouter(prefix="/api/admin", tags=["admin"])
+router = Blueprint("admin_direct_subscribers", __name__)
 
 
-@router.get("/direct-subscribers")
-async def get_direct_subscribers(
-    db: Session = Depends(get_session),
-    _: Annotated[dict, Depends(require_admin)] = None,
-):
+@router.route("/direct-subscribers", methods=["GET"])
+def get_direct_subscribers():    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get all direct subscriber students (admin only).
     
     Returns list of students registered as personal/direct subscribers
@@ -69,16 +72,17 @@ async def get_direct_subscribers(
         
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Error fetching direct subscribers: {str(e)}"
         )
 
 
-@router.get("/direct-subscribers/unsubscribed")
-async def get_unsubscribed_direct_subscribers(
-    db: Session = Depends(get_session),
-    _: Annotated[dict, Depends(require_admin)] = None,
-):
+@router.route("/direct-subscribers/unsubscribed", methods=["GET"])
+def get_unsubscribed_direct_subscribers():    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get direct subscriber students WITHOUT active subscriptions (admin only).
     
     These students will see the subscription popup on next login.
@@ -131,16 +135,17 @@ async def get_unsubscribed_direct_subscribers(
         
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Error fetching unsubscribed students: {str(e)}"
         )
 
 
-@router.get("/direct-subscribers/statistics")
-async def get_direct_subscribers_statistics(
-    db: Session = Depends(get_session),
-    _: Annotated[dict, Depends(require_admin)] = None,
-):
+@router.route("/direct-subscribers/statistics", methods=["GET"])
+def get_direct_subscribers_statistics():    
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
     """Get statistics about direct subscriber students (admin only)."""
     try:
         from ..db.subscription_models import Subscription
@@ -172,6 +177,6 @@ async def get_direct_subscribers_statistics(
         
     except Exception as e:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=500,
             detail=f"Error fetching statistics: {str(e)}"
         )

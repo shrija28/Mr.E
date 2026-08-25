@@ -90,16 +90,16 @@ class VectorStore:
     subject it represents — that mapping is owned by the parent store.
     """
 
-    def __init__(self) -> None:
+    def __init__(self)-> None:
         self.index = None  # ``faiss.IndexFlatL2`` once initialised
         self.chunks: List[str] = []
         self.dim = 384
 
-    def reset(self) -> None:
+    def reset(self)-> None:
         self.index = faiss.IndexFlatL2(self.dim)
         self.chunks = []
 
-    def add(self, texts: Iterable[str]) -> None:
+    def add(self, texts: Iterable[str])-> None:
         if self.index is None:
             self.reset()
         texts = list(texts)
@@ -109,7 +109,7 @@ class VectorStore:
         self.index.add(vecs)
         self.chunks.extend(texts)
 
-    def search(self, query: str, k: int = 20) -> List[str]:
+    def search(self, query: str, k: int = 20)-> List[str]:
         if not self.chunks:
             return []
         vec = embedder.encode([query]).astype("float32")
@@ -135,8 +135,8 @@ class SubjectVectorStores:
         Mathematics.index, Mathematics.chunks.json
     """
 
-    def __init__(self, data_dir: Path | None = None) -> None:
-        self.data_dir: Path = Path(data_dir) if data_dir is not None else _DEFAULT_FAISS_DIR
+    def __init__(self, data_dir: Path | None = None)-> None:
+        self.data_dir: Path if data_dir is not None else _DEFAULT_FAISS_DIR
         self._stores: Dict[Subject, VectorStore] = {}
 
     # ------------------------------------------------------------------
@@ -144,7 +144,7 @@ class SubjectVectorStores:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _normalize(subject: SubjectLike) -> Subject:
+    def _normalize(subject: SubjectLike)-> Subject:
         """Accept a ``Subject`` enum or its string name, return the enum."""
 
         if isinstance(subject, Subject):
@@ -161,16 +161,16 @@ class SubjectVectorStores:
             f"subject must be Subject or str, got {type(subject).__name__}"
         )
 
-    def _index_path(self, subject: Subject) -> Path:
+    def _index_path(self, subject: Subject)-> Path:
         return self.data_dir / f"{subject.value}.index"
 
-    def _chunks_path(self, subject: Subject) -> Path:
+    def _chunks_path(self, subject: Subject)-> Path:
         return self.data_dir / f"{subject.value}.chunks.json"
 
-    def _ensure_data_dir(self) -> None:
+    def _ensure_data_dir(self)-> None:
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
-    def _load(self, subject: Subject) -> VectorStore:
+    def _load(self, subject: Subject)-> VectorStore:
         """Read the persisted index + chunks for ``subject`` from disk.
 
         Returns a fresh :class:`VectorStore` populated from disk if both
@@ -193,7 +193,7 @@ class SubjectVectorStores:
                 vs = VectorStore()
         return vs
 
-    def _persist(self, subject: Subject, vs: VectorStore) -> None:
+    def _persist(self, subject: Subject, vs: VectorStore)-> None:
         """Write the in-memory state for ``subject`` to disk."""
 
         self._ensure_data_dir()
@@ -202,7 +202,7 @@ class SubjectVectorStores:
         with self._chunks_path(subject).open("w", encoding="utf-8") as fp:
             json.dump(vs.chunks, fp, ensure_ascii=False)
 
-    def _get(self, subject: Subject) -> VectorStore:
+    def _get(self, subject: Subject)-> VectorStore:
         """Return the cached store for ``subject``, lazy-loading on miss."""
 
         vs = self._stores.get(subject)
@@ -215,7 +215,7 @@ class SubjectVectorStores:
     # Public API
     # ------------------------------------------------------------------
 
-    def add(self, subject: SubjectLike, texts: Iterable[str]) -> None:
+    def add(self, subject: SubjectLike, texts: Iterable[str])-> None:
         """Append ``texts`` to ``subject``'s index. Other subjects untouched."""
 
         s = self._normalize(subject)
@@ -227,13 +227,13 @@ class SubjectVectorStores:
         if len(vs.chunks) != before:
             self._persist(s, vs)
 
-    def search(self, subject: SubjectLike, query: str, k: int = 20) -> List[str]:
+    def search(self, subject: SubjectLike, query: str, k: int = 20)-> List[str]:
         """Search only ``subject``'s index; never reads other subjects."""
 
         s = self._normalize(subject)
         return self._get(s).search(query, k)
 
-    def reset(self, subject: SubjectLike) -> None:
+    def reset(self, subject: SubjectLike)-> None:
         """Clear ``subject``'s in-memory state and remove its persisted files."""
 
         s = self._normalize(subject)
@@ -245,13 +245,13 @@ class SubjectVectorStores:
             except FileNotFoundError:
                 pass
 
-    def reset_all(self) -> None:
+    def reset_all(self)-> None:
         """Clear every subject's state. Useful for tests and admin reset."""
 
         for s in Subject:
             self.reset(s)
 
-    def chunk_count(self, subject: SubjectLike) -> int:
+    def chunk_count(self, subject: SubjectLike)-> int:
         """Return the number of indexed chunks for ``subject``."""
 
         s = self._normalize(subject)

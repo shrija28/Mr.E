@@ -37,14 +37,14 @@ from ..auth.identity import next_kcet_id, next_institution_student_id
 logger = logging.getLogger("smartkcet.seed_students")
 
 
-def hash_password(password: str) -> str:
+def hash_password(password: str)-> str:
     """Hash a password using bcrypt."""
     import bcrypt
 
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
 
-def get_next_kcet_id(session: Session, counter: int = None) -> str:
+def get_next_kcet_id(session: Session, counter: int = None)-> str:
     """Generate the next student ID (MrE0001, MrE0002, etc.).
     
     Args:
@@ -71,7 +71,7 @@ def get_next_kcet_id(session: Session, counter: int = None) -> str:
         return "MrE0001"
 
 
-def seed_test_institutions(session: Session, count: int = 3) -> list[Institution]:
+def seed_test_institutions(session: Session, count: int = 3)-> list[Institution]:
     """Create test institutions."""
     institutions = []
 
@@ -107,7 +107,7 @@ def seed_test_institutions(session: Session, count: int = 3) -> list[Institution
     return institutions
 
 
-def seed_test_direct_subscribers(session: Session, count: int = 5) -> list[User]:
+def seed_test_direct_subscribers(session: Session, count: int = 5)-> list[User]:
     """Create test direct subscriber accounts (individual students).
 
     Direct subscribers get the global ``KCET####`` ID format via
@@ -146,9 +146,7 @@ def seed_test_direct_subscribers(session: Session, count: int = 5) -> list[User]
     return students
 
 
-def seed_test_institution_students(
-    session: Session, institutions: list[Institution], count_per_institution: int = 5
-) -> list[User]:
+def seed_test_institution_students(session: Session, institutions: list[Institution], count_per_institution: int = 5)-> list[User]:
     """Create test institution-linked student accounts.
 
     Institution students get institution-specific IDs in the
@@ -190,7 +188,7 @@ def seed_test_institution_students(
     return students
 
 
-def create_trial_subscriptions(session: Session, students: list[User]) -> int:
+def create_trial_subscriptions(session: Session, students: list[User])-> int:
     """Create trial subscriptions for students."""
     count = 0
 
@@ -232,7 +230,7 @@ def create_trial_subscriptions(session: Session, students: list[User]) -> int:
     return count
 
 
-def create_institution_subscriptions(session: Session, institutions: list[Institution]) -> int:
+def create_institution_subscriptions(session: Session, institutions: list[Institution])-> int:
     """Create subscriptions for institutions."""
     count = 0
 
@@ -281,12 +279,7 @@ def create_institution_subscriptions(session: Session, institutions: list[Instit
     return count
 
 
-def seed_students(
-    session: Optional[Session] = None,
-    direct_subscriber_count: int = 5,
-    institution_count: int = 3,
-    institution_student_count: int = 5,
-) -> dict:
+def seed_students(session: Optional[Session] = None, direct_subscriber_count: int = 5, institution_count: int = 3, institution_student_count: int = 5)-> dict:
     """Create all test students and subscriptions.
 
     Returns a dictionary with summary of created entities.

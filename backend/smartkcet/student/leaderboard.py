@@ -1,33 +1,68 @@
-"""Student leaderboard endpoint using Flask Blueprint."""
+"""Student leaderboard endpoint — personal rank + top-3 medals.
+
+Implements GET /api/student/leaderboard/me (REQ-11.4, REQ-11.5, REQ-11.7).
+
+Returns:
+- The authenticated student's rank (or "—" if ineligible or Free Trial)
+- Total ranked count (number of students on the leaderboard)
+- Top-3 medal entries (rank 1, 2, 3 with display_name, kcet_student_id, composite_score)
+- The student's own composite_score and average_score if eligible
+- Medal tier for Pro subscribers (Gold top 10%, Silver top 25%, Bronze top 50%)
+
+Access Control (Tasks 5.3, 5.4):
+- Free Trial: Rank hidden, upgrade prompt shown
+- Pro: Rank and medal indicators shown
+"""
 
 from __future__ import annotations
+import os
 
 from typing import Any, Dict, List, Optional
-from flask import Blueprint, jsonify, request
+
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
 from sqlalchemy.orm import Session
 
-from ..db.session import get_db
+from ..db.session import get_async_session as get_session
 from ..leaderboard.service import get_leaderboard
 from ..middleware.rbac import current_user, require_student
 from ..subscription.dependencies import get_access_control
 
-router = Blueprint("student_leaderboard", __name__, url_prefix="/api/student")
+router = Blueprint("student_leaderboard", __name__)
 
 
 @router.route("/leaderboard/me", methods=["GET"])
-@require_student
-def student_leaderboard_me():
-    session: Session = get_db()
+def student_leaderboard_me()-> Dict[str, Any]:    
+    _student = require_student()
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    from flask import g
+    access_control = getattr(g, "access_control", None)
+    """Return the student's rank, top-3 medals, and total ranked count.
+
+    The student is identified by the ``sub`` claim in the JWT payload,
+    which corresponds to their ``kcet_student_id``.
+    
+    Access control (Tasks 5.3, 5.4):
+    - Free Trial: Rank hidden, upgrade prompt shown
+    - Pro: Rank and medal indicators shown
+    """
+    # Get the authenticated user
     user = current_user(request, session)
     if not user:
-        return jsonify({"error": "auth_required", "message": "User not found"}), 401
+        return {
+            "error": "auth_required",
+            "message": "User not found",
+        }
     
-    token_payload = getattr(request, "token_payload", {}) or {}
-    student_kcet_id: str = token_payload.get("sub", "")
+    student_kcet_id: str = payload.get("sub", "")
 
     ranked = get_leaderboard(session)
+
     total_ranked = len(ranked)
 
+    # Top-3 medal entries
     top_3: List[Dict[str, Any]] = []
     for entry in ranked[:3]:
         top_3.append(
@@ -39,11 +74,12 @@ def student_leaderboard_me():
             }
         )
 
+    # Find the authenticated student's entry
     my_entry: Optional[Dict[str, Any]] = None
-    my_rank: Any = "—"
+    my_rank: Any = "\u2014"  # em-dash for ineligible
 
     for entry in ranked:
-        if entry.kcet_student_id == student_kcet_id or entry.student_id == str(user.id):
+        if entry.kcet_student_id == student_kcet_id:
             my_rank = entry.rank
             my_entry = {
                 "rank": entry.rank,
@@ -59,10 +95,10 @@ def student_leaderboard_me():
         "me": my_entry,
     }
     
-    access_control = get_access_control(session)
+    # Filter leaderboard data based on subscription tier
     filtered_data = access_control.filter_leaderboard_data(leaderboard_data, user.id)
     
-    return jsonify(filtered_data), 200
+    return filtered_data
 
 
 __all__ = ["router"]

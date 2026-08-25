@@ -78,7 +78,7 @@ class InstitutionService:
         """
         self.db = db
 
-    def _generate_institution_code(self, institution_name: str) -> str:
+    def _generate_institution_code(self, institution_name: str)-> str:
         """Generate a unique, URL-safe institution code from name.
         
         Converts the institution name to a lowercase alphanumeric code
@@ -127,9 +127,7 @@ class InstitutionService:
         import uuid
         return (base_code[:10] + str(uuid.uuid4())[:8])[:20]
 
-    def register_institution(
-        self, data: InstitutionRegistrationData
-    ) -> InstitutionRegistrationResponse:
+    def register_institution(self, data: InstitutionRegistrationData)-> InstitutionRegistrationResponse:
         """Create institution + institution_admin account atomically.
         
         **Requirements:** 6.1, 6.2, 6.7, 6.8, 6.9
@@ -277,7 +275,7 @@ class InstitutionService:
             self.db.rollback()
             raise InstitutionServiceError(f"Unexpected error during registration: {e}")
 
-    def generate_invitation(self, institution_id: UUID) -> InvitationCodeResponse:
+    def generate_invitation(self, institution_id: UUID)-> InvitationCodeResponse:
         """Generate a 32+ char invitation code, valid 7 days.
         
         Max 50 pending per institution (REQ-9.1).
@@ -362,7 +360,7 @@ class InstitutionService:
                 f"Unexpected error generating invitation: {e}"
             )
 
-    def accept_invitation(self, code: str, student_id: UUID) -> None:
+    def accept_invitation(self, code: str, student_id: UUID)-> None:
         """Link student to institution, consume seat, mark invitation used.
         
         **Requirements:** 9.2, 9.3, 9.4, 9.5
@@ -520,7 +518,7 @@ class InstitutionService:
                 f"Unexpected error accepting invitation: {e}"
             )
 
-    def remove_student(self, institution_id: UUID, student_id: UUID) -> None:
+    def remove_student(self, institution_id: UUID, student_id: UUID)-> None:
         """Unlink student, free seat, preserve history.
         
         **Requirements:** 9.6
@@ -583,9 +581,7 @@ class InstitutionService:
                 f"Unexpected error removing student: {e}"
             )
 
-    def get_institution_students(
-        self, institution_id: UUID
-    ) -> list[StudentSummary]:
+    def get_institution_students(self, institution_id: UUID)-> list[StudentSummary]:
         """List students linked to an institution.
         
         Only returns users with role='student' — excludes institution_admin
@@ -631,9 +627,7 @@ class InstitutionService:
                 f"Unexpected error fetching institution students: {e}"
             )
 
-    def activate_institution_plan(
-        self, institution_id: UUID, plan_id: UUID
-    ) -> "Subscription":
+    def activate_institution_plan(self, institution_id: UUID, plan_id: UUID)-> "Subscription":
         """Activate an institution subscription plan.
         
         **Requirements:** 8.1, 8.2, 8.3
@@ -758,9 +752,7 @@ class InstitutionService:
                 f"Unexpected error activating institution plan: {e}"
             )
 
-    def transition_student_subtype(
-        self, student_id: UUID, transition_type: str
-    ) -> None:
+    def transition_student_subtype(self, student_id: UUID, transition_type: str)-> None:
         """Transition student subtype based on subscription changes.
         
         **Requirements:** 10.3, 10.4, 10.7
@@ -836,7 +828,7 @@ class InstitutionService:
                 f"Unexpected error transitioning student subtype: {e}"
             )
 
-    def deactivate_institution_students(self, institution_id: UUID) -> int:
+    def deactivate_institution_students(self, institution_id: UUID)-> int:
         """Deactivate all students linked to an institution on subscription expiry.
         
         **Requirements:** 8.7

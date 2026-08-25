@@ -49,7 +49,7 @@ class CohortStats:
     max_std_dev_in_cohort: float = 0.0
 
 
-def _std_dev(scores: List[float]) -> float:
+def _std_dev(scores: List[float])-> float:
     """Compute the population standard deviation of *scores*.
 
     Returns 0.0 when the list has fewer than 2 elements.
@@ -61,7 +61,7 @@ def _std_dev(scores: List[float]) -> float:
     return math.sqrt(variance)
 
 
-def compute_composite(student_stats: StudentStats, cohort_stats: CohortStats) -> float:
+def compute_composite(student_stats: StudentStats, cohort_stats: CohortStats)-> float:
     """Compute the composite leaderboard score for a student.
 
     Formula (design.md §6.1):
@@ -97,7 +97,7 @@ def compute_composite(student_stats: StudentStats, cohort_stats: CohortStats) ->
     return (avg * 0.6) + (attempt_norm * 0.2) + (consistency * 0.2)
 
 
-def is_eligible(student_stats: StudentStats) -> bool:
+def is_eligible(student_stats: StudentStats)-> bool:
     """Return True if the student meets leaderboard inclusion criteria.
 
     Eligibility (design.md §6.2, REQ-10.2, REQ-11.2):

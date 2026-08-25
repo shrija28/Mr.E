@@ -55,14 +55,14 @@ class CreateSubscriptionPlanRequest(BaseModel):
     
     @field_validator("plan_type")
     @classmethod
-    def validate_plan_type(cls, v: str) -> str:
+    def validate_plan_type(cls, v: str)-> str:
         if v not in ["individual", "institution"]:
             raise ValueError("plan_type must be 'individual' or 'institution'")
         return v
     
     @field_validator("billing_period")
     @classmethod
-    def validate_billing_period(cls, v: str) -> str:
+    def validate_billing_period(cls, v: str)-> str:
         if v not in ["weekly", "monthly"]:
             raise ValueError("billing_period must be 'weekly' or 'monthly'")
         return v

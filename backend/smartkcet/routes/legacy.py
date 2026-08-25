@@ -1,11 +1,23 @@
-"""Legacy ExamForge routes using Flask Blueprint."""
+"""Legacy ExamForge routes preserved during the structural refactor.
+
+The behaviour is unchanged from ``backend/app.py`` - the endpoints are
+simply moved onto an :class:`fastapi.APIRouter` so ``smartkcet.main`` can
+mount them.  Renaming, RBAC gating, per-subject scoping, and DB-backed
+persistence land in later tasks (3.x, 4.x, 5.x, 7.x, 8.x).
+"""
 
 from __future__ import annotations
+import os
 
 import uuid
 from typing import List
-from flask import Blueprint, jsonify, request
 
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
+from pydantic import BaseModel
+
+# Graceful degradation for Python 3.14 compatibility
+# Both groq and pytesseract hang on import on Python 3.14
 try:
     from ..rag import groq_client as groq_module
     GROQ_AVAILABLE = True
@@ -13,6 +25,7 @@ except (ImportError, TimeoutError):
     GROQ_AVAILABLE = False
     groq_module = None
 
+# pytesseract is not available on Python 3.14 (pkgutil.find_loader removed)
 try:
     from ..rag.parsing import (
         chunk_text,
@@ -23,6 +36,7 @@ try:
     PARSING_AVAILABLE = True
 except (ImportError, TimeoutError):
     PARSING_AVAILABLE = False
+    # Provide stub functions so the module can still be imported
     chunk_text = None
     extract_text_from_docx = None
     extract_text_from_pdf = None
@@ -31,79 +45,93 @@ except (ImportError, TimeoutError):
 from ..rag.store import store
 from ..submissions.scoring import score_submission
 
-router = Blueprint("legacy", __name__)
+router = Blueprint("routes_legacy", __name__)
 
 
 @router.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok", "chunks_indexed": len(store.chunks)}), 200
+def health()-> dict:
+    return {"status": "ok", "chunks_indexed": len(store.chunks)}
 
 
 @router.route("/debug", methods=["GET"])
-def debug():
-    return jsonify({"chunks_indexed": len(store.chunks), "sample": store.chunks[:2]}), 200
+def debug()-> dict:
+    return {"chunks_indexed": len(store.chunks), "sample": store.chunks[:2]}
 
 
 @router.route("/upload", methods=["POST"])
-def upload():
-    uploaded_files = request.files.getlist("files")
-    if len(uploaded_files) > 10:
-        return jsonify({"error": "validation_error", "message": "Maximum 10 files allowed"}), 400
+def upload(files: List[UploadFile])-> dict:
+    if len(files) > 10:
+        raise HTTPException(400, "Maximum 10 files allowed")
     store.reset()
     doc_ids: List[str] = []
     total_chunks = 0
-    for f in uploaded_files:
+    for f in files:
         content = f.read()
         name = (f.filename or "").lower()
         if name.endswith(".pdf"):
-            text = extract_text_from_pdf(content) if extract_text_from_pdf else ""
+            text = extract_text_from_pdf(content)
         elif name.endswith(".docx"):
-            text = extract_text_from_docx(content) if extract_text_from_docx else ""
+            text = extract_text_from_docx(content)
         elif name.endswith((".txt", ".doc")):
-            text = extract_text_from_txt(content) if extract_text_from_txt else ""
+            text = extract_text_from_txt(content)
         else:
             continue
-        chunks = chunk_text(text) if chunk_text else []
+        chunks = chunk_text(text)
         store.add(chunks)
         total_chunks += len(chunks)
         doc_ids.append(str(uuid.uuid4()))
-    return jsonify({
+        print(f"\u2713 Indexed {f.filename}: {len(chunks)} chunks")
+    return {
         "success": True,
         "doc_ids": doc_ids,
         "total_chunks": total_chunks,
         "message": f"{len(doc_ids)} files indexed with {total_chunks} chunks",
-    }), 200
+    }
+
+
+class GenerateRequest(BaseModel):
+    difficulty: str = "medium"
+    count: int = 20
+    types: list = ["MCQ"]
+    subject: str = "General Subject"
+    num_sets: int = 4
 
 
 @router.route("/generate", methods=["POST"])
-def generate():
+def generate()-> dict:
     if not store.chunks:
-        return jsonify({"error": "validation_error", "message": "No documents uploaded yet."}), 400
-    data = request.get_json(silent=True) or {}
-    subject = data.get("subject", "General Subject")
-    if subject == "General Subject" and GROQ_AVAILABLE and groq_module:
+        raise HTTPException(400, "No documents uploaded yet.")
+    subject = req.subject
+    if subject == "General Subject":
         sample = " ".join(store.chunks[:5])
         detected = groq_module.detect_subject(sample)
         if detected:
             subject = detected
+    print(f"Generating for subject: {subject}")
     used_questions: set = set()
     sets: list = []
     for label in ["A", "B", "C", "D"]:
         chunks = store.search(f"{subject} multiple choice questions", k=20)
-        if GROQ_AVAILABLE and groq_module:
-            questions = groq_module.generate_mcq_set(chunks, subject, label, used_questions)
-        else:
-            questions = []
+        questions = groq_module.generate_mcq_set(chunks, subject, label, used_questions)
         sets.append(questions)
-    return jsonify({"sets": sets}), 200
+        print(f"\u2713 Set {label}: {len(questions)} questions")
+    return {"sets": sets}
+
+
+class AnalyzeRequest(BaseModel):
+    questions: list
+    answers: dict
+    student: dict = {}
 
 
 @router.route("/analyze", methods=["POST"])
-def analyze():
-    data = request.get_json(silent=True) or {}
-    questions = data.get("questions", [])
-    answers = data.get("answers", {})
-    return jsonify(score_submission(questions, answers)), 200
+def analyze()-> dict:
+    """Score a submission via the shared :func:`score_submission` helper.
 
+    The legacy ``/analyze`` route is now a thin wrapper around
+    :mod:`smartkcet.submissions.scoring` so the new role-scoped
+    ``POST /api/student/submit`` endpoint (task 8.1) and this legacy path
+    share a single source of scoring truth.
+    """
 
-__all__ = ["router"]
+    return score_submission(req.questions, req.answers)

@@ -38,7 +38,7 @@ _PREFIX = "MrE"
 _DIGITS = 4
 
 
-def format_kcet_id(n: int) -> str:
+def format_kcet_id(n: int)-> str:
     """Format ``n`` as a zero-padded Student ID (e.g. MrE0001)."""
 
     if n < 0:
@@ -46,7 +46,7 @@ def format_kcet_id(n: int) -> str:
     return f"{_PREFIX}{n:0{_DIGITS}d}"
 
 
-def parse_kcet_id(kcet_id: str) -> int | None:
+def parse_kcet_id(kcet_id: str)-> int | None:
     """Return the integer suffix of ``kcet_id`` or ``None`` if malformed."""
 
     if not isinstance(kcet_id, str):
@@ -62,7 +62,7 @@ def parse_kcet_id(kcet_id: str) -> int | None:
     return None
 
 
-def format_institution_id(institution_code: str, n: int) -> str:
+def format_institution_id(institution_code: str, n: int)-> str:
     """Format institution-specific student ID as {code}####.
     
     Args:
@@ -79,7 +79,7 @@ def format_institution_id(institution_code: str, n: int) -> str:
     return f"{institution_code.lower()}{n:04d}"
 
 
-def parse_institution_id(institution_id: str) -> tuple[str, int] | None:
+def parse_institution_id(institution_id: str)-> tuple[str, int] | None:
     """Parse institution student ID to extract code and number.
     
     Args:
@@ -103,7 +103,7 @@ def parse_institution_id(institution_id: str) -> tuple[str, int] | None:
     return (code, number)
 
 
-def next_kcet_id(session: Session) -> str:
+def next_kcet_id(session: Session)-> str:
     """Return the next available KCET_Student_ID.
 
     The function inspects every non-null ``kcet_student_id`` value in the
@@ -124,7 +124,7 @@ def next_kcet_id(session: Session) -> str:
     return format_kcet_id(max_seq + 1)
 
 
-def next_institution_student_id(session: Session, institution_id: str) -> str:
+def next_institution_student_id(session: Session, institution_id: str)-> str:
     """Return the next available institution-specific student ID.
     
     Generates IDs like 'institution0001', 'smvitm0002' per institution.

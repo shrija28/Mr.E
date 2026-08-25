@@ -27,13 +27,13 @@ import bcrypt
 HASHING_INVOKED: Counter = Counter()
 
 
-def reset_hashing_counter() -> None:
+def reset_hashing_counter()-> None:
     """Clear the :data:`HASHING_INVOKED` counter (useful in tests)."""
 
     HASHING_INVOKED.clear()
 
 
-def hash_password(plaintext: str) -> str:
+def hash_password(plaintext: str)-> str:
     """Return a bcrypt hash for ``plaintext``.
 
     The salt is generated fresh per call.  The return type is ``str`` so
@@ -48,7 +48,7 @@ def hash_password(plaintext: str) -> str:
     return digest.decode("utf-8")
 
 
-def verify_password(plaintext: str, hashed: str) -> bool:
+def verify_password(plaintext: str, hashed: str)-> bool:
     """Return ``True`` iff ``plaintext`` matches ``hashed``.
 
     A malformed ``hashed`` string (wrong prefix, wrong length, etc.) is

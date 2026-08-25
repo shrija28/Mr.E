@@ -1,134 +1,188 @@
-"""Platform Admin API routes using Flask Blueprint.
+import os
+"""Platform Admin API routes.
 
-Mounted under /api/admin/platform from smartkcet.admin.__init__.
+This module defines FastAPI routes for Platform Admin operations including:
+- Admin authentication
+- Subscription plan CRUD
+- Institution management
+- Aggregate analytics
 """
 
 import logging
-from datetime import datetime, timedelta
-from decimal import Decimal
+from datetime import datetime
 from typing import List, Optional
 from uuid import UUID
 
-from flask import Blueprint, jsonify, request
-from sqlalchemy import func, outerjoin
+import os
+from flask import Blueprint, request, g, make_response, jsonify, Response
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ..db.models import Exam, Question, User
-from ..db.session import get_db
-from ..db.subscription_models import Institution, Subscription, SubscriptionEvent, SubscriptionPlan
+from ..db.session import get_async_session as get_session
 from ..middleware.rbac import require_platform_admin
+from .platform_admin_models import (
+    AdminLoginRequest,
+    AdminLoginResponse,
+    AggregateAnalyticsResponse,
+    CreateSubscriptionPlanRequest,
+    InstitutionListResponse,
+    InstitutionResponse,
+    SubscriptionPlanResponse,
+    SuccessResponse,
+    UpdateSubscriptionPlanRequest,
+)
 from .platform_admin_service import PlatformAdminService
 
-logger = logging.getLogger("smartkcet.admin.platform")
+logger = logging.getLogger(__name__)
 
-router = Blueprint("platform_admin", __name__, url_prefix="/api/admin/platform")
+router = Blueprint("admin_platform_admin_routes", __name__)
+
+
+# -----------------------------------------------------------------------------
+# Admin Authentication
+# -----------------------------------------------------------------------------
 
 
 @router.route("/check-config", methods=["POST"])
-def check_admin_config():
-    db: Session = get_db()
+def check_admin_config()-> AdminLoginResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Check if Platform Admin is configured.
+    
+    This endpoint checks if ADMIN_EMAIL and ADMIN_PASSWORD_HASH environment
+    variables are set. It does not require authentication.
+    """
     service = PlatformAdminService(db)
     is_configured = service.is_admin_configured()
     
     if is_configured:
-        return jsonify({
-            "success": True,
-            "message": "Platform Admin is configured",
-            "admin_configured": True,
-        }), 200
+        return AdminLoginResponse(
+            success=True,
+            message="Platform Admin is configured",
+            admin_configured=True,
+        )
     else:
-        return jsonify({
-            "success": False,
-            "message": "Platform Admin is not configured.",
-            "admin_configured": False,
-        }), 200
+        return AdminLoginResponse(
+            success=False,
+            message="Platform Admin is not configured. Set ADMIN_EMAIL and ADMIN_PASSWORD_HASH environment variables.",
+            admin_configured=False,
+        )
+
+
+# -----------------------------------------------------------------------------
+# Subscription Plan CRUD
+# -----------------------------------------------------------------------------
 
 
 @router.route("/subscription-plans", methods=["POST"])
-@require_platform_admin
-def create_subscription_plan():
-    db: Session = get_db()
-    data = request.get_json(silent=True) or {}
+def create_subscription_plan()-> SubscriptionPlanResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Create a new subscription plan.
+    
+    Requires Platform Admin authentication.
+    """
     service = PlatformAdminService(db)
     
     try:
         plan = service.create_subscription_plan(
-            name=data.get("name"),
-            plan_type=data.get("plan_type"),
-            billing_period=data.get("billing_period"),
-            price=Decimal(str(data.get("price", 0))),
-            max_test_attempts_per_period=data.get("max_test_attempts_per_period"),
-            max_student_seats=data.get("max_student_seats"),
-            feature_flags=data.get("feature_flags"),
+            name=request.name,
+            plan_type=request.plan_type,
+            billing_period=request.billing_period,
+            price=request.price,
+            max_test_attempts_per_period=request.max_test_attempts_per_period,
+            max_student_seats=request.max_student_seats,
+            feature_flags=request.feature_flags,
         )
-        return jsonify({
-            "id": str(plan.id),
-            "name": plan.name,
-            "plan_type": plan.plan_type,
-            "billing_period": plan.billing_period,
-            "price": float(plan.price),
-            "max_test_attempts_per_period": plan.max_test_attempts_per_period,
-            "max_student_seats": plan.max_student_seats,
-            "feature_flags": plan.feature_flags,
-            "is_active": plan.is_active,
-        }), 201
+        return SubscriptionPlanResponse.model_validate(plan)
     except ValueError as e:
-        return jsonify({"error": "validation_error", "message": str(e)}), 400
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
 
 
 @router.route("/subscription-plans/<plan_id>", methods=["GET"])
-@require_platform_admin
-def get_subscription_plan(plan_id: str):
-    db: Session = get_db()
-    try:
-        pid = UUID(plan_id)
-    except (ValueError, TypeError):
-        return jsonify({"error": "validation_error", "message": "Invalid plan_id"}), 400
-
+def get_subscription_plan(plan_id: UUID)-> SubscriptionPlanResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Get a subscription plan by ID.
+    
+    Requires Platform Admin authentication.
+    """
     service = PlatformAdminService(db)
-    plan = service.get_subscription_plan(pid)
+    plan = service.get_subscription_plan(plan_id)
     
     if not plan:
-        return jsonify({"error": "not_found", "message": f"Subscription plan {plan_id} not found"}), 404
+        raise HTTPException(
+            status_code=404,
+            detail=f"Subscription plan {plan_id} not found",
+        )
     
-    return jsonify({
-        "id": str(plan.id),
-        "name": plan.name,
-        "plan_type": plan.plan_type,
-        "billing_period": plan.billing_period,
-        "price": float(plan.price),
-        "max_test_attempts_per_period": plan.max_test_attempts_per_period,
-        "max_student_seats": plan.max_student_seats,
-        "feature_flags": plan.feature_flags,
-        "is_active": plan.is_active,
-    }), 200
+    return SubscriptionPlanResponse.model_validate(plan)
 
 
 @router.route("/subscription-plans", methods=["GET"])
-@require_platform_admin
-def list_subscription_plans():
-    db: Session = get_db()
-    plan_type = request.args.get("plan_type")
-    raw_is_active = request.args.get("is_active")
-
+def list_subscription_plans(plan_type: Optional[str] = None, is_active: Optional[bool] = None)-> List[SubscriptionPlanResponse]:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """List all subscription plans with optional filters.
+    
+    Requires Platform Admin authentication.
+    """
+    from ..db.subscription_models import SubscriptionPlan
+    from decimal import Decimal
+    
     query = db.query(SubscriptionPlan)
+    
     if plan_type is not None:
         query = query.filter(SubscriptionPlan.plan_type == plan_type)
-    if raw_is_active is not None:
-        query = query.filter(SubscriptionPlan.is_active == (raw_is_active.lower() == "true"))
-
+    
+    if is_active is not None:
+        query = query.filter(SubscriptionPlan.is_active == is_active)
+    
     plans = query.all()
-
+    
+    # If no plans exist, seed with default plans
     if len(plans) == 0:
         default_plans = [
+            # Individual Plans
             {
                 'name': 'Free',
                 'plan_type': 'individual',
                 'billing_period': 'monthly',
                 'price': Decimal('0'),
-                'max_test_attempts_per_period': 5,
+                'max_test_attempts_per_period': 5,  # 5 mock tests
                 'max_student_seats': None,
-                'feature_flags': {'mock_tests_5': True, 'practice_exams_3': True, 'ai_analytics': False, 'kcet_question_bank': False, 'leaderboard': False, 'performance_reports': 'Basic', 'ai_recommendations': False},
+                'feature_flags': {
+                    'mock_tests_5': True,
+                    'practice_exams_3': True,
+                    'ai_analytics': False,
+                    'kcet_question_bank': False,
+                    'leaderboard': False,
+                    'performance_reports': 'Basic',
+                    'ai_recommendations': False,
+                },
                 'is_active': True,
             },
             {
@@ -136,9 +190,17 @@ def list_subscription_plans():
                 'plan_type': 'individual',
                 'billing_period': 'weekly',
                 'price': Decimal('99'),
-                'max_test_attempts_per_period': 999,
+                'max_test_attempts_per_period': 999,  # Unlimited
                 'max_student_seats': None,
-                'feature_flags': {'mock_tests_unlimited': True, 'practice_exams_unlimited': True, 'ai_analytics': True, 'kcet_question_bank': True, 'leaderboard': True, 'performance_reports': True, 'ai_recommendations': True},
+                'feature_flags': {
+                    'mock_tests_unlimited': True,
+                    'practice_exams_unlimited': True,
+                    'ai_analytics': True,
+                    'kcet_question_bank': True,
+                    'leaderboard': True,
+                    'performance_reports': True,
+                    'ai_recommendations': True,
+                },
                 'is_active': True,
             },
             {
@@ -146,9 +208,17 @@ def list_subscription_plans():
                 'plan_type': 'individual',
                 'billing_period': 'monthly',
                 'price': Decimal('349'),
-                'max_test_attempts_per_period': 999,
+                'max_test_attempts_per_period': 999,  # Unlimited
                 'max_student_seats': None,
-                'feature_flags': {'mock_tests_unlimited': True, 'practice_exams_unlimited': True, 'ai_analytics': True, 'kcet_question_bank': True, 'leaderboard': True, 'performance_reports': 'Advanced', 'ai_recommendations': True},
+                'feature_flags': {
+                    'mock_tests_unlimited': True,
+                    'practice_exams_unlimited': True,
+                    'ai_analytics': True,
+                    'kcet_question_bank': True,
+                    'leaderboard': True,
+                    'performance_reports': 'Advanced',
+                    'ai_recommendations': True,
+                },
                 'is_active': True,
             },
             {
@@ -156,11 +226,21 @@ def list_subscription_plans():
                 'plan_type': 'individual',
                 'billing_period': 'monthly',
                 'price': Decimal('2999'),
-                'max_test_attempts_per_period': 999,
+                'max_test_attempts_per_period': 999,  # Unlimited
                 'max_student_seats': None,
-                'feature_flags': {'mock_tests_unlimited': True, 'practice_exams_unlimited': True, 'ai_analytics': True, 'kcet_question_bank': True, 'leaderboard': True, 'performance_reports': 'Advanced', 'ai_recommendations': True, 'priority_access': True},
+                'feature_flags': {
+                    'mock_tests_unlimited': True,
+                    'practice_exams_unlimited': True,
+                    'ai_analytics': True,
+                    'kcet_question_bank': True,
+                    'leaderboard': True,
+                    'performance_reports': 'Advanced',
+                    'ai_recommendations': True,
+                    'priority_access': True,
+                },
                 'is_active': True,
             },
+            # Institution Plans
             {
                 'name': 'Starter',
                 'plan_type': 'institution',
@@ -168,7 +248,16 @@ def list_subscription_plans():
                 'price': Decimal('1499'),
                 'max_test_attempts_per_period': None,
                 'max_student_seats': 50,
-                'feature_flags': {'institution_uploads': True, 'institution_question_bank': False, 'chapter_tests': True, 'analytics': 'Basic', 'ai_analytics': False, 'performance_reports': 'Basic', 'branding': False, 'priority_support': False},
+                'feature_flags': {
+                    'institution_uploads': True,
+                    'institution_question_bank': False,
+                    'chapter_tests': True,
+                    'analytics': 'Basic',
+                    'ai_analytics': False,
+                    'performance_reports': 'Basic',
+                    'branding': False,
+                    'priority_support': False,
+                },
                 'is_active': True,
             },
             {
@@ -178,7 +267,16 @@ def list_subscription_plans():
                 'price': Decimal('2999'),
                 'max_test_attempts_per_period': None,
                 'max_student_seats': 100,
-                'feature_flags': {'institution_uploads': True, 'institution_question_bank': True, 'chapter_tests': True, 'analytics': 'Advanced', 'ai_analytics': False, 'performance_reports': 'Advanced', 'branding': False, 'priority_support': False},
+                'feature_flags': {
+                    'institution_uploads': True,
+                    'institution_question_bank': True,
+                    'chapter_tests': True,
+                    'analytics': 'Advanced',
+                    'ai_analytics': False,
+                    'performance_reports': 'Advanced',
+                    'branding': False,
+                    'priority_support': False,
+                },
                 'is_active': True,
             },
             {
@@ -187,21 +285,40 @@ def list_subscription_plans():
                 'billing_period': 'monthly',
                 'price': Decimal('7999'),
                 'max_test_attempts_per_period': None,
-                'max_student_seats': None,
-                'feature_flags': {'institution_uploads': True, 'institution_question_bank': 'Full', 'chapter_tests': True, 'analytics': 'Advanced', 'ai_analytics': True, 'performance_reports': 'Advanced', 'branding': True, 'priority_support': True},
+                'max_student_seats': None,  # Unlimited
+                'feature_flags': {
+                    'institution_uploads': True,
+                    'institution_question_bank': 'Full',
+                    'chapter_tests': True,
+                    'analytics': 'Advanced',
+                    'ai_analytics': True,
+                    'performance_reports': 'Advanced',
+                    'branding': True,
+                    'priority_support': True,
+                },
                 'is_active': True,
             },
             {
                 'name': 'Enterprise',
                 'plan_type': 'institution',
                 'billing_period': 'monthly',
-                'price': Decimal('0'),
+                'price': Decimal('0'),  # Contact for pricing
                 'max_test_attempts_per_period': None,
-                'max_student_seats': None,
-                'feature_flags': {'institution_uploads': True, 'institution_question_bank': 'Full', 'chapter_tests': True, 'analytics': 'Advanced', 'ai_analytics': True, 'performance_reports': 'Custom', 'branding': True, 'priority_support': 'Dedicated Support'},
+                'max_student_seats': None,  # Unlimited
+                'feature_flags': {
+                    'institution_uploads': True,
+                    'institution_question_bank': 'Full',
+                    'chapter_tests': True,
+                    'analytics': 'Advanced',
+                    'ai_analytics': True,
+                    'performance_reports': 'Custom',
+                    'branding': True,
+                    'priority_support': 'Dedicated Support',
+                },
                 'is_active': True,
             },
         ]
+        
         for plan_data in default_plans:
             plan = SubscriptionPlan(
                 name=plan_data['name'],
@@ -216,229 +333,293 @@ def list_subscription_plans():
             db.add(plan)
         db.commit()
         plans = db.query(SubscriptionPlan).all()
-
-    res = [
-        {
-            "id": str(p.id),
-            "name": p.name,
-            "plan_type": p.plan_type,
-            "billing_period": p.billing_period,
-            "price": float(p.price),
-            "max_test_attempts_per_period": p.max_test_attempts_per_period,
-            "max_student_seats": p.max_student_seats,
-            "feature_flags": p.feature_flags,
-            "is_active": p.is_active,
-        }
-        for p in plans
-    ]
-    return jsonify(res), 200
+    
+    return [SubscriptionPlanResponse.model_validate(plan) for plan in plans]
 
 
 @router.route("/subscription-plans/<plan_id>", methods=["PATCH"])
-@require_platform_admin
-def update_subscription_plan(plan_id: str):
-    db: Session = get_db()
-    try:
-        pid = UUID(plan_id)
-    except (ValueError, TypeError):
-        return jsonify({"error": "validation_error", "message": "Invalid plan_id"}), 400
-
-    data = request.get_json(silent=True) or {}
+def update_subscription_plan(plan_id: UUID)-> SubscriptionPlanResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Update a subscription plan.
+    
+    Requires Platform Admin authentication.
+    """
     service = PlatformAdminService(db)
     
-    price_val = Decimal(str(data["price"])) if "price" in data and data["price"] is not None else None
-
     try:
         plan = service.update_subscription_plan(
-            plan_id=pid,
-            name=data.get("name"),
-            price=price_val,
-            max_test_attempts_per_period=data.get("max_test_attempts_per_period"),
-            max_student_seats=data.get("max_student_seats"),
-            feature_flags=data.get("feature_flags"),
-            is_active=data.get("is_active"),
+            plan_id=plan_id,
+            name=request.name,
+            price=request.price,
+            max_test_attempts_per_period=request.max_test_attempts_per_period,
+            max_student_seats=request.max_student_seats,
+            feature_flags=request.feature_flags,
+            is_active=request.is_active,
         )
-        return jsonify({
-            "id": str(plan.id),
-            "name": plan.name,
-            "plan_type": plan.plan_type,
-            "billing_period": plan.billing_period,
-            "price": float(plan.price),
-            "max_test_attempts_per_period": plan.max_test_attempts_per_period,
-            "max_student_seats": plan.max_student_seats,
-            "feature_flags": plan.feature_flags,
-            "is_active": plan.is_active,
-        }), 200
+        return SubscriptionPlanResponse.model_validate(plan)
     except ValueError as e:
-        return jsonify({"error": "validation_error", "message": str(e)}), 400
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
 
 
 @router.route("/subscription-plans/<plan_id>", methods=["DELETE"])
-@require_platform_admin
-def delete_subscription_plan(plan_id: str):
-    db: Session = get_db()
-    try:
-        pid = UUID(plan_id)
-    except (ValueError, TypeError):
-        return jsonify({"error": "validation_error", "message": "Invalid plan_id"}), 400
-
+def delete_subscription_plan(plan_id: UUID)-> SuccessResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Delete a subscription plan.
+    
+    Rejects deletion if the plan has active subscribers.
+    Requires Platform Admin authentication.
+    """
     service = PlatformAdminService(db)
+    
     try:
-        service.delete_subscription_plan(pid)
-        return jsonify({"success": True, "message": f"Subscription plan {plan_id} deleted successfully"}), 200
+        service.delete_subscription_plan(plan_id)
+        return SuccessResponse(
+            success=True,
+            message=f"Subscription plan {plan_id} deleted successfully",
+        )
     except ValueError as e:
-        return jsonify({"error": "validation_error", "message": str(e)}), 400
+        raise HTTPException(
+            status_code=400,
+            detail=str(e),
+        )
+
+
+# -----------------------------------------------------------------------------
+# Institution Management
+# -----------------------------------------------------------------------------
 
 
 @router.route("/institutions/<institution_id>/activate", methods=["POST"])
-@require_platform_admin
-def activate_institution(institution_id: str):
-    db: Session = get_db()
-    try:
-        iid = UUID(institution_id)
-    except (ValueError, TypeError):
-        return jsonify({"error": "validation_error", "message": "Invalid institution_id"}), 400
-
+def activate_institution(institution_id: UUID)-> InstitutionResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Activate an institution.
+    
+    Requires Platform Admin authentication.
+    """
     service = PlatformAdminService(db)
+    
     try:
-        institution = service.activate_institution(iid)
-        return jsonify({
-            "id": str(institution.id),
-            "name": institution.name,
-            "institution_code": institution.institution_code,
-            "subscription_status": institution.subscription_status,
-        }), 200
+        institution = service.activate_institution(institution_id)
+        return InstitutionResponse.model_validate(institution)
     except ValueError as e:
-        return jsonify({"error": "not_found", "message": str(e)}), 404
+        raise HTTPException(
+            status_code=404,
+            detail=str(e),
+        )
 
 
 @router.route("/institutions/<institution_id>/suspend", methods=["POST"])
-@require_platform_admin
-def suspend_institution(institution_id: str):
-    db: Session = get_db()
-    try:
-        iid = UUID(institution_id)
-    except (ValueError, TypeError):
-        return jsonify({"error": "validation_error", "message": "Invalid institution_id"}), 400
-
+def suspend_institution(institution_id: UUID)-> InstitutionResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Suspend an institution.
+    
+    Requires Platform Admin authentication.
+    """
     service = PlatformAdminService(db)
+    
     try:
-        institution = service.suspend_institution(iid)
-        return jsonify({
-            "id": str(institution.id),
-            "name": institution.name,
-            "institution_code": institution.institution_code,
-            "subscription_status": institution.subscription_status,
-        }), 200
+        institution = service.suspend_institution(institution_id)
+        return InstitutionResponse.model_validate(institution)
     except ValueError as e:
-        return jsonify({"error": "not_found", "message": str(e)}), 404
+        raise HTTPException(
+            status_code=404,
+            detail=str(e),
+        )
 
 
 @router.route("/institutions/<institution_id>", methods=["DELETE"])
-@require_platform_admin
-def remove_institution(institution_id: str):
-    db: Session = get_db()
-    try:
-        iid = UUID(institution_id)
-    except (ValueError, TypeError):
-        return jsonify({"error": "validation_error", "message": "Invalid institution_id"}), 400
-
+def remove_institution(institution_id: UUID)-> SuccessResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Remove an institution.
+    
+    This will cascade delete all related data (subscriptions, invitations, etc.)
+    Requires Platform Admin authentication.
+    """
     service = PlatformAdminService(db)
+    
     try:
-        service.remove_institution(iid)
-        return jsonify({"success": True, "message": f"Institution {institution_id} removed successfully"}), 200
+        service.remove_institution(institution_id)
+        return SuccessResponse(
+            success=True,
+            message=f"Institution {institution_id} removed successfully",
+        )
     except ValueError as e:
-        return jsonify({"error": "not_found", "message": str(e)}), 404
+        raise HTTPException(
+            status_code=404,
+            detail=str(e),
+        )
 
 
 @router.route("/institutions", methods=["GET"])
-@require_platform_admin
-def list_institutions():
-    db: Session = get_db()
-    subscription_status = request.args.get("subscription_status")
-
+def list_institutions(subscription_status: Optional[str] = None)-> InstitutionListResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """List all institutions with optional filters.
+    
+    Requires Platform Admin authentication.
+    """
+    from ..db.models import User, Question, Exam
+    from ..db.subscription_models import Subscription, Institution
+    from sqlalchemy import func
+    
     query = db.query(Institution)
+    
     if subscription_status is not None:
         query = query.filter(Institution.subscription_status == subscription_status)
     
     institutions = query.all()
+    
+    # Build response with additional data
     inst_responses = []
-
     for inst in institutions:
+        # Get subscription info
         subscription = (
             db.query(Subscription)
             .filter(Subscription.institution_id == inst.id)
             .first()
         )
+        
+        # Get plan name from subscription
         plan_name = None
         if subscription and subscription.plan_id:
+            from ..db.subscription_models import SubscriptionPlan
             plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == subscription.plan_id).first()
             if plan:
                 plan_name = plan.name
         
-        student_count = db.query(func.count(User.id)).filter(User.institution_id == inst.id, User.role == 'student').scalar() or 0
-        question_count = db.query(func.count(Question.id)).filter(Question.institution_id == inst.id).scalar() or 0
-        exam_count = db.query(func.count(Exam.id)).filter(Exam.institution_id == inst.id).scalar() or 0
+        # Get student count
+        student_count = db.query(func.count(User.id)).filter(
+            User.institution_id == inst.id,
+            User.role == 'student'
+        ).scalar() or 0
         
-        inst_responses.append({
-            "id": str(inst.id),
-            "name": inst.name,
-            "institution_code": inst.institution_code,
-            "contact_phone": inst.contact_phone,
-            "subscription_status": inst.subscription_status,
-            "registered_at": inst.registered_at.isoformat() if inst.registered_at else None,
-            "student_count": int(student_count),
-            "question_count": int(question_count),
-            "exam_count": int(exam_count),
-            "plan_name": plan_name,
-            "next_renewal_date": subscription.next_renewal_date.isoformat() if subscription and subscription.next_renewal_date else None,
-        })
+        # Get question count
+        question_count = db.query(func.count(Question.id)).filter(
+            Question.institution_id == inst.id
+        ).scalar() or 0
+        
+        # Get exam count
+        exam_count = db.query(func.count(Exam.id)).filter(
+            Exam.institution_id == inst.id
+        ).scalar() or 0
+        
+        inst_responses.append(InstitutionResponse(
+            id=str(inst.id),
+            name=inst.name,
+            institution_code=inst.institution_code,
+            contact_phone=inst.contact_phone,
+            subscription_status=inst.subscription_status,
+            registered_at=inst.registered_at.isoformat() if inst.registered_at else None,
+            student_count=int(student_count),
+            question_count=int(question_count),
+            exam_count=int(exam_count),
+            plan_name=plan_name,
+            next_renewal_date=subscription.next_renewal_date.isoformat() if subscription and subscription.next_renewal_date else None,
+        ))
     
-    return jsonify({
-        "institutions": inst_responses,
-        "total": len(inst_responses),
-    }), 200
+    return InstitutionListResponse(
+        institutions=inst_responses,
+        total=len(inst_responses),
+    )
+
+
+# -----------------------------------------------------------------------------
+# Students Management
+# -----------------------------------------------------------------------------
 
 
 @router.route("/students", methods=["GET"])
-@require_platform_admin
-def list_students():
-    db: Session = get_db()
-    student_type = request.args.get("student_type")
-    raw_inst_id = request.args.get("institution_id")
-
-    inst_id: Optional[UUID] = None
-    if raw_inst_id:
-        try:
-            inst_id = UUID(raw_inst_id)
-        except (ValueError, TypeError):
-            pass
-
+def list_students(student_type: Optional[str] = None, # 'direct' or 'institution' or None for all
+    institution_id: Optional[UUID] = None):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """List all students with optional filters.
+    
+    Requires Platform Admin authentication.
+    
+    Query params:
+    - student_type: 'direct' for direct subscribers, 'institution' for institution-linked
+    - institution_id: filter by specific institution
+    """
+    from ..db.models import User
+    from ..db.subscription_models import Subscription, Institution
+    
     query = db.query(User).filter(User.role == 'student')
-
+    
+    # Filter by student type
     if student_type == 'direct':
         query = query.filter(User.student_subtype.in_(['direct_subscriber', 'dual']))
     elif student_type == 'institution':
         query = query.filter(User.student_subtype.in_(['institution_linked', 'dual']))
-        if inst_id:
-            query = query.filter(User.institution_id == inst_id)
-    elif inst_id:
-        query = query.filter(User.institution_id == inst_id)
-
+        if institution_id:
+            query = query.filter(User.institution_id == institution_id)
+    elif institution_id:
+        query = query.filter(User.institution_id == institution_id)
+    
     students = query.all()
+    
+    # Build response with subscription info
     students_data = []
-
     for user in students:
+        # Get subscription info
         subscription = (
             db.query(Subscription)
-            .filter(User.id == user.id, Subscription.status.in_(["trial", "active", "overdue", "grace_period"]))
+            .filter(
+                Subscription.user_id == user.id,
+                Subscription.status.in_(["trial", "active", "overdue", "grace_period"])
+            )
             .first()
         )
+        
+        # Get institution name if linked
         institution_name = None
         if user.institution_id:
             institution = db.query(Institution).filter(Institution.id == user.institution_id).first()
             institution_name = institution.name if institution else None
-
+        
         students_data.append({
             "id": str(user.id),
             "kcet_student_id": user.kcet_student_id,
@@ -451,43 +632,87 @@ def list_students():
             "has_active_subscription": subscription is not None,
             "created_at": user.created_at.isoformat() if user.created_at else None,
         })
-
-    return jsonify({
+    
+    return {
         "count": len(students_data),
         "students": students_data,
-    }), 200
+    }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test Data Seeding (Development)
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 @router.route("/seed/students", methods=["POST"])
-@require_platform_admin
-def seed_test_students():
-    db: Session = get_db()
-    data = request.get_json(silent=True) or {}
-    direct_count = int(data.get("direct_count", 5))
-    institution_count = int(data.get("institution_count", 3))
-    students_per_institution = int(data.get("students_per_institution", 5))
-
+def seed_test_students(direct_count: int = 5, institution_count: int = 3, students_per_institution: int = 5):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Seed test student accounts for development/testing.
+    
+    Creates:
+    - Direct subscriber students (individual users)
+    - Test institutions
+    - Institution-linked students
+    - Trial subscriptions
+    
+    Query params:
+    - direct_count: Number of direct subscribers to create (default: 5)
+    - institution_count: Number of test institutions to create (default: 3)
+    - students_per_institution: Students per institution (default: 5)
+    
+    Requires Platform Admin authentication.
+    """
     try:
         from ..db.seed_students import seed_students
+        
         result = seed_students(
             session=db,
             direct_subscriber_count=direct_count,
             institution_count=institution_count,
             institution_student_count=students_per_institution,
         )
-        return jsonify(result), 200
+        
+        return result
     except Exception as e:
-        db.rollback()
         logger.error(f"Error seeding students: {e}", exc_info=True)
-        return jsonify({"error": "seed_failed", "message": str(e)}), 500
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error seeding students: {str(e)}",
+        )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Direct Subscriber Subscriptions
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 @router.route("/direct-subscriptions", methods=["GET"])
-@require_platform_admin
-def list_direct_subscriptions():
-    db: Session = get_db()
-    subscription_status = request.args.get("subscription_status")
-
+def list_direct_subscriptions(subscription_status: Optional[str] = None):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """List all direct subscriber students with their subscriptions (if any).
+    
+    Shows ALL direct subscriber students, including those without active subscriptions.
+    Uses LEFT JOIN to include students regardless of subscription status.
+    
+    Requires Platform Admin authentication.
+    """
+    from ..db.models import User
+    from ..db.subscription_models import Subscription, SubscriptionPlan
+    from sqlalchemy import outerjoin
+    
+    # Query ALL direct subscribers with LEFT JOIN to include those without subscriptions
     query = db.query(
         User.id,
         User.display_name,
@@ -508,18 +733,20 @@ def list_direct_subscriptions():
         User.role == 'student',
         User.student_subtype.in_(['direct_subscriber', 'dual']),
     )
-
+    
+    # Filter by active subscriptions only if status filter is applied
     if subscription_status:
         query = query.filter(Subscription.status == subscription_status)
     else:
+        # Show only active/trial subscriptions, or students with no subscription
         query = query.filter(
             (Subscription.status.in_(['trial', 'active', 'overdue', 'grace_period'])) |
             (Subscription.id.is_(None))
         )
-
+    
     results = query.all()
+    
     subscriptions_data = []
-
     for row in results:
         subscriptions_data.append({
             "id": str(row.subscription_id) if row.subscription_id else None,
@@ -534,115 +761,196 @@ def list_direct_subscriptions():
             "next_renewal_date": row.next_renewal_date.isoformat() if row.next_renewal_date else None,
             "price": float(row.price) if row.price else None,
         })
-
-    return jsonify({
+    
+    return {
         "count": len(subscriptions_data),
         "subscriptions": subscriptions_data,
-    }), 200
+    }
+
+
+# -----------------------------------------------------------------------------
+# Aggregate Analytics
+# -----------------------------------------------------------------------------
 
 
 @router.route("/analytics", methods=["GET"])
-@require_platform_admin
-def get_aggregate_analytics():
-    db: Session = get_db()
+def get_aggregate_analytics()-> AggregateAnalyticsResponse:    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Get aggregate analytics for the entire platform.
+    
+    Includes:
+    - Active users count by role and subscription status
+    - Subscription distribution by status and type
+    - Exam attempt statistics
+    - Revenue statistics
+    
+    Requires Platform Admin authentication.
+    """
     service = PlatformAdminService(db)
     analytics = service.get_aggregate_analytics()
-    return jsonify(analytics), 200
+    
+    return AggregateAnalyticsResponse(**analytics)
+
+
+__all__ = ["router"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Subscription Management - Direct Subscribers
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 @router.route("/subscriptions/<subscription_id>/renew", methods=["POST"])
-@require_platform_admin
-def renew_subscription(subscription_id: str):
-    db: Session = get_db()
-    try:
-        sid = UUID(subscription_id)
-    except (ValueError, TypeError):
-        return jsonify({"error": "validation_error", "message": "Invalid subscription_id"}), 400
-
-    subscription = db.query(Subscription).filter(Subscription.id == sid).first()
+def renew_subscription(subscription_id: UUID):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Renew a subscription (extend for another billing period).
+    
+    Requires Platform Admin authentication.
+    """
+    from ..db.subscription_models import Subscription
+    from datetime import timedelta
+    
+    subscription = db.query(Subscription).filter(
+        Subscription.id == subscription_id
+    ).first()
+    
     if not subscription:
-        return jsonify({"error": "not_found", "message": f"Subscription {subscription_id} not found"}), 404
-
+        raise HTTPException(
+            status_code=404,
+            detail=f"Subscription {subscription_id} not found",
+        )
+    
     if subscription.status == 'cancelled':
-        return jsonify({"error": "invalid_operation", "message": "Cannot renew a cancelled subscription"}), 400
-
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot renew a cancelled subscription",
+        )
+    
     try:
+        # Extend renewal date by one billing period
         if subscription.next_renewal_date:
-            if 'monthly' in (subscription.plan.billing_period.lower() if subscription.plan else 'monthly'):
+            if 'monthly' in subscription.plan.billing_period.lower():
                 subscription.next_renewal_date = subscription.next_renewal_date + timedelta(days=30)
-            else:
+            else:  # weekly
                 subscription.next_renewal_date = subscription.next_renewal_date + timedelta(days=7)
+        
+        # Set status to active
         subscription.status = 'active'
         subscription.updated_at = datetime.utcnow()
+        
         db.commit()
-
-        return jsonify({
+        
+        return {
             "success": True,
             "message": f"Subscription renewed successfully until {subscription.next_renewal_date.isoformat()}",
             "subscription_id": str(subscription.id),
             "next_renewal_date": subscription.next_renewal_date.isoformat(),
-        }), 200
+        }
     except Exception as e:
         db.rollback()
-        return jsonify({"error": "renewal_failed", "message": str(e)}), 500
+        logger.error(f"Error renewing subscription: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error renewing subscription: {str(e)}",
+        )
 
 
 @router.route("/subscriptions/<subscription_id>/cancel", methods=["POST"])
-@require_platform_admin
-def cancel_subscription(subscription_id: str):
-    db: Session = get_db()
-    try:
-        sid = UUID(subscription_id)
-    except (ValueError, TypeError):
-        return jsonify({"error": "validation_error", "message": "Invalid subscription_id"}), 400
-
-    subscription = db.query(Subscription).filter(Subscription.id == sid).first()
+def cancel_subscription(subscription_id: UUID):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Cancel a subscription.
+    
+    Requires Platform Admin authentication.
+    """
+    from ..db.subscription_models import Subscription
+    
+    subscription = db.query(Subscription).filter(
+        Subscription.id == subscription_id
+    ).first()
+    
     if not subscription:
-        return jsonify({"error": "not_found", "message": f"Subscription {subscription_id} not found"}), 404
-
+        raise HTTPException(
+            status_code=404,
+            detail=f"Subscription {subscription_id} not found",
+        )
+    
     if subscription.status == 'cancelled':
-        return jsonify({"error": "invalid_operation", "message": "Subscription is already cancelled"}), 400
-
+        raise HTTPException(
+            status_code=400,
+            detail="Subscription is already cancelled",
+        )
+    
     try:
         subscription.status = 'cancelled'
         subscription.cancellation_date = datetime.utcnow()
         subscription.updated_at = datetime.utcnow()
+        
         db.commit()
-
-        return jsonify({
+        
+        return {
             "success": True,
             "message": "Subscription cancelled successfully",
             "subscription_id": str(subscription.id),
             "cancellation_date": subscription.cancellation_date.isoformat(),
-        }), 200
+        }
     except Exception as e:
         db.rollback()
-        return jsonify({"error": "cancellation_failed", "message": str(e)}), 500
+        logger.error(f"Error cancelling subscription: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error cancelling subscription: {str(e)}",
+        )
+
+
+class StudentSubscriptionManageRequest(BaseModel):
+    action: str  # 'update' or 'remove' / 'cancel'
+    plan_id: Optional[UUID] = None
+    duration_months: Optional[int] = 1
+    renew_from: Optional[str] = None
 
 
 @router.route("/students/<user_id>/subscription/manage", methods=["POST"])
-@require_platform_admin
-def manage_student_subscription(user_id: str):
-    db: Session = get_db()
-    try:
-        uid = UUID(user_id)
-    except (ValueError, TypeError):
-        return jsonify({"error": "validation_error", "message": "Invalid user_id"}), 400
+def manage_student_subscription(user_id: UUID):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Update or remove/cancel a student's subscription.
+    
+    Setting status to 'cancelled' sets the account's subscription status to INACTIVE.
+    Requires Platform Admin authentication.
+    """
+    from ..db.models import User
+    from ..db.subscription_models import Subscription, SubscriptionPlan, SubscriptionEvent
+    from datetime import timedelta
 
-    data = request.get_json(silent=True) or {}
-    action = data.get("action")
-    plan_id_raw = data.get("plan_id")
-
-    plan_id: Optional[UUID] = None
-    if plan_id_raw:
-        try:
-            plan_id = UUID(str(plan_id_raw))
-        except (ValueError, TypeError):
-            pass
-
-    user = db.query(User).filter(User.id == uid, User.role == 'student').first()
+    user = db.query(User).filter(User.id == user_id, User.role == 'student').first()
     if not user:
-        return jsonify({"error": "not_found", "message": f"Student {user_id} not found"}), 404
+        raise HTTPException(
+            status_code=404,
+            detail=f"Student {user_id} not found",
+        )
 
     try:
         now = datetime.utcnow()
@@ -651,14 +959,15 @@ def manage_student_subscription(user_id: str):
             Subscription.status.in_(["trial", "active", "overdue", "grace_period"])
         ).all()
 
-        if action in ("remove", "cancel") or not plan_id:
+        if data.action in ("remove", "cancel") or not data.plan_id:
+            # Set all active subscriptions to cancelled (INACTIVE)
             if not active_subs:
-                return jsonify({
+                return {
                     "success": True,
                     "message": "Student already has no active subscription",
                     "user_id": str(user.id),
                     "subscription_status": "cancelled",
-                }), 200
+                }
 
             for sub in active_subs:
                 prev_status = sub.status
@@ -676,23 +985,26 @@ def manage_student_subscription(user_id: str):
                 db.add(event)
 
             db.commit()
-            return jsonify({
+            return {
                 "success": True,
                 "message": "Subscription removed successfully. Student status set to INACTIVE.",
                 "user_id": str(user.id),
                 "subscription_status": "cancelled",
-            }), 200
+            }
 
-        plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == plan_id).first()
+        # Action: update to a new plan
+        plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == data.plan_id).first()
         if not plan:
-            return jsonify({"error": "not_found", "message": f"Plan {plan_id} not found"}), 404
+            raise HTTPException(
+                status_code=404,
+                detail=f"Plan {data.plan_id} not found",
+            )
 
-        months = int(data.get("duration_months", 1) or 1)
+        months = data.duration_months or 1
         start_from = now
-        renew_from_str = data.get("renew_from")
-        if renew_from_str:
+        if data.renew_from:
             try:
-                start_from = datetime.fromisoformat(renew_from_str)
+                start_from = datetime.fromisoformat(data.renew_from)
             except Exception:
                 start_from = now
 
@@ -739,62 +1051,109 @@ def manage_student_subscription(user_id: str):
             db.add(event)
 
         db.commit()
-        return jsonify({
+        return {
             "success": True,
             "message": f"Subscription updated to {plan.name} until {next_renewal.strftime('%d %b %Y')}",
             "user_id": str(user.id),
             "subscription_id": str(sub.id),
             "plan_name": plan.name,
             "subscription_status": "active",
-        }), 200
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Error managing student subscription: {e}", exc_info=True)
-        return jsonify({"error": "manage_failed", "message": str(e)}), 500
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error managing student subscription: {str(e)}",
+        )
+
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Password Reset for Direct Subscribers (Admin-initiated)
+# ─────────────────────────────────────────────────────────────────────────────
+
+class PasswordResetRequest(BaseModel):
+    """Request to reset a student's password."""
+    password: str = Field(
+        ..., 
+        min_length=8, 
+        max_length=72,
+        description="New password (8-72 characters)"
+    )
 
 
 @router.route("/students/<user_id>/reset-password", methods=["POST"])
-@require_platform_admin
-def reset_student_password(user_id: str):
-    db: Session = get_db()
-    try:
-        uid = UUID(user_id)
-    except (ValueError, TypeError):
-        return jsonify({"error": "validation_error", "message": "Invalid user_id"}), 400
-
-    data = request.get_json(silent=True) or {}
-    new_password = data.get("password")
-
+def reset_student_password(user_id: UUID):    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    
+    from flask import g
+    db = getattr(g, "db", None)
+    session = db
+    """Reset a direct subscriber student's password.
+    
+    Allows platform admins to set a new password for students who forgot theirs.
+    
+    Requires Platform Admin authentication.
+    
+    Args:
+        user_id: UUID of the student user
+        data: New password
+        db: Database session
+        
+    Returns:
+        Success response with confirmation
+    """
     from ..db.models import User
     from ..auth.passwords import hash_password
-
+    
     try:
+        # Find the user
         user = db.query(User).filter(
-            User.id == uid,
+            User.id == user_id,
             User.role == 'student',
             User.student_subtype.in_(['direct_subscriber', 'dual'])
         ).first()
-
+        
         if not user:
-            return jsonify({"error": "not_found", "message": "Student not found or is not a direct subscriber"}), 404
-
-        if not new_password or len(new_password) < 8:
-            return jsonify({"error": "validation_error", "message": "Password must be at least 8 characters"}), 400
-
-        user.password_hash = hash_password(new_password)
+            raise HTTPException(
+                status_code=404,
+                detail="Student not found or is not a direct subscriber"
+            )
+        
+        # Validate password
+        if len(data.password) < 8:
+            raise HTTPException(
+                status_code=400,
+                detail="Password must be at least 8 characters"
+            )
+        
+        # Hash and update password
+        user.password_hash = hash_password(data.password)
         user.updated_at = datetime.utcnow()
+        
+        db.add(user)
         db.commit()
-
-        return jsonify({
+        
+        logger.info(f"Admin reset password for student {user.email} ({user.id})")
+        
+        return {
             "success": True,
             "message": "Password reset successfully",
             "user_id": str(user.id),
             "email": user.email,
-        }), 200
+        }
+        
+    except HTTPException:
+        raise
     except Exception as e:
         db.rollback()
         logger.error(f"Error resetting password: {e}", exc_info=True)
-        return jsonify({"error": "reset_failed", "message": str(e)}), 500
-
-
-__all__ = ["router"]
+        raise HTTPException(
+            status_code=500,
+            detail="Error resetting password"
+        )

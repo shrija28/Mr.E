@@ -28,7 +28,7 @@ class ValidationFailure:
     reason: str
 
 
-def validate_email(value: str) -> str | ValidationFailure:
+def validate_email(value: str)-> str | ValidationFailure:
     """Return the normalised email or a :class:`ValidationFailure`.
 
     Uses :mod:`email_validator` for RFC 5322 syntax + domain shape,
@@ -52,7 +52,7 @@ def validate_email(value: str) -> str | ValidationFailure:
     return info.normalized
 
 
-def validate_password(value: str) -> str | ValidationFailure:
+def validate_password(value: str)-> str | ValidationFailure:
     """Enforce REQ-1.4: ≥8 chars and ≥1 digit."""
 
     if not isinstance(value, str):
@@ -68,7 +68,7 @@ def validate_password(value: str) -> str | ValidationFailure:
     return value
 
 
-def validate_display_name(value: str) -> str | ValidationFailure:
+def validate_display_name(value: str)-> str | ValidationFailure:
     """Enforce REQ-1.1: 1–50 character display name (after trimming)."""
 
     if not isinstance(value, str):

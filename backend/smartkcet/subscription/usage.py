@@ -34,7 +34,7 @@ class UsageTracker:
         """
         self.db = db
 
-    def can_start_exam(self, user_id: UUID) -> UsageCheckResult:
+    def can_start_exam(self, user_id: UUID)-> UsageCheckResult:
         """Check if user has remaining quota.
         
         Uses pessimistic locking to prevent race conditions on concurrent
@@ -301,9 +301,7 @@ class UsageTracker:
             resets_at=None,
         )
 
-    def record_attempt(
-        self, user_id: UUID, submission_id: UUID, subject: str
-    ) -> None:
+    def record_attempt(self, user_id: UUID, submission_id: UUID, subject: str)-> None:
         """Record a successful exam start against the user's quota.
         
         **Requirements:** 5.1, 5.7
@@ -371,7 +369,7 @@ class UsageTracker:
         self.db.add(usage_record)
         self.db.commit()
 
-    def get_remaining_attempts(self, user_id: UUID) -> RemainingAttempts:
+    def get_remaining_attempts(self, user_id: UUID)-> RemainingAttempts:
         """Return remaining attempts for display on dashboard.
         
         **Requirements:** 2.4
@@ -544,9 +542,7 @@ class UsageTracker:
             period_end=subscription.next_renewal_date,
         )
 
-    def reset_period_counters(
-        self, institution_id: UUID, period: str
-    ) -> None:
+    def reset_period_counters(self, institution_id: UUID, period: str)-> None:
         """Reset weekly/monthly counters for an institution.
         
         **Requirements:** 5.6
@@ -598,12 +594,7 @@ class UsageTracker:
         
         self.db.commit()
 
-    def get_usage_stats(
-        self,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        subscription_tier: Optional[str] = None,
-    ) -> dict:
+    def get_usage_stats(self, start_date: Optional[datetime] = None, end_date: Optional[datetime] = None, subscription_tier: Optional[str] = None)-> dict:
         """Platform admin query for usage analytics.
         
         **Requirements:** 5.8

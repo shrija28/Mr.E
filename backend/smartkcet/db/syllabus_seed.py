@@ -302,7 +302,7 @@ SYLLABUS_DATA = [
 ]
 
 
-def seed_syllabus(session) -> int:
+def seed_syllabus(session)-> int:
     """Insert all KCET syllabus topics if the table is empty.
 
     Returns the number of rows inserted (0 if already seeded).

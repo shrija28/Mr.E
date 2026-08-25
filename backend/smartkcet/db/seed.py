@@ -57,13 +57,13 @@ _BCRYPT_HASH_RE = re.compile(
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
-def _is_valid_bcrypt_hash(value: str) -> bool:
+def _is_valid_bcrypt_hash(value: str)-> bool:
     """Return True if ``value`` looks like a bcrypt hash."""
 
     return bool(_BCRYPT_HASH_RE.match(value))
 
 
-def _is_valid_email(value: str) -> bool:
+def _is_valid_email(value: str)-> bool:
     """Return True if ``value`` looks like a syntactically valid email."""
 
     return bool(_EMAIL_RE.match(value)) and len(value) <= 254
@@ -74,7 +74,7 @@ def _is_valid_email(value: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _read_admin_config() -> tuple[str, str, str]:
+def _read_admin_config()-> tuple[str, str, str]:
     """Read and validate admin env vars; raise :class:`SystemExit` on error."""
 
     email = os.getenv("ADMIN_EMAIL")
@@ -115,7 +115,7 @@ def _read_admin_config() -> tuple[str, str, str]:
     return email, password_hash, display_name
 
 
-def seed_admin(session: Optional[Session] = None) -> str:
+def seed_admin(session: Optional[Session] = None)-> str:
     """Create or update the singleton admin row.
 
     Returns one of two human-readable status strings::
@@ -177,7 +177,7 @@ def seed_admin(session: Optional[Session] = None) -> str:
             session.close()
 
 
-def seed_subscription_plans(session: Optional[Session] = None) -> int:
+def seed_subscription_plans(session: Optional[Session] = None)-> int:
     """Create default subscription plans for platform and institutions.
     
     Returns the number of plans inserted. Returns 0 if plans already exist
@@ -347,7 +347,7 @@ def seed_subscription_plans(session: Optional[Session] = None) -> int:
             session.close()
 
 
-def main() -> None:
+def main()-> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     seed_admin()
     seed_subscription_plans()

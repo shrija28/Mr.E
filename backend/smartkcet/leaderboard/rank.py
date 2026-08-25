@@ -37,9 +37,7 @@ class RankedEntry:
     attempt_count: int = 0
 
 
-def assign_ranks(
-    entries: Union[List[Tuple[str, float]], List[RankedEntry]],
-) -> Union[List[Tuple[str, int, float]], List[RankedEntry]]:
+def assign_ranks(entries: Union[List[Tuple[str, float]], List[RankedEntry]])-> Union[List[Tuple[str, int, float]], List[RankedEntry]]:
     """Sort entries by composite_score descending and assign ranks.
 
     Uses shared-rank-and-skip semantics (standard competition ranking):
@@ -60,9 +58,7 @@ def assign_ranks(
         return _assign_ranks_entries(entries)  # type: ignore[arg-type]
 
 
-def _assign_ranks_tuples(
-    entries: List[Tuple[str, float]],
-) -> List[Tuple[str, int, float]]:
+def _assign_ranks_tuples(entries: List[Tuple[str, float]])-> List[Tuple[str, int, float]]:
     """Rank a list of (student_id, composite_score) tuples.
 
     Returns a list of (student_id, rank, composite_score) sorted
@@ -84,7 +80,7 @@ def _assign_ranks_tuples(
     return result
 
 
-def _assign_ranks_entries(entries: List[RankedEntry]) -> List[RankedEntry]:
+def _assign_ranks_entries(entries: List[RankedEntry])-> List[RankedEntry]:
     """Rank a list of RankedEntry objects in-place.
 
     Sorts descending by composite_score and assigns rank fields.

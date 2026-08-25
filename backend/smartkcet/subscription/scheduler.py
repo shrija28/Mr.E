@@ -38,8 +38,7 @@ class SubscriptionScheduler:
             db: SQLAlchemy database session
         """
         self.db = db
-
-    async def subscription_lifecycle_tick(self) -> dict:
+    def subscription_lifecycle_tick(self)-> dict:
         """Process all pending subscription state transitions.
         
         This method is called periodically by the scheduler to:
@@ -69,15 +68,15 @@ class SubscriptionScheduler:
         
         try:
             # Process pending renewals (subscriptions past renewal date)
-            grace_period_count = await self.process_pending_renewals()
+            grace_period_count = self.process_pending_renewals()
             results["grace_period"] = grace_period_count
             
             # Expire subscriptions past grace period
-            expired_count = await self.process_grace_period_expirations()
+            expired_count = self.process_grace_period_expirations()
             results["expired"] = expired_count
             
             # Process cancellations (subscriptions marked for cancellation)
-            cancelled_count = await self.process_pending_cancellations()
+            cancelled_count = self.process_pending_cancellations()
             results["cancelled"] = cancelled_count
             
             logger.info(
@@ -90,8 +89,7 @@ class SubscriptionScheduler:
             results["errors"] = 1
         
         return results
-
-    async def process_pending_renewals(self) -> int:
+    def process_pending_renewals(self)-> int:
         """Process subscriptions that have reached their renewal date.
         
         For subscriptions past their renewal date + 24 hours without payment,
@@ -158,8 +156,7 @@ class SubscriptionScheduler:
             self.db.commit()
         
         return count
-
-    async def process_grace_period_expirations(self) -> int:
+    def process_grace_period_expirations(self)-> int:
         """Expire subscriptions that have passed their grace period.
         
         **Requirements:** 4.4
@@ -218,8 +215,7 @@ class SubscriptionScheduler:
             self.db.commit()
         
         return count
-
-    async def process_pending_cancellations(self) -> int:
+    def process_pending_cancellations(self)-> int:
         """Process subscriptions marked for cancellation.
         
         Subscriptions with a cancellation_date set and past their
@@ -282,8 +278,7 @@ class SubscriptionScheduler:
             self.db.commit()
         
         return count
-
-    async def cleanup_old_events(self, days_to_keep: int = 90) -> int:
+    def cleanup_old_events(self, days_to_keep: int = 90)-> int:
         """Clean up subscription events older than specified days.
         
         Args:
@@ -315,7 +310,7 @@ class SubscriptionScheduler:
             return 0
 
 
-async def start_subscription_scheduler(db: Session, interval_minutes: int = 60):
+def start_subscription_scheduler(db: Session, interval_minutes: int = 60):
     """Start the subscription lifecycle scheduler.
     
     This function should be called on application startup to begin
@@ -331,13 +326,12 @@ async def start_subscription_scheduler(db: Session, interval_minutes: int = 60):
         f"Starting subscription lifecycle scheduler "
         f"(interval: {interval_minutes} minutes)"
     )
-    
-    async def scheduler_loop():
+    def scheduler_loop():
         """Main scheduler loop that runs periodically."""
         while True:
             try:
                 scheduler = SubscriptionScheduler(db)
-                results = await scheduler.subscription_lifecycle_tick()
+                results = scheduler.subscription_lifecycle_tick()
                 
                 logger.debug(f"Scheduler tick results: {results}")
                 
@@ -345,14 +339,14 @@ async def start_subscription_scheduler(db: Session, interval_minutes: int = 60):
                 logger.error(f"Scheduler tick failed: {e}", exc_info=True)
             
             # Wait for next tick
-            await asyncio.sleep(interval_minutes * 60)
+            asyncio.sleep(interval_minutes * 60)
     
     # Start the scheduler task
     _scheduler_task = asyncio.create_task(scheduler_loop())
     logger.info("Subscription lifecycle scheduler started")
 
 
-async def stop_subscription_scheduler():
+def stop_subscription_scheduler():
     """Stop the subscription lifecycle scheduler.
     
     This function should be called on application shutdown to gracefully
@@ -364,14 +358,14 @@ async def stop_subscription_scheduler():
         logger.info("Stopping subscription lifecycle scheduler")
         _scheduler_task.cancel()
         try:
-            await _scheduler_task
+            _scheduler_task
         except asyncio.CancelledError:
             pass
         _scheduler_task = None
         logger.info("Subscription lifecycle scheduler stopped")
 
 
-def get_scheduler_interval() -> int:
+def get_scheduler_interval()-> int:
     """Get the scheduler interval from environment variable.
     
     Returns:

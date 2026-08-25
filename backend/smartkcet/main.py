@@ -1,121 +1,105 @@
-"""Flask application factory.
+"""Flask application factory."""
 
-Creates and configures the Flask application instance, registers all Flask
-blueprints, registers database teardown handlers, sets up static asset serving,
-and seeds initial database state.
-"""
-
-from __future__ import annotations
-
-import logging
+import warnings
+from pathlib import Path
 import os
 import sys
-import warnings
-from decimal import Decimal
-from pathlib import Path
 
-from flask import Flask, jsonify, redirect, request, send_file, send_from_directory
+os.environ["PYTHONUNBUFFERED"] = "1"
+
+import nest_asyncio
+from flask import Flask, jsonify, request, send_from_directory, redirect, Blueprint
 from flask_cors import CORS
-from sqlalchemy import func, text
 
-from .config import validate_startup_config
-from .db.session import SessionLocal, teardown_db
-
-# Suppress noise
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+nest_asyncio.apply()
 
-logger = logging.getLogger("smartkcet.main")
-
+from .config import validate_startup_config  # noqa: E402
 STARTUP_CONFIG = validate_startup_config()
 
+try:
+    if sys.version_info >= (3, 14):
+        import logging as _logging
+        _logging.getLogger("smartkcet.main").info(
+            "Python 3.14 detected: skipping Groq validation"
+        )
+    else:
+        from .rag.groq_client import validate_groq_api_key, reset_groq_client
+        reset_groq_client()
+        validate_groq_api_key()
+except Exception as _groq_err:
+    import logging as _logging
+    _logging.getLogger("smartkcet.main").warning(
+        "Groq API key validation failed at startup: %s.",
+        _groq_err,
+    )
 
-def create_app() -> Flask:
-    _project_root = Path(__file__).resolve().parent.parent.parent
-    _frontend_dir = _project_root / "frontend"
+def create_app():
+    app = Flask(
+        __name__,
+        static_folder='../../frontend',
+        static_url_path=''
+    )
+    CORS(app, resources={r"/*": {"origins": "*"}})
 
-    app = Flask(__name__, static_folder=None)
-    CORS(app)
+    from .db.session import SessionLocal
+    from flask import g
 
-    # Database Session Teardown
-    app.teardown_appcontext(teardown_db)
+    @app.before_request
+    def set_db_session():
+        g.db = SessionLocal()
 
-    # Import Blueprints
-    from .admin import public_syllabus_router as syllabus_public_router
-    from .admin import router as admin_api_router, sub_blueprints as admin_sub_blueprints
-    from .auth import router as auth_router
-    from .contact import router as contact_router
-    from .institution import router as institution_router
-    from .institution.content import router as institution_content_router
-    from .payments import router as payments_router
-    from .routes.legacy import router as legacy_router
-    from .routes.pages import router as pages_router
-    from .student import router as student_api_router, sub_blueprints as student_sub_blueprints
-    from .student.exam_access import router as exam_access_router
-    from .subscription import router as subscription_router
+    @app.teardown_request
+    def close_db_session(exception=None):
+        db = getattr(g, 'db', None)
+        if db is not None:
+            db.close()
+    from .admin import router as admin_api_router  # noqa: E402
+    from .auth import router as auth_router  # noqa: E402
+    from .contact import router as contact_router  # noqa: E402
+    from .institution import router as institution_router  # noqa: E402
+    from .payments import router as payments_router  # noqa: E402
+    from .routes.legacy import router as legacy_router  # noqa: E402
+    from .routes.pages import router as pages_router  # noqa: E402
+    from .student import router as student_api_router  # noqa: E402
+    from .subscription import router as subscription_router  # noqa: E402
+    from .student.exam_access import router as exam_access_router  # noqa: E402
 
-    # Register Blueprints
-    app.register_blueprint(auth_router)
+    # Register blueprints
+    app.register_blueprint(auth_router, url_prefix='/api/auth')
     app.register_blueprint(contact_router)
-    app.register_blueprint(subscription_router)
+    app.register_blueprint(subscription_router, url_prefix='/api/subscription')
+
+    print('\n========================================')
+    print('FIXED CREDENTIALS LOADED:')
+    print('Admin Login: admin@mre.com / admin')
+    print('Institution Login: institution@mre.com / inst')
+    print('========================================\n')
+    app.register_blueprint(institution_router, url_prefix='/api/institution')
+    app.register_blueprint(admin_api_router, url_prefix='/api/admin')
+    app.register_blueprint(student_api_router, url_prefix='/api/student')
     app.register_blueprint(payments_router)
-    app.register_blueprint(institution_router)
-    app.register_blueprint(institution_content_router)
     app.register_blueprint(exam_access_router)
-    app.register_blueprint(syllabus_public_router)
-
-    app.register_blueprint(student_api_router)
-    for bp in student_sub_blueprints:
-        app.register_blueprint(bp)
-
-    app.register_blueprint(admin_api_router)
-    for bp in admin_sub_blueprints:
-        app.register_blueprint(bp)
-
     app.register_blueprint(pages_router)
     app.register_blueprint(legacy_router)
 
-    # Public health check
     @app.route("/api/health", methods=["GET"])
     def api_health():
-        return jsonify({"status": "ok"}), 200
+        return jsonify({"status": "ok"})
 
-    # Static File Routes
-    @app.route("/css/<path:filename>", methods=["GET"])
-    def serve_css(filename: str):
-        file_path = _frontend_dir / "css" / filename
-        if file_path.exists() and file_path.is_file():
-            return send_from_directory(_frontend_dir / "css", filename, mimetype="text/css")
-        return jsonify({"error": "not_found"}), 404
-
-    @app.route("/js/<path:filename>", methods=["GET"])
-    def serve_js(filename: str):
-        file_path = _frontend_dir / "js" / filename
-        if file_path.exists() and file_path.is_file():
-            return send_from_directory(_frontend_dir / "js", filename, mimetype="text/javascript")
-        return jsonify({"error": "not_found"}), 404
-
-    @app.route("/html/<path:filename>", methods=["GET"])
-    def serve_html(filename: str):
-        file_path = _frontend_dir / "html" / filename
-        if file_path.exists() and file_path.is_file():
-            return send_from_directory(_frontend_dir / "html", filename, mimetype="text/html")
-        return jsonify({"error": "not_found"}), 404
-
-    # No-cache Headers Middleware
     @app.after_request
-    def add_no_cache_headers(response):
-        path = request.path or ""
+    def add_cache_control(response):
+        path = request.path
         if path.startswith("/api/") or path.endswith(".html") or path.endswith(".js") or path.startswith("/html/") or path.startswith("/js/"):
             response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
             response.headers["Pragma"] = "no-cache"
             response.headers["Expires"] = "0"
         return response
 
-    # 404 Handler for HTML navigation
     @app.errorhandler(404)
-    def page_not_found(e):
-        path = request.path or ""
+    def custom_http_exception_handler(error):
+        path = request.path
         is_api = path.startswith("/api/")
         is_static = path.startswith("/css/") or path.startswith("/js/")
         accept = request.headers.get("accept", "")
@@ -124,90 +108,21 @@ def create_app() -> Flask:
         if not is_api and not is_static and wants_html and path != "/not-found":
             from urllib.parse import quote
             return redirect(f"/not-found?path={quote(path)}", code=302)
+        
+        return jsonify({"detail": "Not Found"}), 404
 
-        return jsonify({"error": "not_found", "message": "The requested URL was not found on the server."}), 404
+    @app.route("/css/<path:filepath>")
+    def serve_css(filepath):
+        return send_from_directory(os.path.join(app.static_folder, 'css'), filepath)
 
-    # Run Database Seeding & Self-Healing
-    _run_startup_seeding()
+    @app.route("/js/<path:filepath>")
+    def serve_js(filepath):
+        return send_from_directory(os.path.join(app.static_folder, 'js'), filepath)
+
+    @app.route("/html/<path:filepath>")
+    def serve_html(filepath):
+        return send_from_directory(os.path.join(app.static_folder, 'html'), filepath)
 
     return app
 
-
-def _run_startup_seeding():
-    from .db.seed import seed_admin, seed_subscription_plans
-    from .db.seed_students import (
-        create_institution_subscriptions,
-        create_trial_subscriptions,
-        seed_test_direct_subscribers,
-        seed_test_institution_students,
-        seed_test_institutions,
-    )
-    from .db.syllabus_seed import seed_syllabus
-    from .db.subscription_models import Institution, SubscriptionPlan
-
-    db = SessionLocal()
-
-    try:
-        db.execute(text("ALTER TABLE syllabus_topics ADD COLUMN textbook_filename VARCHAR(255)"))
-        db.execute(text("ALTER TABLE syllabus_topics ADD COLUMN textbook_path VARCHAR(255)"))
-        db.commit()
-    except Exception:
-        db.rollback()
-
-    try:
-        db.execute(text("ALTER TABLE questions ADD COLUMN source_type VARCHAR(20) NOT NULL DEFAULT 'question_paper'"))
-        db.commit()
-    except Exception:
-        db.rollback()
-
-    try:
-        seed_admin()
-    except Exception as e:
-        logger.warning("Admin seed failed (non-fatal): %s", e)
-
-    try:
-        seed_syllabus(db)
-    except Exception as e:
-        logger.warning("Syllabus seed failed (non-fatal): %s", e)
-
-    try:
-        seed_subscription_plans()
-    except Exception as e:
-        logger.warning("Subscription plans seed failed (non-fatal): %s", e)
-
-    try:
-        existing_count = db.query(func.count(Institution.id)).scalar()
-        if existing_count == 0:
-            institutions = seed_test_institutions(db, count=3)
-            direct_students = seed_test_direct_subscribers(db, count=5)
-            institution_students = seed_test_institution_students(db, institutions, count_per_institution=5)
-            create_trial_subscriptions(db, direct_students)
-            create_institution_subscriptions(db, institutions)
-    except Exception as e:
-        logger.warning("Test data seed failed (non-fatal): %s", e)
-
-    try:
-        wrong_prices = {
-            Decimal("9.99"): Decimal("349.00"),
-            Decimal("99.99"): Decimal("2999.00"),
-        }
-        for wrong_price, correct_price in wrong_prices.items():
-            wrong_plans = db.query(SubscriptionPlan).filter(
-                SubscriptionPlan.price == wrong_price,
-                SubscriptionPlan.plan_type == "individual"
-            ).all()
-            if wrong_plans:
-                for plan in wrong_plans:
-                    plan.price = correct_price
-                    db.add(plan)
-                db.commit()
-    except Exception as e:
-        db.rollback()
-        logger.warning("Pricing safety check failed (non-fatal): %s", e)
-
-    db.close()
-
-
-app = create_app()
-
-__all__ = ["app", "create_app", "STARTUP_CONFIG"]
+__all__ = ["create_app", "STARTUP_CONFIG"]

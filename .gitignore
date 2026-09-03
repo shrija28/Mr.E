@@ -49,6 +49,7 @@ backend/*.db
 # =====================================================
 node_modules/
 frontend/node_modules/
+frontend-react/node_modules/
 
 # =====================================================
 # IDE
@@ -94,12 +95,18 @@ structure.txt
 project_files.txt
 project_structure.txt
 
-# Local credential / user reference docs# Optional internal project reference
+# Local credential / user reference docs
+# Optional internal project reference
 
 # Local credential / internal docs
 ALL_TEST_CREDENTIALS.md
 TEST_CREDENTIALS.md
 DATABASE_USERS_COMPLETE.md
 QUICK_LOGIN_REFERENCE.md
-PROJECT_STRUCTURE.mdscratch/
-scratch
+PROJECT_STRUCTURE.md
+scratch/
+
+# Local cookies and temporary preview files
+*_cookies.txt
+cookies.txt
+temp_home.html

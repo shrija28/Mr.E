@@ -67,6 +67,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from flask import request as flask_request
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -82,10 +83,11 @@ from ..db.session import get_async_session as get_session
 # ---------------------------------------------------------------------------
 
 
-def _read_token()-> Optional[str]:
+def _read_token(request_obj: Optional[Request] = None)-> Optional[str]:
     """Return the raw Session_Token from the cookie, or ``None``."""
 
-    raw = request.cookies.get(SESSION_COOKIE_NAME)
+    req = request_obj or flask_request
+    raw = req.cookies.get(SESSION_COOKIE_NAME)
     if not isinstance(raw, str) or not raw:
         return None
     return raw
@@ -178,14 +180,20 @@ def require_institution_admin()-> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
-def resolve_payload(session: Session)-> Optional[dict[str, Any]]:
+def resolve_payload(request_obj: Optional[Request] = None, session: Optional[Session] = None)-> Optional[dict[str, Any]]:
     """Return the decoded JWT payload, or ``None`` on any failure.
 
     HTML route handlers (task 3.5) call this to choose between rendering
-    the page and issuing a ``RedirectResponse``.  Never raises.
+    the page and issuing a ``RedirectResponse``.  Never raises. Supports
+    both Flask-style calls (request, session) and no-arg usage.
     """
 
-    raw = _read_token(request)
+    req = request_obj or flask_request
+    if session is None:
+        from ..db.session import SessionLocal
+        session = SessionLocal()
+
+    raw = _read_token(req)
     if raw is None:
         return None
     try:

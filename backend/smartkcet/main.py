@@ -38,7 +38,7 @@ except Exception as _groq_err:
 def create_app():
     app = Flask(
         __name__,
-        static_folder='../../frontend',
+        static_folder='../../frontend-react/dist',
         static_url_path=''
     )
     CORS(app, resources={r"/*": {"origins": "*"}})
@@ -87,6 +87,18 @@ def create_app():
     @app.route("/api/health", methods=["GET"])
     def api_health():
         return jsonify({"status": "ok"})
+
+    @app.route("/", defaults={"filepath": ""})
+    @app.route("/<path:filepath>")
+    def serve_react(filepath):
+        if filepath.startswith("api/"):
+            return jsonify({"detail": "Not Found"}), 404
+
+        frontend_path = Path(app.static_folder) / filepath
+        if filepath and frontend_path.is_file():
+            return send_from_directory(app.static_folder, filepath)
+
+        return send_from_directory(app.static_folder, "index.html")
 
     @app.after_request
     def add_cache_control(response):

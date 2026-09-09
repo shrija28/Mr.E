@@ -70,7 +70,7 @@ const LoginPage = () => {
       
 
       <main style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 60px)', padding: '20px' }}>
-        <div className="section-card" style={{ maxWidth: '420px', width: '100%', padding: '32px' }}>
+        <div className="section-card login-card" style={{ width: '100%' }}>
           <h2 style={{ marginBottom: '4px' }}>Welcome Back</h2>
           <p className="input-label" style={{ marginBottom: '20px', textTransform: 'none', fontSize: '0.9rem' }}>Sign in to your account</p>
 
@@ -100,7 +100,7 @@ const LoginPage = () => {
 
           {error && <div style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid var(--red)', borderRadius: 'var(--rs)', padding: '10px 14px', marginBottom: '16px', fontSize: '0.85rem', color: 'var(--red-l)' }}>{error}</div>}
 
-          <form onSubmit={handleLogin}>
+          <form className="login-form" onSubmit={handleLogin}>
             <div className="input-group">
               <label className="input-label" htmlFor="email">Email</label>
               <input 

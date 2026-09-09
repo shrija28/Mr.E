@@ -63,14 +63,14 @@ const RegisterPage = () => {
       
 
       <main style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 'calc(100vh - 60px)', padding: '20px' }}>
-        <div className="section-card" style={{ maxWidth: '420px', width: '100%', padding: '32px' }}>
+        <div className="section-card register-card" style={{ width: '100%' }}>
           <h2 style={{ marginBottom: '8px' }}>Create Account</h2>
           <p className="input-label" style={{ marginBottom: '24px', textTransform: 'none', fontSize: '0.9rem' }}>Register for Mr.E</p>
 
           {error && <div style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid var(--red)', borderRadius: 'var(--rs)', padding: '10px 14px', marginBottom: '16px', fontSize: '0.85rem', color: 'var(--red-l)' }}>{error}</div>}
           {success && <div style={{ background: 'rgba(5,150,105,0.1)', border: '1px solid var(--green)', borderRadius: 'var(--rs)', padding: '10px 14px', marginBottom: '16px', fontSize: '0.85rem', color: 'var(--green-l)' }}>{success}</div>}
 
-          <form onSubmit={handleRegister} autoComplete="off">
+          <form className="register-form" onSubmit={handleRegister} autoComplete="off">
             <div className="input-group" style={{ marginBottom: '16px' }}>
               <label className="input-label" htmlFor="displayName">Display Name</label>
               <input 

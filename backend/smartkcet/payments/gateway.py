@@ -15,6 +15,8 @@ import os
 import uuid
 from typing import Any, Optional
 
+import requests
+
 logger = logging.getLogger("smartkcet.payments.gateway")
 
 _RAZORPAY_KEY_ID     = os.getenv("RAZORPAY_KEY_ID", "")
@@ -60,9 +62,9 @@ def create_order(amount_paise: int, receipt: str, notes: Optional[dict] = None)-
     In dev mode or when keys are not configured, returns a mock order so
     developers can test the full UI flow without real Razorpay credentials.
     """
-    if not _KEYS_CONFIGURED or _DEV_MODE:
+    if not _KEYS_CONFIGURED:
         mock_id = "order_mock_" + uuid.uuid4().hex[:16]
-        logger.info("DEV MODE — returning mock Razorpay order %s", mock_id)
+        logger.info("Razorpay keys unavailable — returning mock order %s", mock_id)
         return {
             "id": mock_id,
             "amount": amount_paise,
@@ -74,7 +76,21 @@ def create_order(amount_paise: int, receipt: str, notes: Optional[dict] = None)-
 
     client = _get_client()
     if client is None:
-        raise RuntimeError("Razorpay client unavailable")
+        response = requests.post(
+            "https://api.razorpay.com/v1/orders",
+            auth=(_RAZORPAY_KEY_ID, _RAZORPAY_KEY_SECRET),
+            json={
+                "amount": amount_paise,
+                "currency": "INR",
+                "receipt": receipt,
+                "notes": notes or {},
+            },
+            timeout=15,
+        )
+        response.raise_for_status()
+        order = response.json()
+        logger.info("Created Razorpay order %s via HTTP API", order["id"])
+        return order
 
     data = {
         "amount":   amount_paise,

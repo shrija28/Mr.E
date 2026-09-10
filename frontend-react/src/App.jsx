@@ -51,6 +51,7 @@ import StudentInstitutionLeaderboard from './pages/auto/StudentInstitutionLeader
 import StudentInstitutionPerformance from './pages/auto/StudentInstitutionPerformance';
 import StudentPricing from './pages/auto/StudentPricing';
 import Subscription from './pages/auto/Subscription';
+import RazorpaySubscription from './pages/RazorpaySubscription';
 import Syllabus from './pages/auto/Syllabus';
 
 // Public Layout Wrapper
@@ -81,7 +82,7 @@ function App() {
           <Route element={<StudentLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/exam" element={<Exam />} />
-            <Route path="/subscription" element={<Subscription />} />
+            <Route path="/subscription" element={<RazorpaySubscription />} />
             <Route path="/syllabus" element={<Syllabus />} />
             <Route path="/student-pricing" element={<StudentPricing />} />
             

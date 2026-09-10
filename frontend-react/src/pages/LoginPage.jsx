@@ -27,6 +27,7 @@ const LoginPage = () => {
 
       const res = await fetch(endpoint, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
@@ -44,7 +45,7 @@ const LoginPage = () => {
       }
 
       // Successful login
-      login(data, "http-only-cookie");
+      login(data);
       
       // Redirect based on role or explicit redirect from backend
       if (data.redirect) navigate(data.redirect);

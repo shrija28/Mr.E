@@ -88,6 +88,10 @@ def _read_token(request_obj: Optional[Request] = None)-> Optional[str]:
 
     req = request_obj or flask_request
     raw = req.cookies.get(SESSION_COOKIE_NAME)
+    if not raw:
+        authorization = req.headers.get("Authorization", "")
+        if authorization.lower().startswith("bearer "):
+            raw = authorization[7:].strip()
     if not isinstance(raw, str) or not raw:
         return None
     return raw
@@ -125,7 +129,7 @@ def require_authenticated()-> dict[str, Any]:
     db = getattr(g, "db", None)
     session = db
     """Require any authenticated user."""
-    raw = _read_token(request)
+    raw = _read_token(flask_request)
     if raw is None:
         raise _unauthorized()
     try:
@@ -217,7 +221,7 @@ def current_user_id()-> Optional[str]:
     dependencies instead.
     """
 
-    raw = _read_token(request)
+    raw = _read_token(flask_request)
     if raw is None:
         return None
     # Decode without revocation check — callers that need enforcement
@@ -246,7 +250,7 @@ def current_user(session: Session)-> Optional[User]:
     points at a user that no longer exists.
     """
 
-    payload = resolve_payload(request, session)
+    payload = resolve_payload(flask_request, session)
     if payload is None:
         return None
     sub = payload.get("sub")

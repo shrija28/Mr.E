@@ -10,6 +10,7 @@ os.environ["PYTHONUNBUFFERED"] = "1"
 import nest_asyncio
 from flask import Flask, jsonify, request, send_from_directory, redirect, Blueprint
 from flask_cors import CORS
+from fastapi.exceptions import HTTPException as FastAPIHTTPException
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -36,10 +37,11 @@ except Exception as _groq_err:
     )
 
 def create_app():
+    frontend_dist = Path(__file__).resolve().parents[2] / 'frontend-react' / 'dist'
     app = Flask(
         __name__,
-        static_folder='../../frontend-react/dist',
-        static_url_path=''
+        static_folder=str(frontend_dist / 'assets'),
+        static_url_path='/assets'
     )
     CORS(app, resources={r"/*": {"origins": "*"}})
 
@@ -79,7 +81,7 @@ def create_app():
     app.register_blueprint(institution_router, url_prefix='/api/institution')
     app.register_blueprint(admin_api_router, url_prefix='/api/admin')
     app.register_blueprint(student_api_router, url_prefix='/api/student')
-    app.register_blueprint(payments_router)
+    app.register_blueprint(payments_router, url_prefix='/api/payments')
     app.register_blueprint(exam_access_router)
     app.register_blueprint(pages_router)
     app.register_blueprint(legacy_router)
@@ -94,11 +96,11 @@ def create_app():
         if filepath.startswith("api/"):
             return jsonify({"detail": "Not Found"}), 404
 
-        frontend_path = Path(app.static_folder) / filepath
+        frontend_path = frontend_dist / filepath
         if filepath and frontend_path.is_file():
-            return send_from_directory(app.static_folder, filepath)
+            return send_from_directory(frontend_dist, filepath)
 
-        return send_from_directory(app.static_folder, "index.html")
+        return send_from_directory(frontend_dist, "index.html")
 
     @app.after_request
     def add_cache_control(response):
@@ -122,6 +124,15 @@ def create_app():
             return redirect(f"/not-found?path={quote(path)}", code=302)
         
         return jsonify({"detail": "Not Found"}), 404
+
+    @app.errorhandler(FastAPIHTTPException)
+    def fastapi_http_exception_handler(error):
+        detail = error.detail
+        if isinstance(detail, dict):
+            response = {"detail": detail}
+        else:
+            response = {"detail": {"message": str(detail)}}
+        return jsonify(response), error.status_code
 
     @app.route("/css/<path:filepath>")
     def serve_css(filepath):

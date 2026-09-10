@@ -28,6 +28,7 @@ from typing import Annotated, Any, Optional
 
 import os
 from flask import Blueprint, request, g, make_response, jsonify, Response
+from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -61,7 +62,7 @@ _RATE_MAX_REQ = 5    # max order creations per window per IP
 
 
 def _check_rate_limit()-> None:
-    ip  = request.client.host if request.client else "unknown"
+    ip  = request.remote_addr or "unknown"
     now = time.monotonic()
     _rate_store[ip] = [t for t in _rate_store[ip] if now - t < _RATE_WINDOW]
     if len(_rate_store[ip]) >= _RATE_MAX_REQ:
@@ -202,28 +203,10 @@ def create_order()-> Any:
     Idempotent: duplicate orders for the same plan within 5 min are safe
     (Razorpay order IDs are unique per creation, so replay = new order).
     """
-    _check_rate_limit(request)
+    _check_rate_limit()
 
-    # DEBUG: Enhanced logging to find exact bug location
-    print("="*60)
-    print("==== CREATE ORDER DEBUG START ====")
-    print("="*60)
-    print(f"RAW BODY object: {body}")
-    print(f"BODY TYPE: {type(body)}")
-    print(f"BODY.__dict__: {body.__dict__ if hasattr(body, '__dict__') else 'N/A'}")
-    print(f"REQUEST object: {request}")
-    print(f"REQUEST TYPE: {type(request)}")
-    print("-"*60)
-    print(f"body.plan_id VALUE: {body.plan_id}")
-    print(f"body.plan_id TYPE: {type(body.plan_id)}")
-    print(f"body.plan_id REPR: {repr(body.plan_id)}")
-    print(f"Is body.plan_id already UUID?: {isinstance(body.plan_id, uuid.UUID)}")
-    print("-"*60)
-    print(f"payload ROLE: {payload.get('role')}")
-    print(f"payload KEYS: {list(payload.keys())}")
-    print("="*60)
-    
-    logger.info(f"[create-order] body.plan_id: {body.plan_id}, type: {type(body.plan_id)}")
+    body = CreateOrderRequest.model_validate(request.get_json(silent=True) or {})
+    logger.info("[create-order] plan_id: %s, role: %s", body.plan_id, payload.get("role"))
 
     try:
         # Check if already UUID (DO NOT parse twice!)
@@ -258,7 +241,7 @@ def create_order()-> Any:
             # Students: get user UUID from current_user (not from token "sub")
             # The "sub" in JWT might be KCET ID (string), not a UUID
             from ..middleware.rbac import current_user
-            user = current_user(request, db)
+            user = current_user(db)
             if user is None:
                 raise HTTPException(
                     status_code=401, 
@@ -311,12 +294,7 @@ def verify_payment()-> Any:
     Subscription activation happens only via the server-side webhook.
     Returns 200 immediately so the frontend can show "payment received" UI.
     """
-    print(f"\n[VERIFY] /verify endpoint HIT")
-    print(f"[VERIFY] razorpay_order_id = {body.razorpay_order_id}")
-    print(f"[VERIFY] razorpay_payment_id = {body.razorpay_payment_id}")
-    print(f"[VERIFY] razorpay_signature = {body.razorpay_signature[:20]}...")
-    
-    print(f"[VERIFY] Verifying payment signature...")
+    body = VerifyPaymentRequest.model_validate(request.get_json(silent=True) or {})
     valid = gateway.verify_payment_signature(
         body.razorpay_order_id,
         body.razorpay_payment_id,
@@ -324,7 +302,6 @@ def verify_payment()-> Any:
     )
     
     if not valid:
-        print(f"[VERIFY] ❌ SIGNATURE VERIFICATION FAILED")
         logger.warning("Frontend payment verification FAILED for order %s", body.razorpay_order_id)
         raise HTTPException(
             status_code=400,
@@ -335,32 +312,21 @@ def verify_payment()-> Any:
             },
         )
 
-    print(f"[VERIFY] ✅ SIGNATURE VERIFICATION SUCCESS")
     logger.info("Frontend payment verified (awaiting webhook) for order %s", body.razorpay_order_id)
 
     # In test mode (rzp_test_ keys), activate subscription directly since
     # Razorpay can't reach localhost with a webhook. In production (rzp_live_),
     # activation happens ONLY via the server-side webhook — this block is skipped.
     razorpay_key = gateway.get_public_key()
-    print(f"[VERIFY] Razorpay key starts with: {razorpay_key[:8]}")
-    
     if razorpay_key.startswith("rzp_test_") or not gateway.is_configured():
-        print(f"[VERIFY] TEST MODE DETECTED - calling _activate_on_payment directly")
         try:
             from .service import _activate_on_payment
-            print(f"[VERIFY] Calling _activate_on_payment({body.razorpay_order_id}, ...)")
             _activate_on_payment(db, body.razorpay_order_id, body.razorpay_payment_id, 0, "test_card")
-            print(f"[VERIFY] ✅ _activate_on_payment returned successfully")
         except Exception as e:
-            print(f"[VERIFY] ❌ Test-mode direct activation FAILED:")
-            print(f"[VERIFY] Exception: {e}")
-            import traceback
-            traceback.print_exc()
             logger.warning("Test-mode direct activation failed: %s", e)
     else:
-        print(f"[VERIFY] PRODUCTION MODE - activation will happen via webhook")
+        logger.info("Production mode - activation will happen via webhook")
 
-    print(f"[VERIFY] Returning success response\n")
     return {
         "verified": True,
         "message": "Payment received. Your subscription has been activated.",
@@ -394,7 +360,7 @@ def razorpay_webhook()-> Any:
     Production setup: configure this URL in Razorpay dashboard as webhook endpoint.
     Test mode: mock webhooks can be sent via Razorpay test dashboard.
     """
-    raw_body = request.body()
+    raw_body = request.get_data(cache=True)
 
     # Signature verification
     if not gateway.verify_webhook_signature(raw_body, x_razorpay_signature):

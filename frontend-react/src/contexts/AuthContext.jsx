@@ -11,6 +11,9 @@ export const AuthProvider = ({ children }) => {
     const checkAuth = async () => {
       try {
         const token = localStorage.getItem('token');
+        if (token === 'http-only-cookie') {
+          localStorage.removeItem('token');
+        }
         if (token) {
           // Verify token or get user info
           const storedUser = localStorage.getItem('user');
@@ -28,7 +31,11 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = (userData, token) => {
-    localStorage.setItem('token', token);
+    if (token && token !== 'http-only-cookie') {
+      localStorage.setItem('token', token);
+    } else {
+      localStorage.removeItem('token');
+    }
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
   };

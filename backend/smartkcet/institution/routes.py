@@ -11,7 +11,7 @@ This module defines the API endpoints for institution operations:
 - Content management (upload, question bank, exams, analytics)
 """
 
-from typing import Annotated
+from typing import Annotated, Any, Optional
 from uuid import UUID
 
 import os
@@ -83,120 +83,120 @@ def require_institution_admin()-> dict:
 
 @router.route(
     "/register", methods=["POST"])
-def register_institution(data: InstitutionRegistrationData):    
-    from flask import g
+def register_institution(data: Any = None):    
+    from flask import request, g, make_response, jsonify
     db = getattr(g, "db", None)
-    session = db
-    
-    from flask import g
-    db = getattr(g, "db", None)
-    session = db
-    """Register a new institution with an institution admin account.
-    
-    **Requirements:** 6.1, 6.2, 6.7, 6.8, 6.9
-    
-    Creates both an Institution record and an institution_admin User record
-    atomically. Validates all input fields and rejects duplicate emails.
-    
-    Validation rules:
-    - name: 1-100 characters
-    - admin_email: RFC 5322 format, max 254 characters
-    - admin_password: 8-72 characters with at least one digit
-    - contact_phone: 10-15 digits (including country code)
-    
-    Args:
-        data: Institution registration data
-        db: Database session
-        
-    Returns:
-        InstitutionRegistrationResponse with generated institution and admin IDs
-        
-    Raises:
-        HTTPException:
-            - 400: Validation error (returns first failing field)
-            - 409: Email already registered
-            - 503: Database unavailable
-    """
+
+    if data is None:
+        raw_data = request.get_json() or {}
+        if not raw_data and request.form:
+            raw_data = request.form.to_dict()
+        try:
+            mapped = {
+                "name": raw_data.get("name") or raw_data.get("institutionName") or raw_data.get("institution_name"),
+                "admin_email": raw_data.get("admin_email") or raw_data.get("email") or raw_data.get("inst_reg_email"),
+                "admin_password": raw_data.get("admin_password") or raw_data.get("password") or raw_data.get("inst_reg_pwd"),
+                "contact_phone": raw_data.get("contact_phone") or raw_data.get("phone"),
+            }
+            data = InstitutionRegistrationData(**mapped)
+        except Exception as e:
+            msg = "Invalid registration data. Please check your inputs."
+            if hasattr(e, "errors") and callable(e.errors):
+                try:
+                    errs = e.errors()
+                    if errs:
+                        first = errs[0]
+                        field = ".".join(str(loc) for loc in first.get("loc", []))
+                        raw_msg = first.get("msg", "")
+                        if "digit" in raw_msg.lower():
+                            msg = "Password must contain at least one number (0–9)."
+                        elif "8" in raw_msg or "min_length" in raw_msg:
+                            msg = "Password must be at least 8 characters."
+                        elif "phone" in field.lower():
+                            msg = "Contact phone must contain between 10 and 15 digits."
+                        elif "email" in field.lower():
+                            msg = "Please enter a valid email address."
+                        else:
+                            msg = raw_msg.replace("Value error, ", "").strip()
+                except Exception:
+                    msg = str(e)
+            return make_response(jsonify({
+                "error": "validation_error",
+                "message": msg,
+            }), 400)
+
     service = InstitutionService(db)
     
     try:
         result = service.register_institution(data)
-        return result
+        out = {
+            "institution_id": str(result.institution_id),
+            "admin_user_id": str(result.admin_user_id),
+            "institution_name": result.institution_name,
+            "admin_email": result.admin_email,
+            "registered_at": result.registered_at.isoformat() if result.registered_at else None,
+            "message": "Institution registered successfully. Please sign in with your credentials.",
+        }
+        return make_response(jsonify(out), 201)
     except ValidationError as e:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "error": "validation_error",
-                "field": e.field,
-                "message": e.reason,
-            },
-        )
+        return make_response(jsonify({
+            "error": "validation_error",
+            "field": e.field,
+            "message": e.reason,
+        }), 400)
     except DuplicateEmailError as e:
-        raise HTTPException(
-            status_code=409,
-            detail={
-                "error": "duplicate_email",
-                "message": "Email is already registered",
-                "email": e.email,
-            },
-        )
+        return make_response(jsonify({
+            "error": "duplicate_email",
+            "message": "Email is already registered",
+            "email": e.email,
+        }), 409)
     except DatabaseUnavailableError as e:
-        raise HTTPException(
-            status_code=503,
-            detail={
-                "error": "service_unavailable",
-                "message": str(e),
-                "retry_after_sec": 5,
-            },
-        )
+        return make_response(jsonify({
+            "error": "service_unavailable",
+            "message": str(e),
+            "retry_after_sec": 5,
+        }), 503)
     except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": "internal_error",
-                "message": "An unexpected error occurred during registration",
-            },
-        )
+        return make_response(jsonify({
+            "error": "internal_error",
+            "message": str(e) or "An unexpected error occurred during registration",
+        }), 500)
 
 
 # Note: Institution login uses the standard /api/auth/login endpoint
 # The auth service handles institution_admin role tokens
 
 
-@router.route(
-    "/invite", methods=["POST"])
-def generate_invitation(data: InvitationCreate):    
+@router.route("/invite", methods=["POST"])
+@router.route("/invitations", methods=["POST"])
+def generate_invitation(data: Any = None):    
     payload = require_institution_admin()
     from flask import g
     db = getattr(g, "db", None)
     session = db
-    """Generate an invitation code for student onboarding.
-    
-    **Requirements:** 9.1
-    
-    Generates a unique invitation code (minimum 32 alphanumeric characters)
-    valid for 7 days. Maximum 50 pending invitations per institution.
-    
-    Args:
-        data: Invitation creation data (empty for now)
-        payload: JWT payload from authentication middleware
-        db: Database session
-        
-    Returns:
-        InvitationCodeResponse with generated code
-        
-    Raises:
-        HTTPException:
-            - 403: Not an institution admin
-            - 409: Max pending invitations reached (50)
-            - 503: Database unavailable
-    """
     service = InstitutionService(db)
     institution_id = UUID(payload["institution_id"])
+
+    req_data = request.get_json(silent=True) or {}
+    batch_id_str = req_data.get("batch_id")
+    batch_id = None
+    if batch_id_str:
+        try:
+            batch_id = UUID(batch_id_str)
+        except Exception:
+            batch_id = None
     
     try:
-        result = service.generate_invitation(institution_id)
-        return result
+        result = service.generate_invitation(institution_id, batch_id=batch_id)
+        return jsonify({
+            "id": str(result.id),
+            "code": result.code,
+            "institution_id": str(result.institution_id),
+            "batch_id": str(batch_id) if batch_id else None,
+            "status": result.status,
+            "created_at": result.created_at.isoformat() if result.created_at else None,
+            "expires_at": result.expires_at.isoformat() if result.expires_at else None,
+        }), 201
     except InstitutionServiceError as e:
         if "Maximum pending invitations" in str(e):
             raise HTTPException(
@@ -846,6 +846,7 @@ def list_invitations():
                 {
                     "sequence_number": inv.sequence_number,  # NEW: Show invitation number
                     "code": inv.code,
+                    "batch_id": str(inv.batch_id) if getattr(inv, "batch_id", None) else None,
                     "status": inv.status,
                     "created_at": inv.created_at.isoformat() if inv.created_at else None,
                     "expires_at": inv.expires_at.isoformat() if inv.expires_at else None,
@@ -1090,17 +1091,33 @@ def get_institution_student_exams():
 
     institution_id = UUID(institution_id_str)
 
-    from ..db.models import Exam, ExamSet
-    from sqlalchemy import func
+    from ..db.models import Exam, ExamSet, User
+    from sqlalchemy import func, or_
 
-    # ── Strict isolation: institution students see ONLY their institution's exams ──
+    student_id_str = payload.get("user_id") or payload.get("sub")
+    student = None
+    if student_id_str:
+        try:
+            student = db.query(User).filter(User.id == UUID(student_id_str)).first()
+        except Exception:
+            student = None
+
+    student_batch_id = getattr(student, "batch_id", None) if student else None
+
+    # Filter: ONLY exams belonging to this institution, AND either assigned to student's batch OR all batches
+    filters = [
+        Exam.is_published.is_(True),
+        Exam.institution_id == institution_id,
+    ]
+    if student_batch_id:
+        filters.append(or_(Exam.batch_id.is_(None), Exam.batch_id == student_batch_id))
+    else:
+        filters.append(Exam.batch_id.is_(None))
+
     stmt = (
         db.query(Exam, func.count(ExamSet.id).label("set_count"))
         .outerjoin(ExamSet, ExamSet.exam_id == Exam.id)
-        .filter(
-            Exam.is_published.is_(True),
-            Exam.institution_id == institution_id,   # ONLY this institution's exams
-        )
+        .filter(*filters)
         .group_by(Exam.id)
         .order_by(Exam.created_at.desc())
         .all()
@@ -1120,7 +1137,13 @@ def get_institution_student_exams():
             "exam_name": exam.exam_name,
             "created_at": exam.created_at.isoformat() if exam.created_at else None,
             "set_count": int(set_count or 0),
-            "is_institution_exam": True,   # always True — only institution exams
+            "is_institution_exam": True,
+            "batch_id": str(exam.batch_id) if exam.batch_id else None,
+            "batch_name": exam.batch.name if getattr(exam, "batch", None) else "All Batches",
+            "duration_minutes": getattr(exam, "duration_minutes", 60) or 60,
+            "scheduled_start": exam.scheduled_start.isoformat() if getattr(exam, "scheduled_start", None) else None,
+            "scheduled_end": exam.scheduled_end.isoformat() if getattr(exam, "scheduled_end", None) else None,
+            "total_marks": getattr(exam, "total_marks", 60) or 60,
             "sets": [{"exam_set_id": str(s.id), "set_label": s.set_label} for s in sets_list],
         })
 
@@ -1357,6 +1380,142 @@ def get_all_students():
             status_code=500,
             detail={"error": "server_error", "message": "Failed to fetch students"}
         )
+
+
+# ---------------------------------------------------------------------------
+# BATCH MANAGEMENT (Classes / Sections)
+# ---------------------------------------------------------------------------
+
+@router.route("/batches", methods=["GET"])
+def list_institution_batches():
+    payload = require_institution_admin()
+    db = getattr(g, "db", None)
+    inst_id = UUID(payload["institution_id"])
+    from ..db.models import InstitutionBatch, User, Exam
+
+    batches = (
+        db.query(InstitutionBatch)
+        .filter(InstitutionBatch.institution_id == inst_id)
+        .order_by(InstitutionBatch.created_at.asc())
+        .all()
+    )
+
+    result = []
+    for b in batches:
+        student_count = db.query(User).filter(User.batch_id == b.id, User.role == "student").count()
+        exam_count = db.query(Exam).filter(Exam.batch_id == b.id).count()
+        result.append({
+            "id": str(b.id),
+            "name": b.name,
+            "description": b.description,
+            "student_count": student_count,
+            "exam_count": exam_count,
+            "created_at": b.created_at.isoformat() if b.created_at else None,
+        })
+
+    return jsonify({"batches": result, "total": len(result)})
+
+
+@router.route("/batches", methods=["POST"])
+def create_institution_batch():
+    payload = require_institution_admin()
+    db = getattr(g, "db", None)
+    inst_id = UUID(payload["institution_id"])
+    from ..db.models import InstitutionBatch
+
+    data = request.get_json(silent=True) or {}
+    name = (data.get("name") or "").strip()
+    description = (data.get("description") or "").strip()
+
+    if not name:
+        return make_response(jsonify({"error": "validation_error", "message": "Batch name is required"}), 400)
+
+    batch = InstitutionBatch(
+        institution_id=inst_id,
+        name=name,
+        description=description if description else None,
+    )
+    db.add(batch)
+    db.commit()
+    db.refresh(batch)
+
+    return jsonify({
+        "id": str(batch.id),
+        "name": batch.name,
+        "description": batch.description,
+        "student_count": 0,
+        "exam_count": 0,
+        "created_at": batch.created_at.isoformat() if batch.created_at else None,
+        "message": "Batch created successfully"
+    }), 201
+
+
+@router.route("/batches/<batch_id>", methods=["DELETE"])
+def delete_institution_batch(batch_id: str):
+    payload = require_institution_admin()
+    db = getattr(g, "db", None)
+    inst_id = UUID(payload["institution_id"])
+    from ..db.models import InstitutionBatch, User, Exam
+
+    try:
+        b_uuid = UUID(batch_id)
+    except ValueError:
+        return make_response(jsonify({"error": "invalid_id", "message": "Invalid batch ID"}), 400)
+
+    batch = db.query(InstitutionBatch).filter(InstitutionBatch.id == b_uuid, InstitutionBatch.institution_id == inst_id).first()
+    if not batch:
+        return make_response(jsonify({"error": "not_found", "message": "Batch not found"}), 404)
+
+    # Unlink students and exams before deleting
+    db.query(User).filter(User.batch_id == b_uuid).update({"batch_id": None})
+    db.query(Exam).filter(Exam.batch_id == b_uuid).update({"batch_id": None})
+
+    db.delete(batch)
+    db.commit()
+
+    return jsonify({"success": True, "message": "Batch deleted successfully"})
+
+
+@router.route("/students/<student_id>/batch", methods=["PATCH"])
+def assign_student_batch(student_id: str):
+    payload = require_institution_admin()
+    db = getattr(g, "db", None)
+    inst_id = UUID(payload["institution_id"])
+    from ..db.models import InstitutionBatch, User
+
+    try:
+        s_uuid = UUID(student_id)
+    except ValueError:
+        return make_response(jsonify({"error": "invalid_id", "message": "Invalid student ID"}), 400)
+
+    student = db.query(User).filter(User.id == s_uuid, User.institution_id == inst_id, User.role == "student").first()
+    if not student:
+        return make_response(jsonify({"error": "not_found", "message": "Student not found"}), 404)
+
+    data = request.get_json(silent=True) or {}
+    batch_id_str = data.get("batch_id")
+    if batch_id_str:
+        try:
+            b_uuid = UUID(batch_id_str)
+            batch = db.query(InstitutionBatch).filter(InstitutionBatch.id == b_uuid, InstitutionBatch.institution_id == inst_id).first()
+            if not batch:
+                return make_response(jsonify({"error": "batch_not_found", "message": "Batch not found"}), 404)
+            student.batch_id = b_uuid
+            batch_name = batch.name
+        except ValueError:
+            return make_response(jsonify({"error": "invalid_batch_id", "message": "Invalid batch ID"}), 400)
+    else:
+        student.batch_id = None
+        batch_name = None
+
+    db.commit()
+    return jsonify({
+        "success": True,
+        "student_id": str(student.id),
+        "batch_id": str(student.batch_id) if student.batch_id else None,
+        "batch_name": batch_name,
+        "message": "Student batch updated successfully"
+    })
 
 
 __all__ = ["router"]

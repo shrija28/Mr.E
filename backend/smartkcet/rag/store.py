@@ -136,7 +136,7 @@ class SubjectVectorStores:
     """
 
     def __init__(self, data_dir: Path | None = None)-> None:
-        self.data_dir: Path if data_dir is not None else _DEFAULT_FAISS_DIR
+        self.data_dir = data_dir if data_dir is not None else _DEFAULT_FAISS_DIR
         self._stores: Dict[Subject, VectorStore] = {}
 
     # ------------------------------------------------------------------

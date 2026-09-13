@@ -75,13 +75,13 @@ router = Blueprint("admin_upload", __name__)
 MAX_FILES_PER_BATCH = 10
 
 
-def _validation_error(message: str, field: Optional[str] = None)-> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None):
     """Return a 400 JSON envelope identical in shape to other auth/admin errors."""
 
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=400, content=body)
+    return jsonify(body), 400
 
 
 def _normalise_subject(value: Optional[str])-> Optional[Subject]:
@@ -237,12 +237,22 @@ def list_indexed_files()-> Any:
 
 
 @router.route("/upload/single", methods=["POST"])
-def upload_single(subject: Optional[str], file_type: str, file: UploadFile)-> Any:    
+def upload_single(subject: Optional[str] = None, file_type: str = "question_paper", file: Any = None)-> Any:    
     _admin = require_admin()
-    from flask import g
+    from flask import g, request
     db = getattr(g, "db", None)
     session = db
     """Index a single uploaded file. Returns per-file status for progress tracking."""
+
+    if subject is None:
+        subject = request.form.get("subject") or request.args.get("subject")
+    if file_type is None or file_type == "question_paper":
+        file_type = request.form.get("file_type") or request.args.get("file_type") or "question_paper"
+    if file is None:
+        file = request.files.get("file")
+
+    if file is None:
+        return _validation_error("file is required", field="file")
 
     selected = _normalise_subject(subject)
     if selected is None:
@@ -304,7 +314,10 @@ def upload_single(subject: Optional[str], file_type: str, file: UploadFile)-> An
         }
 
     # Index into FAISS
-    stores.add(selected, chunks)
+    try:
+        stores.add(selected, chunks)
+    except Exception as exc:
+        logger.warning("FAISS store indexing failed: %s", exc)
 
     # Record in database
     _record_indexed_file(
@@ -343,9 +356,9 @@ def upload_single(subject: Optional[str], file_type: str, file: UploadFile)-> An
 
 
 @router.route("/upload", methods=["POST"])
-def upload(subject: Optional[str], file_type: str, files: List[UploadFile])-> Any:    
+def upload(subject: Optional[str] = None, file_type: str = "question_paper", files: Optional[List[Any]] = None)-> Any:    
     _admin = require_admin()
-    from flask import g
+    from flask import g, request
     db = getattr(g, "db", None)
     session = db
     """Index uploaded files into the requested subject's FAISS store.
@@ -353,6 +366,16 @@ def upload(subject: Optional[str], file_type: str, files: List[UploadFile])-> An
     Now includes duplicate detection — files with matching SHA-256 hash
     for the same subject are skipped and returned in ``already_indexed``.
     """
+
+    if subject is None:
+        subject = request.form.get("subject") or request.args.get("subject")
+    if file_type is None or file_type == "question_paper":
+        file_type = request.form.get("file_type") or request.args.get("file_type") or "question_paper"
+    if not files:
+        files = request.files.getlist("files") or request.files.getlist("file")
+
+    if not files:
+        return _validation_error("At least one file is required", field="files")
 
     selected = _normalise_subject(subject)
     if selected is None:
@@ -435,7 +458,10 @@ def upload(subject: Optional[str], file_type: str, files: List[UploadFile])-> An
             len(chunks),
             selected.value,
         )
-        stores.add(selected, chunks)
+        try:
+            stores.add(selected, chunks)
+        except Exception as exc:
+            logger.warning("FAISS store indexing failed for %s: %s", filename, exc)
 
         # Record in database
         _record_indexed_file(

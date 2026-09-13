@@ -33,7 +33,7 @@ router = Blueprint("student_leaderboard", __name__)
 
 @router.route("/leaderboard/me", methods=["GET"])
 def student_leaderboard_me()-> Dict[str, Any]:    
-    _student = require_student()
+    payload = require_student()
     from flask import g
     db = getattr(g, "db", None)
     session = db

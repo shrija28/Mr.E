@@ -1,10 +1,9 @@
 """Database engine + session factory.
 
-The default development backend is SQLite (``sqlite:///./smartkcet.db``,
-resolved relative to the ``backend/`` directory).  Production deployments
-override this by setting ``DATABASE_URL`` in the environment — the value is
-already loaded for us by :mod:`smartkcet.config`, which calls
-``dotenv.load_dotenv`` at import time.
+The project defaults to PostgreSQL for local/production work and reads the
+connection string from ``DATABASE_URL``.  A SQLite fallback remains available
+for quick local troubleshooting, but the standard project configuration now
+points at PostgreSQL so the app matches the requested production database.
 
 For SQLite specifically we set ``check_same_thread=False`` so a session
 created in FastAPI's request thread can be safely consumed by background
@@ -26,14 +25,16 @@ from sqlalchemy.orm import Session, sessionmaker
 from smartkcet import config as _config  # noqa: F401  (import for side-effects)
 
 
-# The default DB lives next to ``backend/app.py`` regardless of the
-# directory the process was launched from.
+# PostgreSQL is the default project database.  If no ``DATABASE_URL`` is
+# provided explicitly, the app uses the local PostgreSQL service configured for
+# this project.
+_DEFAULT_POSTGRES_URL = "postgresql+psycopg2://postgres:postgres@127.0.0.1:5432/smartkcet"
 _DEFAULT_SQLITE_PATH = Path(__file__).resolve().parents[2] / "smartkcet.db"
-_DEFAULT_DATABASE_URL = f"sqlite:///{_DEFAULT_SQLITE_PATH.as_posix()}"
+_DEFAULT_DATABASE_URL = _DEFAULT_POSTGRES_URL
 
 
 def _resolve_database_url()-> str:
-    """Read ``DATABASE_URL`` from the environment, falling back to SQLite."""
+    """Read ``DATABASE_URL`` from the environment, falling back to PostgreSQL."""
 
     return os.getenv("DATABASE_URL", _DEFAULT_DATABASE_URL)
 

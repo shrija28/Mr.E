@@ -51,6 +51,7 @@ import StudentInstitutionLeaderboard from './pages/auto/StudentInstitutionLeader
 import StudentInstitutionPerformance from './pages/auto/StudentInstitutionPerformance';
 import StudentPricing from './pages/auto/StudentPricing';
 import Subscription from './pages/auto/Subscription';
+import RazorpaySubscription from './pages/RazorpaySubscription';
 import Syllabus from './pages/auto/Syllabus';
 
 // Public Layout Wrapper
@@ -71,17 +72,16 @@ function App() {
           <Route path="/index" element={<PublicLayout><Index /></PublicLayout>} />
           <Route path="/login" element={<PublicLayout><LoginPage /></PublicLayout>} />
           <Route path="/register" element={<PublicLayout><RegisterPage /></PublicLayout>} />
+          <Route path="/institution/register" element={<PublicLayout><InstitutionRegister /></PublicLayout>} />
           <Route path="/contact-us" element={<PublicLayout><ContactUs /></PublicLayout>} />
           <Route path="/config" element={<Config />} />
           <Route path="/invitation-accept" element={<PublicLayout><InvitationAccept /></PublicLayout>} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/institution/dashboard" element={<InstitutionDashboard />} />
 
           {/* Student Routes */}
           <Route element={<StudentLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/exam" element={<Exam />} />
-            <Route path="/subscription" element={<Subscription />} />
+            <Route path="/subscription" element={<RazorpaySubscription />} />
             <Route path="/syllabus" element={<Syllabus />} />
             <Route path="/student-pricing" element={<StudentPricing />} />
             
@@ -116,7 +116,6 @@ function App() {
             <Route path="exams" element={<InstitutionExams />} />
             <Route path="pricing" element={<InstitutionPricing />} />
             <Route path="questions" element={<InstitutionQuestions />} />
-            <Route path="register" element={<InstitutionRegister />} />
             <Route path="students" element={<InstitutionStudents />} />
             <Route path="subscription" element={<InstitutionSubscription />} />
             <Route path="syllabus" element={<InstitutionSyllabus />} />

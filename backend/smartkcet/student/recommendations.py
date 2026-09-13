@@ -271,24 +271,8 @@ def get_college_recommendations()-> Dict[str, Any]:
     # 3. Determine projected rank and student tier
     projected_rank, rank_range, student_tier = map_score_to_rank_and_tier(avg_score)
 
-    # 4. Determine subscription/locked state
-    # Institution students always get full access
-    if user.student_subtype == "institution_linked":
-        is_locked = False
-    else:
-        # Check active non-trial subscriptions
-        active_sub = (
-            db.query(Subscription)
-            .join(SubscriptionPlan, Subscription.plan_id == SubscriptionPlan.id)
-            .filter(
-                Subscription.user_id == user.id,
-                Subscription.status.in_(["active", "grace_period"]),
-                SubscriptionPlan.name != "Free",
-            )
-            .first()
-        )
-        # If student has active subscription, unlocked. Otherwise locked.
-        is_locked = active_sub is None
+    # 4. Determine subscription/locked state - All students have full access without paywall censorship
+    is_locked = False
 
     # 5. Build match lists
     targets = []
@@ -422,21 +406,8 @@ def get_rank_booster_suggestions(target_rank: int = 5000)-> Dict[str, Any]:
             weakest_score = score
             weakest_subject = subj
 
-    # 5. Check subscription status (gating)
-    if user.student_subtype == "institution_linked":
-        is_locked = False
-    else:
-        active_sub = (
-            db.query(Subscription)
-            .join(SubscriptionPlan, Subscription.plan_id == SubscriptionPlan.id)
-            .filter(
-                Subscription.user_id == user.id,
-                Subscription.status.in_(["active", "grace_period"]),
-                SubscriptionPlan.name != "Free",
-            )
-            .first()
-        )
-        is_locked = active_sub is None
+    # 5. Check subscription status (gating) - All students have full access without paywall censorship
+    is_locked = False
 
     # 6. Generate action items
     action_items = []
@@ -504,6 +475,114 @@ def get_rank_booster_suggestions(target_rank: int = 5000)-> Dict[str, Any]:
             if is_locked else None
         )
     }
+
+
+@router.route("/predict-colleges", methods=["GET"])
+def predict_colleges():
+    """Predict college admissions dynamically based on a student's KCET rank."""
+    _student = require_student()
+    from flask import request, jsonify
+    
+    rank_str = request.args.get("rank", "").strip()
+    if not rank_str:
+        return jsonify({"error": "missing_rank", "message": "Please enter a valid KCET rank."}), 400
+        
+    try:
+        rank = int(rank_str)
+        if rank < 1:
+            return jsonify({"error": "invalid_rank", "message": "Rank must be 1 or greater."}), 400
+    except ValueError:
+        return jsonify({"error": "invalid_rank", "message": "Invalid rank number."}), 400
+        
+    location_filter = request.args.get("location", "all").strip().lower()
+    category = request.args.get("category", "GM").strip().upper()
+    
+    # Category multiplier for KCET cutoffs
+    cat_multiplier = 1.0
+    if category in ["2A", "2B", "3A", "3B", "OBC"]:
+        cat_multiplier = 1.15
+    elif category in ["SC", "ST", "CAT-1", "CATEGORY-1"]:
+        cat_multiplier = 1.35
+    elif category in ["HK", "HYDERABAD-KARNATAKA"]:
+        cat_multiplier = 1.20
+        
+    safes = []
+    targets = []
+    reaches = []
+    
+    # Common engineering branches mapped by tier
+    branch_map = {
+        1: ["Computer Science (CSE)", "AI & Machine Learning", "Information Science (ISE)", "Electronics & Comm (ECE)"],
+        2: ["Computer Science (CSE)", "Information Science (ISE)", "AI & Data Science", "ECE", "Mechanical"],
+        3: ["Computer Science (CSE)", "Cybersecurity", "ECE", "Electrical (EEE)", "Civil Engineering"],
+        4: ["Computer Science (CSE)", "Information Science", "ECE", "Mechanical Engineering", "Civil Engineering"]
+    }
+    
+    for col in COLLEGES:
+        if location_filter != "all" and location_filter not in col["location"].lower():
+            continue
+            
+        effective_cutoff = int(col["cutoff_rank"] * cat_multiplier)
+        
+        # Safe: Student's rank is comfortably better (lower) than cutoff
+        if rank <= int(0.85 * effective_cutoff):
+            match_type = "safe"
+            chance_pct = min(99, max(88, int(100 - (rank / max(1, effective_cutoff)) * 12)))
+            chance_label = "High Chance"
+        # Target: Student's rank is within proximity of cutoff
+        elif rank <= int(1.25 * effective_cutoff):
+            match_type = "target"
+            chance_pct = min(85, max(60, int(85 - ((rank - effective_cutoff) / max(1, effective_cutoff)) * 50)))
+            chance_label = "Competitive Match"
+        # Reach / Ambitious: Student's rank is higher (tougher) than cutoff
+        else:
+            match_type = "reach"
+            chance_pct = min(49, max(15, int(49 - ((rank - effective_cutoff) / max(1, effective_cutoff)) * 30)))
+            chance_label = "Ambitious Reach"
+            
+        branches = col.get("branches") or branch_map.get(col["tier"], branch_map[3])
+        
+        item = {
+            "name": col["name"],
+            "location": col["location"],
+            "tier": col["tier"],
+            "tier_label": f"Tier {col['tier']}" if col["tier"] > 1 else "Tier 1 Elite",
+            "cutoff_rank": col["cutoff_rank"],
+            "effective_cutoff": effective_cutoff,
+            "match_type": match_type,
+            "chance_pct": chance_pct,
+            "chance_label": chance_label,
+            "description": col["description"],
+            "branches": branches
+        }
+        
+        if match_type == "safe":
+            safes.append(item)
+        elif match_type == "target":
+            targets.append(item)
+        else:
+            reaches.append(item)
+            
+    safes.sort(key=lambda c: c["cutoff_rank"])
+    targets.sort(key=lambda c: c["cutoff_rank"])
+    reaches.sort(key=lambda c: c["cutoff_rank"])
+    
+    return jsonify({
+        "rank": rank,
+        "category": category,
+        "location": location_filter,
+        "total_colleges": len(safes) + len(targets) + len(reaches),
+        "counts": {
+            "safe": len(safes),
+            "target": len(targets),
+            "reach": len(reaches)
+        },
+        "matches": {
+            "safe": safes,
+            "target": targets,
+            "reach": reaches
+        }
+    })
 
 
 __all__ = ["router"]

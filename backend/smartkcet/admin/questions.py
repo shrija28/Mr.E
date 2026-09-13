@@ -176,45 +176,34 @@ def list_counts()-> Any:
 @router.route("/questions", methods=["GET"])
 def list_questions()-> Any:    
     _admin = require_admin()
-    from flask import g
+    from flask import g, request
     db = getattr(g, "db", None)
     session = db
-    from flask import request
     subject = request.args.get("subject", None)
-    from flask import request
-    page = int(request.args.get("page", 1))
-    
-    _admin = require_admin()
-    from flask import g
-    db = getattr(g, "db", None)
-    session = db
-    from flask import request
-    subject = request.args.get("subject", None)
-    from flask import request
-    page = int(request.args.get("page", 1))
+    source = request.args.get("source", None)
+    try:
+        page = int(request.args.get("page", 1))
+        if page < 1:
+            page = 1
+    except (ValueError, TypeError):
+        page = 1
     """List questions with optional subject filter and stable pagination.
 
     Query parameters
     ----------------
     subject
         Optional KCET subject (one of ``Biology``, ``Physics``,
-        ``Chemistry``, ``Mathematics``).  Anything else short-circuits
-        to a 400 envelope before any DB call is made.
+        ``Chemistry``, ``Mathematics``).
+    source
+        Optional source filter (e.g. ``textbook``, ``question_paper``, ``rag``).
     page
-        1-indexed page number.  Values < 1 are rejected by FastAPI's
-        ``Query(ge=1)`` and surface as a standard 422.
+        1-indexed page number.
     page_size
-        Accepted for forward compatibility but **always capped** at
-        :data:`PAGE_SIZE` (REQ-6.1: "at most 50 questions per page").
-        Reading the raw query string lets us cap silently rather than
-        introducing a hard-coded ``page_size`` parameter that would
-        misleadingly suggest the cap is negotiable.
+        Max number of questions per page (capped at 50).
     """
 
-    # Validate the subject filter up-front so we never run a SELECT with
-    # a bogus filter value.
     selected: Optional[Subject] = None
-    if subject is not None:
+    if subject is not None and subject != "":
         normalised = _normalise_subject(subject)
         if normalised is None:
             allowed = [s.value for s in Subject]
@@ -224,32 +213,22 @@ def list_questions()-> Any:
             )
         selected = normalised
 
-    # ``page_size`` is intentionally not exposed as a typed parameter:
-    # the spec pins the page size at 50 and the cap should hold even
-    # when callers try to override it.
-    requested_size = request.query_params.get("page_size")
+    requested_size = request.args.get("page_size")
     page_size = PAGE_SIZE
     if requested_size is not None:
         try:
             parsed = int(requested_size)
+            if parsed >= 1:
+                page_size = min(parsed, MAX_PAGE_SIZE)
         except ValueError:
-            return _validation_error(
-                "page_size must be an integer",
-                field="page_size",
-            )
-        if parsed < 1:
-            return _validation_error(
-                "page_size must be >= 1",
-                field="page_size",
-            )
-        page_size = min(parsed, MAX_PAGE_SIZE)
+            pass
 
     # Build the base SELECT — platform-wide questions only (institution_id IS NULL).
-    # Institution-uploaded questions are scoped to their institution and must
-    # never appear in the admin question bank view.
     base_filter = [Question.institution_id.is_(None)]
     if selected is not None:
         base_filter.append(Question.subject == selected.value)
+    if source and source.strip():
+        base_filter.append(Question.source_type == source.strip())
 
     total_stmt = select(func.count(Question.id))
     if base_filter:
@@ -325,6 +304,41 @@ def delete_question(question_id: uuid.UUID)-> Any:
         return make_response(jsonify({"deleted": False, "error": error_name, "id": qid_str}), 500)
 
     return {"deleted": True, "id": qid_str}
+
+
+# ---------------------------------------------------------------------------
+# POST /api/admin/questions/clear
+# ---------------------------------------------------------------------------
+
+
+@router.route("/questions/clear", methods=["POST"])
+def clear_questions() -> Any:
+    """Clear all questions or clear questions for a specific subject."""
+    _admin = require_admin()
+    from flask import g, request
+    db = getattr(g, "db", None)
+    session = db
+    
+    subject = request.args.get("subject") or (request.get_json(silent=True) or {}).get("subject")
+    
+    try:
+        stmt = delete(Question).where(Question.institution_id.is_(None))
+        if subject and subject.strip():
+            stmt = stmt.where(Question.subject == subject.strip())
+        
+        result = session.execute(stmt)
+        session.commit()
+        deleted_count = int(result.rowcount or 0)
+        return jsonify({
+            "success": True,
+            "deleted_count": deleted_count,
+            "subject": subject or "all",
+            "message": f"Successfully cleared {deleted_count} questions."
+        })
+    except Exception as exc:
+        session.rollback()
+        logger.warning("Failed to clear questions: %s", exc)
+        return make_response(jsonify({"error": "clear_failed", "message": str(exc)}), 500)
 
 
 __all__ = [

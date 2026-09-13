@@ -167,6 +167,8 @@ class StudentSummary(BaseModel):
     kcet_student_id: Optional[str] = None
     linked_at: datetime
     student_subtype: str
+    batch_id: Optional[UUID] = None
+    batch_name: Optional[str] = None
 
     class Config:
         from_attributes = True

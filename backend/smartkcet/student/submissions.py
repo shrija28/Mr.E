@@ -53,11 +53,11 @@ _MAX_LIMIT = 200
 # ---------------------------------------------------------------------------
 
 
-def _validation_error(message: str, field: Optional[str] = None)-> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None) -> Any:
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=400, content=body)
+    return make_response(jsonify(body), 400)
 
 
 def _normalise_subject(value: Optional[str])-> Optional[Subject]:
@@ -189,7 +189,9 @@ def list_submissions()-> Any:
         }
         
         # Get remaining attempts
-        remaining_attempts_data = access_control.get_remaining_attempts(user.id)
+        from ..subscription.access_control import SubscriptionAccessControl
+        ac = access_control or SubscriptionAccessControl(session)
+        remaining_attempts_data = ac.get_remaining_attempts(user.id)
     except Exception as exc:
         # If we can't get subscription info, log but don't fail the request
         import logging
@@ -327,6 +329,356 @@ def get_submission(submission_id: uuid.UUID)-> Any:
     filtered_data = access_control.filter_analytics_data(analytics_data, user.id)
     
     return filtered_data
+
+
+# ---------------------------------------------------------------------------
+# GET /api/student/dashboard-stats
+# ---------------------------------------------------------------------------
+
+
+@router.route("/dashboard-stats", methods=["GET"])
+def get_dashboard_stats() -> Any:
+    """Return real-time aggregated dashboard analytics for the authenticated student.
+
+    Calculates real KPIs, subject performance, chronological score trend,
+    pass vs fail ratio, AI strength/weakness areas, leaderboard standing,
+    and recent exam history from the student's actual database submissions.
+    """
+    _student = require_student()
+    session = getattr(g, "db", None)
+    if session is None:
+        from ..db.session import SessionLocal
+        session = SessionLocal()
+
+    user = current_user(request, session)
+    if user is None or user.role != "student":
+        return make_response(
+            jsonify({
+                "error": "auth_required",
+                "message": "Authenticated student account not found.",
+            }),
+            401,
+        )
+
+    # 1. Fetch leaderboard to determine student's rank and top peers
+    from ..leaderboard.service import get_leaderboard
+    ranked = get_leaderboard(session)
+
+    top_students = []
+    for entry in ranked[:5]:
+        top_students.append({
+            "rank": entry.rank,
+            "name": entry.display_name or f"Student {str(entry.kcet_student_id)[-4:]}",
+            "id": entry.kcet_student_id,
+            "score": round(float(entry.composite_score), 1),
+            "progress": "+Top",
+        })
+
+    # 2. Query all completed submissions for the student, sorted newest first
+    stmt = (
+        select(Submission, ExamSet, Exam)
+        .join(ExamSet, ExamSet.id == Submission.exam_set_id)
+        .join(Exam, Exam.id == ExamSet.exam_id)
+        .where(Submission.user_id == user.id, Submission.status == "completed")
+        .order_by(Submission.submitted_at.desc(), Submission.id.asc())
+    )
+    rows = session.execute(stmt).all()
+
+    # Starter state when student has 0 submissions
+    if not rows:
+        return jsonify({
+            "kpis": {
+                "examsTaken": 0,
+                "submissions": 0,
+                "avgScore": 0,
+                "passRate": 0,
+                "avgTime": 0,
+                "rank": "—",
+                "rankHint": "Complete at least one mock exam to generate your score and rank analytics",
+            },
+            "topicData": {
+                "labels": ["Physics", "Chemistry", "Mathematics", "Biology"],
+                "scores": [0, 0, 0, 0],
+            },
+            "setData": {
+                "labels": [],
+                "scores": [],
+            },
+            "passFailData": {
+                "labels": ["Pass", "Fail"],
+                "counts": [0, 0],
+            },
+            "aiAnalysis": {
+                "strong_areas": [],
+                "can_improve_areas": [],
+                "weak_areas": [],
+                "recommendation": "You have not completed any mock exams yet. Select a published exam above and submit your first attempt to generate personalized AI performance insights.",
+                "rank_booster": {
+                    "current_score": 0,
+                    "current_rank": 55000,
+                    "boosted_score": 75.0,
+                    "boosted_rank": 8000,
+                    "rank_leap": 47000,
+                    "potential_marks_gain": 15.0,
+                    "weakest_subject": "General",
+                    "top_weak_topic": "Foundational Concepts",
+                    "has_data": False,
+                },
+                "action_plan": [
+                    {
+                        "id": "step-1",
+                        "title": "Complete Your First KCET Diagnostic Exam",
+                        "desc": "Take any published subject mock test above (Physics, Chemistry, or Mathematics) to calibrate your starting score.",
+                        "category": "Diagnostic",
+                        "badge": "Step 1",
+                    },
+                    {
+                        "id": "step-2",
+                        "title": "Inspect Personalized AI Topic Breakdown",
+                        "desc": "Identify high-weightage chapters where you can convert gaps into rapid marks.",
+                        "category": "Analysis",
+                        "badge": "Step 2",
+                    },
+                    {
+                        "id": "step-3",
+                        "title": "Execute Targeted Revision & PYQs",
+                        "desc": "Solve 15-20 timed KCET previous year questions on your lowest-scoring topic.",
+                        "category": "Practice",
+                        "badge": "Step 3",
+                    },
+                ],
+            },
+            "topStudents": top_students,
+            "examHistory": [],
+            "has_data": False,
+        })
+
+    # 3. Calculate real KPIs
+    submissions_count = len(rows)
+    distinct_exam_ids = len(set(exam.id for _, _, exam in rows))
+    scores = [float(sub.score_pct) for sub, _, _ in rows]
+    avg_score = round(sum(scores) / submissions_count, 1)
+    pass_count = sum(1 for s in scores if s >= 50.0)
+    fail_count = submissions_count - pass_count
+    pass_rate = round((pass_count / submissions_count) * 100, 1)
+    total_time = sum(int(sub.time_taken_sec or 0) for sub, _, _ in rows)
+    avg_time = round(total_time / (submissions_count * 60)) if submissions_count > 0 else 0
+
+    # Determine user's rank
+    my_rank: Any = "—"
+    rank_hint = "Score at least 30% on average to qualify on statewide leaderboard"
+    for entry in ranked:
+        if entry.student_id == str(user.id) or entry.kcet_student_id == user.kcet_student_id:
+            my_rank = entry.rank
+            rank_hint = f"Ranked #{my_rank} out of {len(ranked)} on statewide leaderboard"
+            break
+
+    if my_rank == "—" and avg_score >= 30.0:
+        rank_hint = "Take exams across more subjects to appear on statewide leaderboard"
+
+    # 4. Subject / Topic scores
+    subject_scores_dict: dict[str, list[float]] = {
+        "Physics": [],
+        "Chemistry": [],
+        "Mathematics": [],
+        "Biology": [],
+    }
+    for sub, _, exam in rows:
+        subj = exam.subject
+        if subj in subject_scores_dict:
+            subject_scores_dict[subj].append(float(sub.score_pct))
+        else:
+            subject_scores_dict[subj] = [float(sub.score_pct)]
+
+    topic_labels = ["Physics", "Chemistry", "Mathematics", "Biology"]
+    topic_scores = []
+    for label in topic_labels:
+        scores_list = subject_scores_dict.get(label, [])
+        if scores_list:
+            topic_scores.append(round(sum(scores_list) / len(scores_list), 1))
+        else:
+            topic_scores.append(0)
+
+    # 5. Chronological score progression trend
+    chronological_rows = list(reversed(rows))
+    trend_labels = []
+    trend_scores = []
+    for i, (sub, exam_set, exam) in enumerate(chronological_rows):
+        label = f"#{i+1} {exam.subject}"
+        trend_labels.append(label)
+        trend_scores.append(round(float(sub.score_pct), 1))
+
+    # 6. Aggregate AI Analysis (strengths, weak topics, and personalized recommendation)
+    topic_aggregates: dict[str, dict[str, int]] = {}
+    for sub, _, _ in rows:
+        breakdown = sub.topic_breakdown
+        if isinstance(breakdown, dict):
+            for topic, stats in breakdown.items():
+                if isinstance(stats, dict) and "earned" in stats and "total" in stats:
+                    if topic not in topic_aggregates:
+                        topic_aggregates[topic] = {"earned": 0, "total": 0}
+                    topic_aggregates[topic]["earned"] += int(stats["earned"])
+                    topic_aggregates[topic]["total"] += int(stats["total"])
+
+    strong_areas = []
+    can_improve_areas = []
+    weak_areas = []
+
+    for topic, stats in sorted(topic_aggregates.items(), key=lambda x: x[0]):
+        if stats["total"] > 0:
+            pct = round((stats["earned"] / stats["total"]) * 100, 1)
+            display_str = f"{topic} ({pct}%)"
+            if pct >= 75.0:
+                strong_areas.append(display_str)
+            elif pct >= 50.0:
+                can_improve_areas.append(display_str)
+            else:
+                weak_areas.append(display_str)
+
+    # Recommendation text
+    recommendation_text = ""
+    latest_sub = rows[0][0] if rows else None
+    if latest_sub and isinstance(latest_sub.answers, dict):
+        ai_meta = latest_sub.answers.get("__ai_analysis__")
+        if isinstance(ai_meta, dict) and ai_meta.get("recommendation"):
+            recommendation_text = ai_meta["recommendation"]
+
+    if not recommendation_text:
+        if weak_areas:
+            recommendation_text = f"Priority Focus: Strengthen foundational concepts in {weak_areas[0].split(' (')[0]}. Regular practice with standard KCET numericals will boost your score significantly."
+        elif can_improve_areas:
+            recommendation_text = f"Good progress! To push your score into the top percentile, refine speed and accuracy in {can_improve_areas[0].split(' (')[0]}."
+        else:
+            recommendation_text = "Outstanding performance across all topics! Maintain your daily practice routine and focus on mock exam time-management."
+
+    # 7. Rank Booster & 3-Step Action Plan calculations
+    def _calc_kcet_rank(score: float) -> int:
+        s = max(0.0, min(100.0, float(score)))
+        if s >= 90.0:
+            return int(100 + (100.0 - s) * 240.0)
+        elif s >= 75.0:
+            return int(2500 + (90.0 - s) * 366.6)
+        elif s >= 60.0:
+            return int(8000 + (75.0 - s) * 800.0)
+        elif s >= 45.0:
+            return int(20000 + (60.0 - s) * 1666.6)
+        else:
+            return int(45000 + (45.0 - s) * 1222.2)
+
+    # Identify student's weakest subject
+    weakest_subject = "Physics"
+    lowest_subj_score = 101.0
+    for subj, sc_list in subject_scores_dict.items():
+        if sc_list:
+            subj_avg = sum(sc_list) / len(sc_list)
+            if subj_avg < lowest_subj_score:
+                lowest_subj_score = subj_avg
+                weakest_subject = subj
+
+    # Top weak topic (from weak_areas, or can_improve_areas, or fallback)
+    top_weak_topic = None
+    if weak_areas:
+        top_weak_topic = weak_areas[0].split(" (")[0]
+    elif can_improve_areas:
+        top_weak_topic = can_improve_areas[0].split(" (")[0]
+    else:
+        top_weak_topic = f"{weakest_subject} Core Concepts"
+
+    current_rank = _calc_kcet_rank(avg_score)
+    est_gain = 14.0 if avg_score < 70.0 else (10.0 if avg_score < 85.0 else 5.0)
+    boosted_score = min(98.0, round(avg_score + est_gain, 1))
+    boosted_rank = _calc_kcet_rank(boosted_score)
+    rank_leap = max(50, current_rank - boosted_rank)
+    potential_marks = round(est_gain * 0.6, 1)
+
+    rank_booster = {
+        "current_score": avg_score,
+        "current_rank": current_rank,
+        "boosted_score": boosted_score,
+        "boosted_rank": boosted_rank,
+        "rank_leap": rank_leap,
+        "potential_marks_gain": potential_marks,
+        "est_gain_pct": est_gain,
+        "weakest_subject": weakest_subject,
+        "top_weak_topic": top_weak_topic,
+        "has_data": True,
+    }
+
+    action_plan = [
+        {
+            "id": "step-1",
+            "title": f"Revise Core Formulas & NCERT Theory in {top_weak_topic}",
+            "desc": f"Review key formulas, standard definitions, and exception cases for {top_weak_topic} in {weakest_subject}.",
+            "category": "Formulas & Theory",
+            "badge": "Step 1",
+        },
+        {
+            "id": "step-2",
+            "title": f"Solve 15-20 Timed PYQs in {top_weak_topic}",
+            "desc": f"Work through past 5 years KCET questions under timed conditions (< 75s per numerical).",
+            "category": "Targeted Practice",
+            "badge": "Step 2",
+        },
+        {
+            "id": "step-3",
+            "title": f"Validate with a {weakest_subject} Mock Exam",
+            "desc": f"Retake a {weakest_subject} exam aiming for >= 75% accuracy to lock in your score and rank gains.",
+            "category": "Mock Validation",
+            "badge": "Step 3",
+        },
+    ]
+
+    # 8. Exam history list
+    exam_history = []
+    for sub, exam_set, exam in rows:
+        submitted_at_str = sub.submitted_at.strftime("%b %d, %Y") if sub.submitted_at else "—"
+        exam_history.append({
+            "id": str(sub.id),
+            "subject": exam.subject,
+            "exam_name": exam.exam_name or f"{exam.subject} Exam",
+            "set": f"Set {exam_set.set_label}",
+            "score": f"{float(sub.score_pct):.1f}%",
+            "score_pct": float(sub.score_pct),
+            "time": f"{round(sub.time_taken_sec / 60)}m",
+            "time_taken_sec": int(sub.time_taken_sec),
+            "status": "Pass" if float(sub.score_pct) >= 50.0 else "Fail",
+            "date": submitted_at_str,
+        })
+
+    return jsonify({
+        "kpis": {
+            "examsTaken": distinct_exam_ids,
+            "submissions": submissions_count,
+            "avgScore": avg_score,
+            "passRate": pass_rate,
+            "avgTime": avg_time,
+            "rank": my_rank,
+            "rankHint": rank_hint,
+        },
+        "topicData": {
+            "labels": topic_labels,
+            "scores": topic_scores,
+        },
+        "setData": {
+            "labels": trend_labels,
+            "scores": trend_scores,
+        },
+        "passFailData": {
+            "labels": ["Pass", "Fail"],
+            "counts": [pass_count, fail_count],
+        },
+        "aiAnalysis": {
+            "strong_areas": strong_areas,
+            "can_improve_areas": can_improve_areas,
+            "weak_areas": weak_areas,
+            "recommendation": recommendation_text,
+            "rank_booster": rank_booster,
+            "action_plan": action_plan,
+        },
+        "topStudents": top_students,
+        "examHistory": exam_history,
+        "has_data": True,
+    })
 
 
 __all__ = ["router"]

@@ -74,9 +74,9 @@ def create_app():
     app.register_blueprint(subscription_router, url_prefix='/api/subscription')
 
     print('\n========================================')
-    print('FIXED CREDENTIALS LOADED:')
+    print('PLATFORM CREDENTIALS:')
     print('Admin Login: admin@mre.com / admin')
-    print('Institution Login: institution@mre.com / inst')
+    print('Institution: Authenticates via registered institution accounts')
     print('========================================\n')
     app.register_blueprint(institution_router, url_prefix='/api/institution')
     app.register_blueprint(admin_api_router, url_prefix='/api/admin')

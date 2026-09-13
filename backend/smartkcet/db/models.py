@@ -86,6 +86,36 @@ def _uuid_pk()-> Mapped[uuid.UUID]:
 
 
 # ---------------------------------------------------------------------------
+# INSTITUTION BATCHES (Classes / Cohorts)
+# ---------------------------------------------------------------------------
+
+
+class InstitutionBatch(Base):
+    """A class, section, or cohort belonging to an institution (e.g. PUC-II Section A)."""
+
+    __tablename__ = "institution_batches"
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
+    institution_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("institutions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.now()
+    )
+
+    students: Mapped[list["User"]] = relationship(
+        back_populates="batch",
+        foreign_keys="User.batch_id",
+    )
+    exams: Mapped[list["Exam"]] = relationship(
+        back_populates="batch",
+        foreign_keys="Exam.batch_id",
+    )
+
+
+# ---------------------------------------------------------------------------
 # USERS
 # ---------------------------------------------------------------------------
 
@@ -119,6 +149,9 @@ class User(Base):
     institution_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         Uuid, ForeignKey("institutions.id", ondelete="SET NULL"), nullable=True
     )
+    batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("institution_batches.id", ondelete="SET NULL"), nullable=True, index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now()
     )
@@ -127,6 +160,10 @@ class User(Base):
     )
     lockout_until: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
+    batch: Mapped[Optional["InstitutionBatch"]] = relationship(
+        back_populates="students",
+        foreign_keys=[batch_id],
+    )
     submissions: Mapped[list["Submission"]] = relationship(
         back_populates="user", cascade="all, delete-orphan"
     )
@@ -223,7 +260,26 @@ class Exam(Base):
     is_published: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="0"
     )
+    batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("institution_batches.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    duration_minutes: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, default=60, server_default="60"
+    )
+    scheduled_start: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
+    scheduled_end: Mapped[Optional[datetime]] = mapped_column(
+        DateTime, nullable=True
+    )
+    total_marks: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True, default=60, server_default="60"
+    )
 
+    batch: Mapped[Optional["InstitutionBatch"]] = relationship(
+        back_populates="exams",
+        foreign_keys=[batch_id],
+    )
     sets: Mapped[list["ExamSet"]] = relationship(
         back_populates="exam", cascade="all, delete-orphan"
     )
@@ -255,7 +311,9 @@ class ExamSet(Base):
     question_links: Mapped[list["ExamSetQuestion"]] = relationship(
         back_populates="exam_set", cascade="all, delete-orphan"
     )
-    submissions: Mapped[list["Submission"]] = relationship(back_populates="exam_set")
+    submissions: Mapped[list["Submission"]] = relationship(
+        back_populates="exam_set", cascade="all, delete-orphan"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -335,7 +393,7 @@ class Submission(Base):
     user: Mapped["User"] = relationship(back_populates="submissions")
     exam_set: Mapped["ExamSet"] = relationship(back_populates="submissions")
     usage_records: Mapped[list["UsageRecord"]] = relationship(
-        back_populates="submission",
+        back_populates="submission", cascade="all, delete-orphan"
     )
 
 

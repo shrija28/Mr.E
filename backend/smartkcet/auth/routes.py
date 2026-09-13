@@ -527,27 +527,52 @@ def admin_login()-> Any:
 
 
 @router.route("/institution/login", methods=["POST"])
-def institution_admin_login()-> Any:
-    from flask import request
+def institution_admin_login() -> Any:
+    from flask import request, g
+    session = getattr(g, "db", None)
     payload = LoginRequest(**(request.get_json() or {}))
-    
-    # Fixed Institution Admin Credentials
-    FIXED_INST_EMAIL = "institution@mre.com"
-    FIXED_INST_PASSWORD = "inst"
 
     email_str = payload.email.strip().lower() if isinstance(payload.email, str) else ""
     password_str = payload.password if isinstance(payload.password, str) else ""
 
-    if email_str != FIXED_INST_EMAIL or password_str != FIXED_INST_PASSWORD:
+    if not email_str or not password_str:
         return _generic_auth_failure()
 
-    # Successful login
+    # Query institution_admin account from database
+    user = session.execute(
+        select(User).where(User.email == email_str, User.role == "institution_admin")
+    ).scalar_one_or_none()
+
+    if user is None:
+        return _generic_auth_failure()
+
+    if not verify_password(password_str, user.password_hash):
+        return _generic_auth_failure()
+
+    institution_id_str = str(user.institution_id) if user.institution_id else None
+
+    # Retrieve institution details if linked
+    display_name = user.display_name or "Institution Admin"
+    if user.institution_id:
+        from ..db.subscription_models import Institution
+        inst = session.get(Institution, user.institution_id)
+        if inst and inst.name:
+            display_name = inst.name
+
+    # Issue session token with institution_admin role and institution_id
     token, _jti, _iat, _exp = issue_token(
-        sub=FIXED_INST_EMAIL,
+        sub=user.email,
         role="institution_admin",
-        institution_id="fixed-inst-id",
+        institution_id=institution_id_str,
     )
-    resp = make_response(jsonify({"email": FIXED_INST_EMAIL, "display_name": "Institution Admin", "role": "institution_admin", "institution_id": "fixed-inst-id"}))
+
+    resp = make_response(jsonify({
+        "email": user.email,
+        "display_name": display_name,
+        "role": "institution_admin",
+        "institution_id": institution_id_str,
+        "redirect": "/institution/dashboard",
+    }))
     _set_session_cookie(resp, token, max_age=ADMIN_TOKEN_TTL_SEC)
     return resp
 

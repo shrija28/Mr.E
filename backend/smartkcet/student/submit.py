@@ -58,6 +58,7 @@ from ..db.models import (
 from ..db.session import get_async_session as get_session
 from ..middleware.rbac import current_user, require_student
 from ..submissions.scoring import score_submission
+from ..rag.ai_analyzer import analyze_student_submission
 
 logger = logging.getLogger("smartkcet.student.submit")
 
@@ -74,13 +75,13 @@ _MAX_IDEMPOTENCY_KEY_LEN = 64
 # ---------------------------------------------------------------------------
 
 
-def _validation_error(message: str, field: Optional[str] = None)-> JSONResponse:
+def _validation_error(message: str, field: Optional[str] = None)-> Any:
     """Return a 400 envelope identical in shape to the admin endpoints."""
 
     body: dict[str, Any] = {"error": "validation_error", "message": message}
     if field is not None:
         body["field"] = field
-    return JSONResponse(status_code=400, content=body)
+    return make_response(jsonify(body), 400)
 
 
 def _not_found(resource: str, value: Any)-> JSONResponse:
@@ -123,18 +124,24 @@ def _load_exam_set_questions(session: Session, exam_set_id: uuid.UUID)-> list[di
         .order_by(ExamSetQuestion.order_index.asc())
     )
     rows = session.execute(stmt).all()
+    from ..rag.mcq_extractor import infer_question_subtype
+
     questions: list[dict[str, Any]] = []
     for question, _order in rows:
+        st = infer_question_subtype(question.question_text, question.options or [], question.subject)
         questions.append(
             {
                 "q": question.question_text,
                 "opts": question.options,
                 "ans": question.correct_option,
                 "topic": question.topic or "General",
+                "exp": question.explanation or "",
+                "subtype": st,
                 "marks": 1,
             }
         )
     return questions
+
 
 
 # ---------------------------------------------------------------------------
@@ -200,21 +207,15 @@ def submit()-> Any:
             field="time_taken_sec",
         )
 
-    if (
-        not isinstance(payload.idempotency_key, str)
-        or not payload.idempotency_key.strip()
-    ):
-        return _validation_error(
-            "idempotency_key is required and must be a non-empty string",
-            field="idempotency_key",
-        )
-
-    idempotency_key = payload.idempotency_key.strip()
-    if len(idempotency_key) > _MAX_IDEMPOTENCY_KEY_LEN:
-        return _validation_error(
-            f"idempotency_key must be {_MAX_IDEMPOTENCY_KEY_LEN} characters or fewer",
-            field="idempotency_key",
-        )
+    if isinstance(payload.idempotency_key, str) and payload.idempotency_key.strip():
+        idempotency_key = payload.idempotency_key.strip()
+        if len(idempotency_key) > _MAX_IDEMPOTENCY_KEY_LEN:
+            return _validation_error(
+                f"idempotency_key must be {_MAX_IDEMPOTENCY_KEY_LEN} characters or fewer",
+                field="idempotency_key",
+            )
+    else:
+        idempotency_key = uuid.uuid4().hex
 
     # ---- Step 2: resolve authenticated student -----------------------
     user = current_user(request, session)
@@ -236,15 +237,23 @@ def submit()-> Any:
         )
     ).scalar_one_or_none()
     if existing is not None:
-        # REQ-9.3: a retried POST with the same key returns the existing
-        # submission record — no new row is created.  The full scoring
-        # envelope isn't recomputed (the answers may have differed in a
-        # malicious retry); we surface the persisted truth instead.
-        return {
+        rep_answers = existing.answers or {}
+        replay_body = {
             "submission_id": str(existing.id),
             "submission": _serialise_submission(existing),
             "idempotent_replay": True,
+            "percentage": float(existing.score_pct or 0.0),
+            "time_taken_sec": int(existing.time_taken_sec or 0),
         }
+        if isinstance(rep_answers, dict) and "__ai_analysis__" in rep_answers:
+            ai_data = rep_answers["__ai_analysis__"]
+            replay_body["ai_analysis"] = ai_data
+            summ = ai_data.get("summary", {}) if isinstance(ai_data, dict) else {}
+            replay_body["score"] = summ.get("score")
+            replay_body["total_marks"] = summ.get("total")
+            replay_body["correct_count"] = summ.get("score")
+            replay_body["incorrect_count"] = max(0, (summ.get("total") or 0) - (summ.get("score") or 0))
+        return make_response(jsonify(replay_body), 200)
 
     # ---- Step 4: load questions + score + persist --------------------
     exam_set = session.get(ExamSet, exam_set_id)
@@ -253,19 +262,28 @@ def submit()-> Any:
 
     questions = _load_exam_set_questions(session, exam_set_id)
     if not questions:
-        # An exam set without question rows is in an invalid state from
-        # the admin side (REQ-7.1 makes that impossible for new exams),
-        # but we surface it as a 422 rather than scoring 0/0.
         return make_response(jsonify({
                 "error": "exam_set_empty",
                 "message": "exam set has no questions",
                 "exam_set_id": str(exam_set_id),
             }), 422)
 
+    exam = session.get(Exam, exam_set.exam_id) if exam_set else None
+    subject_name = exam.subject if exam is not None else "General"
+
     score = score_submission(questions, payload.answers)
+    ai_analysis = analyze_student_submission(
+        questions=questions,
+        answers=payload.answers or {},
+        score_data=score,
+        time_taken_sec=int(payload.time_taken_sec),
+        subject=subject_name,
+    )
+
     answers_data = dict(payload.answers) if payload.answers else {}
     if payload.question_times:
         answers_data["__question_times__"] = payload.question_times
+    answers_data["__ai_analysis__"] = ai_analysis
 
     submission = Submission(
         user_id=user.id,
@@ -338,18 +356,30 @@ def submit()-> Any:
         # Usage tracking is important but should not fail the submission
         logger.warning("usage tracking record_attempt raised: %s", exc)
 
+    earned = int(score.get("earned", 0))
+    total = int(score.get("total", len(questions)))
+    pct = float(score.get("percentage", 0.0))
+    q_res = score.get("questionResults", [])
+    correct = sum(1 for q in q_res if q.get("earned", 0) > 0)
+    unans = sum(1 for q in q_res if not q.get("studentAnswer"))
+    incorrect = max(0, total - correct - unans)
+
     response_body: dict[str, Any] = {
         "submission_id": str(submission.id),
         "submission": _serialise_submission(submission),
         "idempotent_replay": False,
+        "ai_analysis": ai_analysis,
+        "score": earned,
+        "total_marks": total,
+        "percentage": pct,
+        "correct_count": correct,
+        "incorrect_count": incorrect,
+        "unanswered_count": unans,
+        "time_taken_sec": int(payload.time_taken_sec),
     }
-    # Surface the scoring envelope so the frontend can render the
-    # post-exam recap without a second request.  Drop the duplicated
-    # ``topic_breakdown`` alias so the response mirrors the legacy
-    # /analyze body (which only had ``topicScores``).
     score_envelope = {k: v for k, v in score.items() if k != "topic_breakdown"}
     response_body["result"] = score_envelope
-    return response_body
+    return make_response(jsonify(response_body), 200)
 
 
 # ---------------------------------------------------------------------------

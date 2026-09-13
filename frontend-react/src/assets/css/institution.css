@@ -56,12 +56,8 @@
    the portal from the student and platform admin interfaces.
    ───────────────────────────────────────────────────────────────────────── */
 .institution-nav {
-  border-bottom-color: var(--inst-accent-border);
-  background: linear-gradient(
-    180deg,
-    rgba(139, 92, 246, 0.06) 0%,
-    rgba(6, 6, 16, 0.85) 100%
-  );
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: #060610;
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   position: relative;
@@ -190,7 +186,7 @@
 .institution-nav .nav-links,
 .institution-nav-links {
   gap: 4px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 /* ── Institution Page Wrapper / Headings ───────────────────────────────────

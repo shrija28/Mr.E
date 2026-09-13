@@ -237,7 +237,7 @@ def current_user_id()-> Optional[str]:
     return sub if isinstance(sub, str) else None
 
 
-def current_user(session: Session)-> Optional[User]:
+def current_user(*args: Any, **kwargs: Any)-> Optional[User]:
     """Resolve the cookie token to a :class:`User` ORM row, or ``None``.
 
     The lookup column depends on role:
@@ -249,6 +249,17 @@ def current_user(session: Session)-> Optional[User]:
     Returns ``None`` when the token is absent, invalid, revoked, or
     points at a user that no longer exists.
     """
+    session = kwargs.get("session") or kwargs.get("db")
+    if session is None:
+        for arg in args:
+            if isinstance(arg, Session):
+                session = arg
+                break
+    if session is None and args:
+        session = args[-1]
+    if session is None:
+        from flask import g
+        session = getattr(g, "db", None)
 
     payload = resolve_payload(flask_request, session)
     if payload is None:

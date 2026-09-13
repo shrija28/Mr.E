@@ -1,265 +1,277 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler
-} from 'chart.js';
-import { Bar, Line } from 'react-chartjs-2';
-
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler);
 
 const InstitutionDashboard = () => {
-  const [data, setData] = useState(null);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [batches, setBatches] = useState([]);
+  const [exams, setExams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  useEffect(() => {
-    // Simulate API fetch for Institution Dashboard Data
-    setTimeout(() => {
-      // Remove loading state by styling the display block appropriately
-      const loader = document.getElementById('dashboardLoading');
-      const content = document.getElementById('dashboardContent');
-      if (loader) loader.style.display = 'none';
-      if (content) content.style.display = 'block';
+  const fetchDashboard = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      // 1. Dashboard summary
+      const dashRes = await fetch('/api/institution/dashboard', { credentials: 'include' });
+      if (dashRes.ok) {
+        const dData = await dashRes.json();
+        setDashboardData(dData);
+      }
 
-      setData({
-        kpis: {
-          students: 350,
-          testsWeek: 12,
-          testsMonth: 48,
-          status: 'Active'
-        }
-      });
-    }, 800);
-  }, []);
+      // 2. Batches
+      const batchRes = await fetch('/api/institution/batches', { credentials: 'include' });
+      if (batchRes.ok) {
+        const bData = await batchRes.json();
+        setBatches(bData.batches || []);
+      }
 
-  const chartOptions = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
-    scales: {
-      y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { color: '#64748b' } },
-      x: { grid: { display: false }, ticks: { color: '#64748b' } }
+      // 3. Exams
+      const examRes = await fetch('/api/institution/content/exams', { credentials: 'include' });
+      if (examRes.ok) {
+        const eData = await examRes.json();
+        setExams(eData.exams || []);
+      }
+    } catch (err) {
+      setError('Unable to load dashboard data');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const performanceChartData = {
-    labels: ['Physics', 'Chemistry', 'Math', 'Bio'],
-    datasets: [{
-      label: 'Average Score',
-      data: [75, 82, 65, 88],
-      backgroundColor: 'rgba(124, 58, 237, 0.8)',
-      borderRadius: 4
-    }]
-  };
+  useEffect(() => {
+    fetchDashboard();
+  }, []);
+
+  const totalStudents = dashboardData?.total_students ?? 0;
+  const institutionName = dashboardData?.institution_name || 'Your Institution';
+  const subStatus = dashboardData?.subscription_status || 'active';
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: `` }} />
       <div className="bg-mesh"></div>
-      
+
       <main className="institution-page" id="institutionDashboardPage">
-    
-    <div className="institution-page-header">
-      <div>
-        <h1 className="institution-page-title">
-          Institution <span className="institution-page-title-accent">Dashboard</span>
-        </h1>
-        <p className="institution-page-sub" id="institutionName">Overview of your institution's activity and subscription</p>
-      </div>
-      <div className="institution-page-header-actions">
-        <div className="last-updated" id="lastUpdated" role="status" aria-live="polite" aria-atomic="true">Last updated: —</div>
-        <button className="btn-institution-outline" id="refreshDashboardBtn" type="button" aria-label="Refresh dashboard data">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
-          Refresh
-        </button>
-      </div>
-    </div>
-
-    
-    <div className="institution-alert-banner" id="subscriptionAlertBanner" role="alert" aria-live="polite" style={{"display":"none"}}>
-      <div className="alert-content">
-        <span className="alert-icon" aria-hidden="true">⚠️</span>
-        <div className="alert-text">
-          <strong id="alertTitle">Payment Overdue</strong>
-          <span id="alertMessage">Your institution's access will be suspended soon.</span>
-        </div>
-      </div>
-      <Link to="/institution/subscription" className="btn-institution" id="alertActionBtn" aria-describedby="alertTitle alertMessage">Pay Now</Link>
-    </div>
-
-    
-    <div className="loading-state" id="dashboardLoading" role="status" aria-live="polite">
-      <div className="loading-spinner" aria-hidden="true"></div>
-      <p>Loading dashboard...</p>
-    </div>
-
-    
-    <div className="empty-state" id="dashboardError" style={{"display":"none"}} role="alert" aria-live="polite">
-      <div className="empty-icon" aria-hidden="true">⚠️</div>
-      <h3>Unable to load dashboard data</h3>
-      <p id="dashboardErrorMessage">Please check your connection and try again.</p>
-      <div className="empty-actions">
-        <button className="btn-institution" id="retryDashboardBtn" type="button" aria-label="Retry loading dashboard">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
-          Retry
-        </button>
-      </div>
-    </div>
-
-    
-    <div id="dashboardContent" style={{"display":"none"}}>
-
-      
-      <section className="kpi-grid" aria-label="Institution key metrics">
-        
-        <div className="kpi-tile" id="kpiTileStudents">
-          <div className="kpi-icon" aria-hidden="true">👥</div>
-          <div className="kpi-value" id="kpiTotalStudents">{data ? data.kpis.students : "—"}</div>
-          <div className="kpi-label">Total Students</div>
-        </div>
-
-        
-        <div className="kpi-tile" id="kpiTileWeek">
-          <div className="kpi-icon" aria-hidden="true">📝</div>
-          <div className="kpi-value" id="kpiTestsThisWeek">{data ? data.kpis.testsWeek : "—"}</div>
-          <div className="kpi-label">Tests This Week</div>
-        </div>
-
-        
-        <div className="kpi-tile" id="kpiTileMonth">
-          <div className="kpi-icon" aria-hidden="true">📊</div>
-          <div className="kpi-value" id="kpiTestsThisMonth">{data ? data.kpis.testsMonth : "—"}</div>
-          <div className="kpi-label">Tests This Month</div>
-        </div>
-
-        
-        <div className="kpi-tile" id="kpiTileStatus" data-status="active">
-          <div className="kpi-icon" aria-hidden="true">✓</div>
-          <div className="kpi-value" id="kpiSubscriptionStatus" role="status" aria-live="polite">{data ? data.kpis.status : "—"}</div>
-          <div className="kpi-label">Subscription Status</div>
-        </div>
-      </section>
-
-      
-      
-
-      
-      <section className="section-card" aria-labelledby="recentActivityHeading">
-        <div className="section-card-header">
-          <div className="section-icon institution" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
-          </div>
+        {/* Header */}
+        <div className="institution-page-header" style={{ marginBottom: '24px' }}>
           <div>
-            <h2 id="recentActivityHeading">Recent Activity</h2>
-            <p className="section-sub">10 most recent exam submissions by your students</p>
-          </div>
-        </div>
-        <div className="section-body">
-          
-          <div className="recent-activity-empty" id="recentActivityEmpty" style={{"display":"none"}} role="status" aria-live="polite">
-            <p className="empty-message">No exam submissions yet. Activity will appear here as students take tests.</p>
-          </div>
-
-          
-          <div className="responsive-table-wrapper" id="recentActivityWrapper">
-            <table className="results-table" id="recentActivityTable" aria-describedby="recentActivityHeading">
-              <thead>
-                <tr>
-                  <th scope="col">Student</th>
-                  <th scope="col">Subject</th>
-                  <th scope="col">Score</th>
-                  <th scope="col">Date</th>
-                  <th scope="col">Time Taken</th>
-                </tr>
-              </thead>
-              <tbody id="recentActivityBody">
-                
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      
-      <section className="section-card chart-card" aria-labelledby="performanceSummaryHeading">
-        <div className="section-card-header">
-          <div className="section-icon institution" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          </div>
-          <div>
-            <h2 id="performanceSummaryHeading">Student Performance Summary</h2>
-            <p className="section-sub">Average score by subject across all institution students</p>
-          </div>
-        </div>
-        <div className="section-body">
-          
-          <div className="performance-empty" id="performanceEmpty" style={{"display":"none"}} role="status" aria-live="polite">
-            <p className="empty-message">No performance data available yet. Charts will appear once students submit exams.</p>
-          </div>
-          
-          <div className="chart-wrap" id="performanceChartWrap">
-            <div style={{ height: "300px" }}>{data && <Bar data={performanceChartData} options={chartOptions} />}</div>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    
-    <div className="modal-overlay" id="studentsModal" role="dialog" aria-modal="true" aria-labelledby="studentsModalTitle" aria-hidden="true" style={{"display":"none"}}>
-      <div className="modal-dialog" style={{"maxWidth":"900px"}}>
-        <div className="modal-header">
-          <h2 id="studentsModalTitle">All Students</h2>
-          <button type="button" className="modal-close" id="studentsModalClose" aria-label="Close students list">&times;</button>
-        </div>
-        <div className="modal-body" style={{"maxHeight":"70vh","overflowY":"auto"}}>
-          
-          <div id="institutionStudentsSection">
-            <h3 id="institutionName" style={{"marginTop":"0","color":"var(--purple-l, #a78bfa)","fontSize":"1.1rem"}}>Loading...</h3>
-            <p style={{"color":"var(--muted)","marginBottom":"16px"}}>Institution-Linked Students</p>
-            <div className="responsive-table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Student ID</th>
-                  </tr>
-                </thead>
-                <tbody id="institutionStudentsBody">
-                  <tr><td colspan="3" style={{"textAlign":"center","color":"var(--muted)","padding":"20px"}}>Loading...</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          
-          <div id="directSubscribersSection" style={{"marginTop":"32px"}}>
-            <h3 style={{"marginTop":"0","color":"var(--green-l, #86efac)","fontSize":"1.1rem"}}>Direct Subscribers</h3>
-            <p style={{"color":"var(--muted)","marginBottom":"16px"}}>All Platform Direct Subscribers</p>
-            <div className="responsive-table-wrapper">
-              <table>
-                <thead>
-                  <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Student ID</th>
-                  </tr>
-                </thead>
-                <tbody id="directSubscribersBody">
-                  <tr><td colspan="3" style={{"textAlign":"center","color":"var(--muted)","padding":"20px"}}>Loading...</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          
-          <div style={{"marginTop":"24px","padding":"16px","background":"rgba(167, 139, 250, 0.08)","borderRadius":"8px","border":"1px solid var(--border)"}}>
-            <p style={{"margin":"0","color":"var(--text)","fontWeight":"500"}}>
-              <span id="institutionStudentCount">0</span> institution students + <span id="directSubscriberCount">0</span> direct subscribers = <span id="totalStudentCount">0</span> total students
+            <h1 className="institution-page-title">
+              {institutionName} <span className="institution-page-title-accent">Dashboard</span>
+            </h1>
+            <p className="institution-page-sub">
+              Command center for managing your classes, weekly mock tests, and student rankings
             </p>
           </div>
+          <div className="institution-page-header-actions">
+            <button
+              className="btn-institution-outline"
+              type="button"
+              onClick={fetchDashboard}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: '14px', height: '14px' }}><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+              Refresh Data
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
 
-  </main>
+        {error && (
+          <div style={{ background: 'rgba(220,38,38,0.1)', border: '1px solid var(--red)', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', color: 'var(--red-l)' }}>
+            {error}
+          </div>
+        )}
+
+        {/* 1. Real KPI Summary Tiles */}
+        <section className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          <Link to="/institution/students" style={{ textDecoration: 'none' }}>
+            <div className="kpi-tile" style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', transition: 'transform 0.2s', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 600 }}>TOTAL STUDENTS</span>
+                <span style={{ fontSize: '1.4rem' }}>👥</span>
+              </div>
+              <div style={{ fontSize: '2.2rem', fontWeight: 700, color: 'var(--text)' }}>
+                {loading ? '—' : totalStudents}
+              </div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--blue)' }}>Manage & Invite Students →</span>
+            </div>
+          </Link>
+
+          <Link to="/institution/students" style={{ textDecoration: 'none' }}>
+            <div className="kpi-tile" style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', transition: 'transform 0.2s', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 600 }}>ACTIVE BATCHES</span>
+                <span style={{ fontSize: '1.4rem' }}>🏫</span>
+              </div>
+              <div style={{ fontSize: '2.2rem', fontWeight: 700, color: 'var(--purple-l, #a78bfa)' }}>
+                {loading ? '—' : batches.length}
+              </div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--purple-l, #a78bfa)' }}>View & Create Sections →</span>
+            </div>
+          </Link>
+
+          <Link to="/institution/exams" style={{ textDecoration: 'none' }}>
+            <div className="kpi-tile" style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', transition: 'transform 0.2s', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 600 }}>WEEKLY EXAMS</span>
+                <span style={{ fontSize: '1.4rem' }}>📝</span>
+              </div>
+              <div style={{ fontSize: '2.2rem', fontWeight: 700, color: 'var(--text)' }}>
+                {loading ? '—' : exams.length}
+              </div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--blue)' }}>Build & Schedule Tests →</span>
+            </div>
+          </Link>
+
+          <Link to="/institution/subscription" style={{ textDecoration: 'none' }}>
+            <div className="kpi-tile" style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', padding: '20px', transition: 'transform 0.2s', cursor: 'pointer' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--muted)', fontWeight: 600 }}>SUBSCRIPTION</span>
+                <span style={{ fontSize: '1.4rem' }}>✓</span>
+              </div>
+              <div style={{ fontSize: '2.2rem', fontWeight: 700, color: '#10b981', textTransform: 'capitalize' }}>
+                {subStatus}
+              </div>
+              <span style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Manage Plan & Quota →</span>
+            </div>
+          </Link>
+        </section>
+
+        {/* 2. Getting Started & Quick Action Workflow */}
+        <section className="section-card" style={{ marginBottom: '24px', background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.08), rgba(37, 99, 235, 0.08))', border: '1px solid rgba(124, 58, 237, 0.3)' }}>
+          <div className="section-card-header">
+            <div>
+              <h2 style={{ fontSize: '1.25rem', color: 'var(--text)' }}>🚀 Teacher-Led Next Steps: What You Can Do</h2>
+              <p className="section-sub">Follow these 3 simple steps to start testing and grading your students</p>
+            </div>
+          </div>
+
+          <div className="section-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+            <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '1.8rem', marginBottom: '8px' }}>👥</div>
+                <h3 style={{ fontSize: '1.05rem', margin: '0 0 6px', color: 'var(--text)' }}>1. Create Batches & Invite Students</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0 }}>
+                  Create class sections (e.g. <em>PUC-II Section A</em>) and generate a single invitation link to share with your students.
+                </p>
+              </div>
+              <Link to="/institution/students" className="btn-primary" style={{ marginTop: '16px', textAlign: 'center', justifyContent: 'center' }}>
+                Manage Students & Batches →
+              </Link>
+            </div>
+
+            <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '1.8rem', marginBottom: '8px' }}>📝</div>
+                <h3 style={{ fontSize: '1.05rem', margin: '0 0 6px', color: 'var(--text)' }}>2. Build & Assign Weekly Tests</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0 }}>
+                  Pick a subject (Mathematics, Biology, Physics, Chemistry), choose questions count, set a 60-min timer, and assign to your batch.
+                </p>
+              </div>
+              <Link to="/institution/exams" className="btn-primary" style={{ marginTop: '16px', textAlign: 'center' }}>
+                Open Test Builder →
+              </Link>
+            </div>
+
+            <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '10px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '1.8rem', marginBottom: '8px' }}>📊</div>
+                <h3 style={{ fontSize: '1.05rem', margin: '0 0 6px', color: 'var(--text)' }}>3. View Batch Rank Lists</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0 }}>
+                  Instantly track student submissions, view leaderboard rankings (#1 🥇, #2 🥈), and analyze class average scores.
+                </p>
+              </div>
+              <Link to="/institution/analytics" className="btn-primary" style={{ marginTop: '16px', textAlign: 'center', justifyContent: 'center' }}>
+                View Batch Analytics →
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* 3. Scheduled Tests Overview */}
+        <section className="section-card">
+          <div className="section-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div className="section-icon" style={{ background: 'rgba(59, 130, 246, 0.2)' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+              </div>
+              <div>
+                <h2>Your Institution's Active Exams</h2>
+                <p className="section-sub">Tests currently available to your students</p>
+              </div>
+            </div>
+            <Link to="/institution/exams" className="btn-institution-outline" style={{ padding: '6px 12px', fontSize: '0.85rem' }}>
+              + Create New Test
+            </Link>
+          </div>
+
+          <div className="section-body" style={{ padding: 0 }}>
+            {exams.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--muted)' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '8px' }}>📝</div>
+                <p>No exams created yet. Click the button below to schedule your first weekly mock test.</p>
+                <Link to="/institution/exams" className="btn-primary" style={{ display: 'inline-block', marginTop: '12px' }}>
+                  Create First Weekly Test
+                </Link>
+              </div>
+            ) : (
+              <div className="responsive-table-wrapper">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Exam Name</th>
+                      <th>Subject</th>
+                      <th>Assigned Batch</th>
+                      <th>Duration</th>
+                      <th>Status</th>
+                      <th style={{ textAlign: 'right' }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {exams.slice(0, 5).map((exam) => (
+                      <tr key={exam.exam_id}>
+                        <td>
+                          <div style={{ fontWeight: 600, color: 'var(--text)' }}>{exam.exam_name}</div>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                            {exam.created_at ? new Date(exam.created_at).toLocaleDateString() : '—'}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--blue)' }}>
+                            {exam.subject}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: '0.8rem', padding: '2px 8px', borderRadius: '4px', background: exam.batch_id ? 'rgba(167, 139, 250, 0.15)' : 'rgba(255, 255, 255, 0.06)', color: exam.batch_id ? 'var(--purple-l)' : 'var(--muted)' }}>
+                            👥 {exam.batch_name || 'All Batches'}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: '0.85rem' }}>{exam.duration_minutes || 60} mins</td>
+                        <td>
+                          <span style={{
+                            fontSize: '0.78rem',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            background: exam.is_published ? 'rgba(16, 185, 129, 0.15)' : 'rgba(234, 179, 8, 0.15)',
+                            color: exam.is_published ? '#10b981' : '#eab308',
+                            fontWeight: 600,
+                          }}>
+                            {exam.is_published ? 'Published' : 'Draft'}
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <Link to="/institution/exams" className="btn-institution-outline" style={{ padding: '4px 8px', fontSize: '0.78rem' }}>
+                            View in Builder →
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </section>
+      </main>
     </>
   );
 };

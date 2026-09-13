@@ -173,21 +173,8 @@ def get_rank_suggestions():
             detail={"error": "user_not_found", "message": "Authenticated user not found"},
         )
 
-    # 1. Fetch user subscription gating state
-    if user.student_subtype == "institution_linked":
-        is_locked = False
-    else:
-        active_sub = (
-            db.query(Subscription)
-            .join(SubscriptionPlan, Subscription.plan_id == SubscriptionPlan.id)
-            .filter(
-                Subscription.user_id == user.id,
-                Subscription.status.in_(["active", "grace_period"]),
-                SubscriptionPlan.name != "Free",
-            )
-            .first()
-        )
-        is_locked = active_sub is None
+    # 1. Fetch user subscription gating state - All students have full access without paywall censorship
+    is_locked = False
 
     # 2. Fetch completed submissions for user to calculate stats
     submissions = (

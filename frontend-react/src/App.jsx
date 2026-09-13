@@ -72,11 +72,10 @@ function App() {
           <Route path="/index" element={<PublicLayout><Index /></PublicLayout>} />
           <Route path="/login" element={<PublicLayout><LoginPage /></PublicLayout>} />
           <Route path="/register" element={<PublicLayout><RegisterPage /></PublicLayout>} />
+          <Route path="/institution/register" element={<PublicLayout><InstitutionRegister /></PublicLayout>} />
           <Route path="/contact-us" element={<PublicLayout><ContactUs /></PublicLayout>} />
           <Route path="/config" element={<Config />} />
           <Route path="/invitation-accept" element={<PublicLayout><InvitationAccept /></PublicLayout>} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/institution/dashboard" element={<InstitutionDashboard />} />
 
           {/* Student Routes */}
           <Route element={<StudentLayout />}>
@@ -117,7 +116,6 @@ function App() {
             <Route path="exams" element={<InstitutionExams />} />
             <Route path="pricing" element={<InstitutionPricing />} />
             <Route path="questions" element={<InstitutionQuestions />} />
-            <Route path="register" element={<InstitutionRegister />} />
             <Route path="students" element={<InstitutionStudents />} />
             <Route path="subscription" element={<InstitutionSubscription />} />
             <Route path="syllabus" element={<InstitutionSyllabus />} />

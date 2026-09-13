@@ -138,10 +138,10 @@ def _require_feature(db: Session, institution_id: uuid.UUID, feature: str, featu
             },
         )
 
-# Exam creation constants (mirrors admin: 4 sets × 20 = 80)
+# Exam creation constants (mirrors admin: 4 sets × 60 = 240)
 SET_LABELS = ("A", "B", "C", "D")
-QUESTIONS_PER_SET = 20
-QUESTIONS_PER_EXAM = QUESTIONS_PER_SET * len(SET_LABELS)  # 80
+QUESTIONS_PER_SET = 60
+QUESTIONS_PER_EXAM = QUESTIONS_PER_SET * len(SET_LABELS)  # 240
 
 
 # ---------------------------------------------------------------------------
@@ -692,23 +692,10 @@ def delete_institution_question(question_id: uuid.UUID)-> Any:
 @router.route("/content/exams", methods=["POST"])
 def create_institution_exam()-> Any:    
     payload = require_institution_admin()
-    from flask import g
+    from flask import g, request, jsonify, make_response
     db = getattr(g, "db", None)
     session = db
-    from flask import request
-    subject = request.args.get("subject", None)
-    from flask import request
-    exam_name = request.args.get("exam_name", None)
     
-    payload = require_institution_admin()
-    from flask import g
-    db = getattr(g, "db", None)
-    session = db
-    from flask import request
-    subject = request.args.get("subject", None)
-    from flask import request
-    exam_name = request.args.get("exam_name", None)
-    """Create an exam from this institution's question bank."""
     inst_id = _institution_id(payload)
 
     if not check_subscription_active(session, inst_id):
@@ -720,64 +707,83 @@ def create_institution_exam()-> Any:
             },
         )
 
-    # Feature gate: Advanced exam creation requires Premium plan
-    # Basic plan can create exams from institution's own question bank
-    # Premium plan additionally allows using admin KCET question bank
-    # (No explicit gate here since we always use institution's own bank)
+    body = request.get_json(silent=True) or {}
+    subject_raw = body.get("subject") or request.args.get("subject")
+    exam_name = body.get("exam_name") or request.args.get("exam_name") or "Weekly Test"
+    batch_id_raw = body.get("batch_id")
+    duration_minutes = int(body.get("duration_minutes") or 60)
+    total_marks = int(body.get("total_marks") or 60)
+    scheduled_start_str = body.get("scheduled_start")
+    scheduled_end_str = body.get("scheduled_end")
+    is_published = body.get("is_published", True)
+    question_count = int(body.get("question_count") or 40)
 
-    selected = _normalise_subject(subject)
+    selected = _normalise_subject(subject_raw)
     if selected is None:
         return _validation_error(
             f"subject is required and must be one of {[s.value for s in Subject]}",
             field="subject",
         )
 
+    # Parse batch_id
+    batch_id = None
+    if batch_id_raw and str(batch_id_raw).strip() not in ("", "all", "null"):
+        try:
+            batch_id = uuid.UUID(str(batch_id_raw))
+        except Exception:
+            batch_id = None
+
+    # Parse dates
+    from datetime import datetime
+    scheduled_start = None
+    if scheduled_start_str:
+        try:
+            scheduled_start = datetime.fromisoformat(scheduled_start_str.replace("Z", "+00:00"))
+        except Exception:
+            scheduled_start = None
+            
+    scheduled_end = None
+    if scheduled_end_str:
+        try:
+            scheduled_end = datetime.fromisoformat(scheduled_end_str.replace("Z", "+00:00"))
+        except Exception:
+            scheduled_end = None
+
     # Count institution-scoped questions
-    available = int(session.execute(
-        select(func.count(Question.id)).where(
-            Question.subject == selected.value,
-            Question.institution_id == inst_id,
-        )
-    ).scalar_one())
-
-    # We need at least 4 questions to create 4 sets (A, B, C, D)
-    if available < 4:
-        return make_response(jsonify({
-                "error": "insufficient_questions",
-                "subject": selected.value,
-                "count": available,
-                "required": 4,
-                "message": (
-                    f"Not enough questions in institution's {selected.value} bank. "
-                    f"Found {available}, need at least 4. "
-                    f"Please upload more question papers first."
-                ),
-            }), 422)
-
     id_rows = session.execute(
         select(Question.id).where(
             Question.subject == selected.value,
             Question.institution_id == inst_id,
         )
     ).all()
-    all_ids: list[uuid.UUID] = [row[0] for row in id_rows]
+    all_ids = [row[0] for row in id_rows]
 
-    # Dynamic scaling based on availability (up to QUESTIONS_PER_EXAM)
-    exam_size = min(len(all_ids), QUESTIONS_PER_EXAM)
-    
-    # Ensure the exam size is perfectly divisible by the number of sets (4)
+    # Seamless fallback: if institution has fewer questions than requested, draw from platform questions!
+    if len(all_ids) < question_count:
+        needed = question_count - len(all_ids)
+        platform_rows = session.execute(
+            select(Question.id).where(
+                Question.subject == selected.value,
+                Question.institution_id.is_(None)
+            ).order_by(func.random()).limit(needed)
+        ).all()
+        all_ids.extend([row[0] for row in platform_rows])
+
+    if len(all_ids) < 4:
+        return make_response(jsonify({
+            "error": "insufficient_questions",
+            "subject": selected.value,
+            "count": len(all_ids),
+            "required": 4,
+            "message": f"Not enough questions available for {selected.value}. Need at least 4."
+        }), 422)
+
+    exam_size = min(len(all_ids), question_count)
     num_sets = len(SET_LABELS)
     exam_size = exam_size - (exam_size % num_sets)
-    questions_per_set = exam_size // num_sets
-
     if exam_size < 4:
-        return make_response(jsonify({
-                "error": "insufficient_questions",
-                "subject": selected.value,
-                "count": len(all_ids),
-                "required": 4,
-                "message": "Not enough unique questions to form 4 sets."
-            }), 422)
+        exam_size = 4
+    questions_per_set = exam_size // num_sets
 
     drawn = random.sample(all_ids, exam_size)
     partitions = [
@@ -789,12 +795,18 @@ def create_institution_exam()-> Any:
         subject=selected.value,
         exam_name=exam_name,
         institution_id=inst_id,
+        batch_id=batch_id,
+        duration_minutes=duration_minutes,
+        total_marks=total_marks,
+        scheduled_start=scheduled_start,
+        scheduled_end=scheduled_end,
+        is_published=is_published,
     )
     session.add(exam)
 
     try:
         session.flush()
-        sets_payload: list[dict[str, Any]] = []
+        sets_payload = []
         for label, qids in zip(SET_LABELS, partitions):
             exam_set = ExamSet(exam_id=exam.id, set_label=label)
             session.add(exam_set)
@@ -806,7 +818,7 @@ def create_institution_exam()-> Any:
             sets_payload.append({
                 "label": label,
                 "exam_set_id": str(exam_set.id),
-                "question_count": QUESTIONS_PER_SET,
+                "question_count": len(qids),
             })
         session.commit()
     except (SQLAlchemyError, Exception) as exc:
@@ -815,14 +827,20 @@ def create_institution_exam()-> Any:
         return make_response(jsonify({"error": "exam_creation_failed", "message": str(exc)}), 500)
 
     created_at = exam.created_at
-    return {
+    batch_name = exam.batch.name if getattr(exam, "batch", None) else "All Batches"
+    return jsonify({
         "exam_id": str(exam.id),
         "institution_id": str(inst_id),
         "subject": selected.value,
         "exam_name": exam.exam_name,
+        "batch_id": str(batch_id) if batch_id else None,
+        "batch_name": batch_name,
+        "duration_minutes": exam.duration_minutes,
+        "total_marks": exam.total_marks,
+        "is_published": exam.is_published,
         "set_ids": sets_payload,
         "created_at": created_at.isoformat() if created_at else None,
-    }
+    }), 201
 
 
 # ---------------------------------------------------------------------------
@@ -832,12 +850,10 @@ def create_institution_exam()-> Any:
 @router.route("/content/exams", methods=["GET"])
 def list_institution_exams()-> Any:    
     payload = require_institution_admin()
-    from flask import g
+    from flask import g, request, jsonify
     db = getattr(g, "db", None)
     session = db
-    from flask import request
     subject = request.args.get("subject", None)
-    """List all exams created by this institution."""
     inst_id = _institution_id(payload)
 
     stmt = (
@@ -858,17 +874,29 @@ def list_institution_exams()-> Any:
         stmt = stmt.where(Exam.subject == selected.value)
 
     rows = session.execute(stmt).all()
-    exams_payload = [
-        {
+    exams_payload = []
+    for exam, set_count in rows:
+        sub_count = (
+            session.query(func.count(Submission.id))
+            .join(ExamSet, Submission.exam_set_id == ExamSet.id)
+            .filter(ExamSet.exam_id == exam.id)
+            .scalar() or 0
+        )
+        exams_payload.append({
             "exam_id": str(exam.id),
             "subject": exam.subject,
             "exam_name": exam.exam_name,
+            "batch_id": str(exam.batch_id) if exam.batch_id else None,
+            "batch_name": exam.batch.name if getattr(exam, "batch", None) else "All Batches",
+            "duration_minutes": getattr(exam, "duration_minutes", 60) or 60,
+            "total_marks": getattr(exam, "total_marks", 60) or 60,
+            "scheduled_start": exam.scheduled_start.isoformat() if getattr(exam, "scheduled_start", None) else None,
+            "scheduled_end": exam.scheduled_end.isoformat() if getattr(exam, "scheduled_end", None) else None,
             "created_at": exam.created_at.isoformat() if exam.created_at else None,
             "is_published": bool(exam.is_published),
             "set_count": int(set_count or 0),
-        }
-        for exam, set_count in rows
-    ]
+            "completion_count": int(sub_count),
+        })
 
     return {
         "institution_id": str(inst_id),
@@ -879,37 +907,73 @@ def list_institution_exams()-> Any:
 
 
 # ---------------------------------------------------------------------------
-# PATCH /content/exams/{exam_id}  (publish / unpublish)
+# PATCH /content/exams/{exam_id}  (publish / unpublish / update)
 # ---------------------------------------------------------------------------
 
-class PublishExamRequest(BaseModel):
-    is_published: bool
-
 @router.route("/content/exams/<exam_id>", methods=["PATCH"])
-def patch_institution_exam(exam_id: uuid.UUID)-> Any:    
+def patch_institution_exam(exam_id: str)-> Any:    
     payload = require_institution_admin()
-    from flask import g
+    from flask import g, request, jsonify, make_response
     db = getattr(g, "db", None)
     session = db
-    """Publish or unpublish an institution exam."""
     inst_id = _institution_id(payload)
 
-    if payload_body.is_published is None:
-        return _validation_error("is_published is required", field="is_published")
+    body = request.get_json(silent=True) or {}
+    try:
+        e_uuid = uuid.UUID(exam_id)
+    except ValueError:
+        return make_response(jsonify({"error": "invalid_id", "message": "Invalid exam ID"}), 400)
 
-    exam = session.get(Exam, exam_id)
+    exam = session.get(Exam, e_uuid)
     if exam is None or exam.institution_id != inst_id:
         return make_response(jsonify({"error": "not_found", "exam_id": str(exam_id)}), 404)
 
-    if exam.is_published != payload_body.is_published:
-        exam.is_published = payload_body.is_published
-        try:
-            session.commit()
-        except SQLAlchemyError as exc:
-            session.rollback()
-            return make_response(jsonify({"error": "update_failed", "message": str(exc)}), 500)
+    if "is_published" in body:
+        exam.is_published = bool(body["is_published"])
+    if "batch_id" in body:
+        b_raw = body["batch_id"]
+        exam.batch_id = uuid.UUID(b_raw) if b_raw and str(b_raw).strip() not in ("", "all", "null") else None
+    if "exam_name" in body and body["exam_name"]:
+        exam.exam_name = str(body["exam_name"]).strip()
 
-    return {"exam_id": str(exam.id), "is_published": exam.is_published}
+    try:
+        session.commit()
+    except SQLAlchemyError as exc:
+        session.rollback()
+        return make_response(jsonify({"error": "update_failed", "message": str(exc)}), 500)
+
+    return jsonify({"exam_id": str(exam.id), "is_published": exam.is_published, "message": "Exam updated"})
+
+
+# ---------------------------------------------------------------------------
+# DELETE /content/exams/{exam_id}
+# ---------------------------------------------------------------------------
+
+@router.route("/content/exams/<exam_id>", methods=["DELETE"])
+def delete_institution_exam(exam_id: str)-> Any:    
+    payload = require_institution_admin()
+    from flask import g, jsonify, make_response
+    db = getattr(g, "db", None)
+    session = db
+    inst_id = _institution_id(payload)
+
+    try:
+        e_uuid = uuid.UUID(exam_id)
+    except ValueError:
+        return make_response(jsonify({"error": "invalid_id", "message": "Invalid exam ID"}), 400)
+
+    exam = session.get(Exam, e_uuid)
+    if exam is None or exam.institution_id != inst_id:
+        return make_response(jsonify({"error": "not_found", "exam_id": str(exam_id)}), 404)
+
+    try:
+        session.delete(exam)
+        session.commit()
+    except SQLAlchemyError as exc:
+        session.rollback()
+        return make_response(jsonify({"error": "delete_failed", "message": str(exc)}), 500)
+
+    return jsonify({"success": True, "exam_id": str(e_uuid), "message": "Exam deleted successfully"})
 
 
 # ---------------------------------------------------------------------------
@@ -919,14 +983,29 @@ def patch_institution_exam(exam_id: uuid.UUID)-> Any:
 @router.route("/content/analytics", methods=["GET"])
 def get_institution_content_analytics()-> Any:    
     payload = require_institution_admin()
-    from flask import g
+    from flask import g, request
     db = getattr(g, "db", None)
     session = db
-    """Analytics for institution students on institution exams."""
     inst_id = _institution_id(payload)
+    from ..db.models import InstitutionBatch
 
-    students = db.query(User).filter(User.institution_id == inst_id, User.role == "student").all()
+    batch_id_str = request.args.get("batch_id")
+    batch_filter_id = None
+    if batch_id_str and str(batch_id_str).lower() not in ("all", ""):
+        try:
+            batch_filter_id = uuid.UUID(batch_id_str)
+        except Exception:
+            batch_filter_id = None
+
+    # Query students
+    students_query = db.query(User).filter(User.institution_id == inst_id, User.role == "student")
+    if batch_filter_id:
+        students_query = students_query.filter(User.batch_id == batch_filter_id)
+    students = students_query.all()
     student_ids = [s.id for s in students]
+
+    all_batches = db.query(InstitutionBatch).filter(InstitutionBatch.institution_id == inst_id).order_by(InstitutionBatch.name.asc()).all()
+    batches_data = [{"id": str(b.id), "name": b.name} for b in all_batches]
 
     if not student_ids:
         return {
@@ -935,6 +1014,7 @@ def get_institution_content_analytics()-> Any:
             "total_submissions": 0,
             "average_score": 0.0,
             "students": [],
+            "batches": batches_data,
         }
 
     submissions = (
@@ -967,6 +1047,7 @@ def get_institution_content_analytics()-> Any:
             "student_id": str(student.id),
             "display_name": student.display_name,
             "email": student.email,
+            "batch_name": student.batch.name if getattr(student, "batch", None) else "Unassigned",
             "total_attempts": len(student_subs),
             "average_score": round(avg, 2),
         })
@@ -979,6 +1060,7 @@ def get_institution_content_analytics()-> Any:
         "total_submissions": total_submissions,
         "average_score": round(average_score, 2),
         "students": student_analytics,
+        "batches": batches_data,
     }
 
 

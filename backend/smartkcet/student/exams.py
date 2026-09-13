@@ -144,15 +144,15 @@ def list_published_exams()-> Any:
     # ── Strict exam isolation ────────────────────────────────────────────────
     # Access matrix:
     #   direct_subscriber  → platform-wide exams only (institution_id IS NULL)
-    #   institution_linked → their institution's exams only (institution_id == theirs)
-    #                        NOT platform-wide, NOT other institutions
+    #   institution_linked → their institution's exams AND platform-wide exams (created by admin)
     if student_subtype == "institution_linked" and student_institution_id is not None:
-        # Institution student: ONLY see exams belonging to their institution
+        # Institution student: see their institution's exams AND platform-wide admin exams
         try:
             inst_uuid = uuid.UUID(student_institution_id)
         except ValueError:
             inst_uuid = student_institution_id
-        stmt = stmt.where(Exam.institution_id == inst_uuid)
+        from sqlalchemy import or_
+        stmt = stmt.where(or_(Exam.institution_id == inst_uuid, Exam.institution_id.is_(None)))
     else:
         # Personal student (direct_subscriber or no subtype): platform-wide only
         stmt = stmt.where(Exam.institution_id.is_(None))
@@ -206,11 +206,13 @@ def list_published_exams()-> Any:
 
     # Get remaining attempts for display (REQ-1.5, 2.4)
     from ..middleware.rbac import current_user
+    from ..subscription.access_control import SubscriptionAccessControl
     user = current_user(request, session)
     remaining_attempts_data = None
     if user:
         try:
-            remaining_attempts_data = access_control.get_remaining_attempts(user.id)
+            ac = access_control or SubscriptionAccessControl(session)
+            remaining_attempts_data = ac.get_remaining_attempts(user.id)
         except Exception as exc:
             # If we can't get remaining attempts, log but don't fail the request
             import logging
@@ -275,8 +277,8 @@ def get_exam_set_questions(exam_set_id: str)-> Any:
     student_institution_id = _student.get("institution_id")
 
     if student_subtype == "institution_linked":
-        # Must belong to their institution
-        if str(exam.institution_id) != str(student_institution_id):
+        # Must belong to their institution OR be platform-wide (created by admin)
+        if exam.institution_id is not None and str(exam.institution_id) != str(student_institution_id):
             return make_response(jsonify({"error": "not_found", "message": "Exam is not available"}), 404)
     else:
         # Personal student: must be platform-wide (institution_id IS NULL)
@@ -291,17 +293,21 @@ def get_exam_set_questions(exam_set_id: str)-> Any:
         .order_by(ExamSetQuestion.order_index.asc())
     )
     rows = session.execute(stmt).all()
+    from ..rag.mcq_extractor import infer_question_subtype
 
     questions = []
     for question, _order in rows:
+        st = infer_question_subtype(question.question_text, question.options or [], exam.subject)
         questions.append({
             "q": question.question_text,
             "type": "MCQ",
             "opts": question.options,
             "topic": question.topic or "General",
             "ans": question.correct_option,
+            "subtype": st,
             "marks": 1,
         })
+
 
     return {
         "exam_set_id": str(set_id),

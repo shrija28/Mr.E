@@ -373,6 +373,9 @@ class Invitation(Base):
     consumed_by: Mapped[Optional[uuid.UUID]] = mapped_column(
         Uuid, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+    batch_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        Uuid, ForeignKey("institution_batches.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, nullable=False, server_default=func.now()
     )

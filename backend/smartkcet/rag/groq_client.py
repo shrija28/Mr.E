@@ -350,33 +350,78 @@ def detect_subject(sample_text: str)-> Optional[str]:
         return None
 
 
-def generate_kcet_mcqs_from_textbook(context_chunks: Iterable[str], subject: str, set_label: str, used_questions: Set[str], questions_needed: int = 20, chapter_names: Optional[List[str]] = None)-> List[dict]:
+def generate_kcet_mcqs_from_textbook(context_chunks: Iterable[str], subject: str, set_label: str, used_questions: Set[str], questions_needed: int = 60, chapter_names: Optional[List[str]] = None)-> List[dict]:
     """Generate KCET-level MCQs from textbook content chunks.
 
     Reads actual extracted textbook text and creates high-quality KCET-pattern
-    MCQs matching the difficulty and style of KCET exams.
+    MCQs matching the difficulty and style of KCET exams (60 questions per set).
     """
 
     chunks = list(context_chunks)
-    # The caller already passes one big context string; join them just in case
     context = "\n\n".join(chunks)
-    # Trim if needed to keep within token limits (4000 chars ~ 1000-1500 tokens)
     if len(context) > 4000:
         context = context[:4000]
-
-    used_str = (
-        "\n".join(f"- {q}" for q in list(used_questions)[:30])
-        if used_questions
-        else "None"
-    )
 
     chapters_str = ""
     if chapter_names:
         chapters_str = f"\nChapters covered: {', '.join(chapter_names)}\n"
 
-    prompt = f"""You are an expert entrance exam question paper setter for {subject}.
+    subj_lower = subject.lower()
+    if "physic" in subj_lower:
+        blueprint_rules = f"""
+MANDATORY PHYSICS CALCULATION & QUESTION PATTERN BREAKDOWN (STRICTLY ENFORCE):
+- Total Calculations: 50% to 60% of questions (around 30 to 36 questions out of {questions_needed}, target ~55%).
+  1. Direct formula substitution (~30% to 40% / ~21 questions out of 60):
+     Single formula numerical application with given values and standard units (kinematics s=ut+0.5at², Ohm's law V=IR, lens power P=100/f, capacitor energy U=0.5CV², transformer ratio, Snell's law, etc.). Set "subtype": "direct_formula".
+  2. Multi-step conceptual problem solving (~15% to 20% / ~12 questions out of 60):
+     Requires combining two or more physical concepts or calculating an intermediate quantity before obtaining final answer (e.g. projectile motion combined with kinetic energy, wire stretching changing both length and area, Bohr transition energy and photon wavelength). Set "subtype": "multi_step".
+- Pure theory and definition-based questions (~40% to 50% / ~27 questions out of 60):
+  Conceptual deductions, physical law statements (Lenz's law, Faraday, Kirchhoff), electromagnetic wave properties, dimensions, device principles, semiconductor band theory. Set "subtype": "theory_definition".
+"""
+    elif "chem" in subj_lower:
+        blueprint_rules = f"""
+MANDATORY CHEMISTRY CALCULATION & QUESTION PATTERN BREAKDOWN (STRICTLY ENFORCE):
+- Total Calculations: 10% to 15% of questions (strictly 5 to 8 questions out of 60, e.g. 6 questions, ~10%).
+  1. Numerical problems:
+     Strictly confined to Physical Chemistry chapters (Solutions, Chemical Kinetics, Electrochemistry, Thermodynamics, Solid State).
+     Examples: k = 0.693/t_1/2, Molarity, ΔT_f = K_f · m, cell EMF E°_cell = E°_c - E°_a, pH = -log[H+], mass percentage. Set "subtype": "physical_numerical".
+- Direct fact, memory, or reaction-based questions: 88% to 92% of the paper (around 52 to 55 questions out of 60).
+  1. Organic Chemistry: Named reactions (Reimer-Tiemann, Kolbe, Aldol, Cannizzaro, Sandmeyer, Wurtz-Fittig), IUPAC naming, mechanism & intermediates (carbocation stability, Markovnikov rule, SN1/SN2), chemical tests (Lucas, Tollens, Fehling, Iodoform), polymers & biomolecules.
+  2. Inorganic Chemistry: Coordination compounds (IUPAC, isomerism, crystal field theory, magnetic moments), Periodic trends, electronic configurations, oxidation states, metallurgical processes, block chemistry properties. Set "subtype": "fact_reaction".
+"""
+    elif "math" in subj_lower:
+        blueprint_rules = """
+MANDATORY MATHEMATICS QUESTION PATTERN:
+- Focus on calculation-heavy problems with mathematical equations and variables in the question stem.
+- Mix: 60% standard formula calculations (determinants, derivatives, integrals, vectors) and 40% conceptual deductions and properties. Set "subtype": "calculation" or "concept".
+"""
+    else:
+        blueprint_rules = """
+MANDATORY BIOLOGY QUESTION PATTERN:
+- Focus on deep conceptual understanding, mechanisms, genetics, cellular processes, and physiological pathways. Set "subtype": "concept_mechanism".
+"""
+
+    # Generate in batches if questions_needed > 25 to avoid LLM token truncation limits
+    batch_size = 25 if questions_needed > 25 else questions_needed
+    batches = [(min(batch_size, questions_needed - i)) for i in range(0, questions_needed, batch_size)]
+
+    valid_questions: List[dict] = []
+    client = None
+    try:
+        client = get_groq_client()
+    except Exception as exc:
+        logger.warning("Groq client not initialized: %s", exc)
+        return []
+
+    for b_idx, count in enumerate(batches):
+        used_str = (
+            "\n".join(f"- {q}" for q in list(used_questions)[:30])
+            if used_questions
+            else "None"
+        )
+        prompt = f"""You are an expert entrance exam question paper setter for {subject}.
 {chapters_str}
-Use ONLY the following source content to create exactly {questions_needed} standard entrance-level MCQ questions:
+Use ONLY the following source content to create exactly {count} standard entrance-level MCQ questions:
 
 --- SOURCE CONTENT START ---
 {context}
@@ -385,22 +430,18 @@ Use ONLY the following source content to create exactly {questions_needed} stand
 Questions already used in other sets (DO NOT repeat any of these):
 {used_str}
 
+{blueprint_rules}
+
 STRICT EXAM RULES:
 1. NO TRIVIAL/FACTUAL DEFINITIONS: Do NOT ask simple fact-retrieval questions.
 2. ENTRANCE EXAM LEVEL: Every question must be a problem-solving, calculation, application-based, or rigorous conceptual deduction question that matches the difficulty of a standard competitive entrance exam.
-3. SUBJECT-SPECIFIC STANDARDS:
-   - Mathematics: Focus on calculation-heavy problems. Use mathematical equations and variables in the question stem.
-   - Physics: Formulate numerical problems applying physics formulas (kinematics, electricity, circuits, work-energy, optics, electrostatics, modern physics, etc.). Include specific numerical values, units (m/s, N, J, V, A, Hz, kg, etc.), and step-by-step calculations. At least 60% of Physics questions MUST be numerical calculation problems.
-   - Chemistry: Include stoichiometry, organic reactions, physical chemistry numericals, etc.
-   - Biology: Focus on deep understanding, mechanisms, genetics.
-4. DISTRACTOR QUALITY & COMPLEXITY (CRITICAL):
-   - Questions must require multiple steps to solve or combine at least two concepts.
+3. DISTRACTOR QUALITY & COMPLEXITY (CRITICAL):
    - The options (distractors) must be HIGHLY plausible. Use common student calculation errors, sign errors, and misconceptions as the incorrect options. Do NOT use obviously wrong, silly, or random options.
-5. STYLE & CONCISENESS: Keep the question stem brief, precise, and contain clear scientific conditions. Do not use generic AI introductory phrases. Ensure professional exam tone.
-6. TOPIC COVERAGE: Ensure your questions comprehensively cover all the main topics and concepts present in the provided source content above.
+4. STYLE & CONCISENESS: Keep the question stem brief, precise, and contain clear scientific conditions. Do not use generic AI introductory phrases. Ensure professional exam tone.
+5. TOPIC COVERAGE: Ensure your questions comprehensively cover all the main topics and concepts present in the provided source content above.
 
 STRICT OUTPUT RULES:
-- Generate EXACTLY {questions_needed} multiple choice questions — no more, no less.
+- Generate EXACTLY {count} multiple choice questions — no more, no less.
 - Every question MUST have EXACTLY 4 options (A, B, C, D).
 - Base EVERY question STRICTLY on the source content provided above — do NOT invent random facts or go out of syllabus.
 - ans must be the 0-based index of the CORRECT option (0=A, 1=B, 2=C, 3=D).
@@ -411,46 +452,50 @@ STRICT OUTPUT RULES:
 - PURE EXTRACTION & RELEVANCE: PURELY EXTRACT the contents from the input data provided. DO NOT make up questions that aren't grounded in the data. Keep all questions strictly relevant to the subject.
 - COMPLETENESS: ALL QUESTIONS AND OPTIONS MUST BE FULLY COMPLETED. DO NOT GENERATE RANDOM AND INCOMPLETE QUESTIONS. Do not generate incomplete sentences.
 
-Output ONLY a valid JSON array of exactly {questions_needed} objects. No markdown, no explanation, ONLY the JSON array.
+Output ONLY a valid JSON array of exactly {count} objects. No markdown, no explanation, ONLY the JSON array.
 Each object MUST follow this exact format:
-{{"q":"question text","type":"MCQ","topic":"specific topic/chapter name","opts":["option A","option B","option C","option D"],"ans":0,"marks":1,"exp":"Detailed step-by-step explanation of the correct answer."}}"""
+{{"q":"question text","type":"MCQ","subtype":"direct_formula|multi_step|theory_definition|physical_numerical|fact_reaction","topic":"specific topic/chapter name","opts":["option A","option B","option C","option D"],"ans":0,"marks":1,"exp":"Detailed step-by-step explanation of the correct answer."}}"""
 
-    try:
-        client = get_groq_client()
-        system_prompt = "You are an elite academic evaluator. You follow all instructions strictly. You NEVER use introductory phrases or refer to the source text. You ensure every question is 100% complete and self-contained."
-        resp = create_chat_completion_with_fallback(
-            client=client,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.6,
-            max_tokens=2500,
-        )
-        questions = parse_llm_json(resp.choices[0].message.content)
-    except GroqAPIKeyError:
-        raise
-    except Exception as exc:
-        exc_str = str(exc).lower()
-        if "invalid_api_key" in exc_str or "authentication" in exc_str or "401" in exc_str:
-            raise GroqAPIKeyError(
-                f"Groq API key is invalid or expired. Error: {exc}. "
-                "Get a new key from https://console.groq.com/keys and update backend/.env"
-            ) from exc
-        logger.error("Error calling Groq API for textbook generation: %s", exc)
-        raise RuntimeError(f"Groq API call failed: {exc}") from exc
+        try:
+            system_prompt = "You are an elite academic evaluator. You follow all instructions strictly. You NEVER use introductory phrases or refer to the source text. You ensure every question is 100% complete and self-contained."
+            resp = create_chat_completion_with_fallback(
+                client=client,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.6,
+                max_tokens=2500,
+            )
+            batch_questions = parse_llm_json(resp.choices[0].message.content)
+            for q in batch_questions:
+                if not isinstance(q, dict) or "q" not in q or "opts" not in q or "ans" not in q:
+                    continue
+                if not isinstance(q.get("opts"), list) or len(q["opts"]) != 4:
+                    continue
+                if q["q"] in used_questions:
+                    continue
+                q["id"] = f"{set_label}-{len(valid_questions)}"
+                q["type"] = "MCQ"
+                q["marks"] = 1
+                used_questions.add(q["q"])
+                valid_questions.append(q)
+                if len(valid_questions) >= questions_needed:
+                    break
+        except GroqAPIKeyError:
+            raise
+        except Exception as exc:
+            exc_str = str(exc).lower()
+            if "invalid_api_key" in exc_str or "authentication" in exc_str or "401" in exc_str:
+                raise GroqAPIKeyError(
+                    f"Groq API key is invalid or expired. Error: {exc}. "
+                    "Get a new key from https://console.groq.com/keys and update backend/.env"
+                ) from exc
+            logger.warning("Groq API batch %d failed: %s. Continuing with collected.", b_idx, exc)
+            break
 
-    valid_questions: List[dict] = []
-    for q in questions:
-        if not isinstance(q, dict) or "q" not in q or "opts" not in q or "ans" not in q:
-            continue
-        if not isinstance(q.get("opts"), list) or len(q["opts"]) != 4:
-            continue
-        q["id"] = f"{set_label}-{len(valid_questions)}"
-        q["type"] = "MCQ"
-        q["marks"] = 1
-        used_questions.add(q.get("q", ""))
-        valid_questions.append(q)
+        if len(valid_questions) >= questions_needed:
+            break
 
     logger.info(
         "Textbook KCET generation: set %s → %d/%d valid questions",

@@ -134,7 +134,21 @@ const LoginPage = () => {
           </form>
 
           <p style={{ textAlign: 'center', marginTop: '24px', fontSize: '0.85rem', color: 'var(--muted)' }}>
-            Don't have an account? <Link to="/register" style={{ color: 'var(--purple-l)', textDecoration: 'none' }}>Register</Link>
+            {role === 'institution' ? (
+              <>
+                Onboarding your school or college?{' '}
+                <Link to="/institution/register" style={{ color: 'var(--purple-l)', textDecoration: 'none', fontWeight: 600 }}>
+                  Register Institution →
+                </Link>
+              </>
+            ) : (
+              <>
+                Don't have an account?{' '}
+                <Link to="/register" style={{ color: 'var(--purple-l)', textDecoration: 'none' }}>
+                  Register
+                </Link>
+              </>
+            )}
           </p>
         </div>
       </main>

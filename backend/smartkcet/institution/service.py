@@ -275,22 +275,10 @@ class InstitutionService:
             self.db.rollback()
             raise InstitutionServiceError(f"Unexpected error during registration: {e}")
 
-    def generate_invitation(self, institution_id: UUID)-> InvitationCodeResponse:
-        """Generate a 32+ char invitation code, valid 7 days.
-        
-        Max 50 pending per institution (REQ-9.1).
-        
-        Args:
-            institution_id: Institution ID
-            
-        Returns:
-            InvitationCodeResponse with generated code
-            
-        Raises:
-            InstitutionServiceError: If max pending invitations reached
-        """
+    def generate_invitation(self, institution_id: UUID, batch_id: Optional[UUID] = None)-> InvitationCodeResponse:
+        """Generate an invitation code for student onboarding."""
         try:
-            # Check pending invitation count (REQ-9.1: max 50 pending)
+            # Check maximum pending invitations limit (50) - REQ-9.1
             pending_count = (
                 self.db.query(Invitation)
                 .filter(
@@ -314,8 +302,6 @@ class InstitutionService:
             next_sequence = max_sequence + 1
             
             # Generate secure random code (minimum 32 alphanumeric characters)
-            # Using secrets.token_urlsafe which generates URL-safe base64 strings
-            # 32 bytes = 43 base64 characters (> 32 requirement)
             code = secrets.token_urlsafe(32)
             
             # Create invitation with 7-day validity
@@ -324,8 +310,9 @@ class InstitutionService:
             
             invitation = Invitation(
                 institution_id=institution_id,
+                batch_id=batch_id,
                 code=code,
-                sequence_number=next_sequence,  # NEW: Add sequence number
+                sequence_number=next_sequence,
                 status="pending",
                 consumed_by=None,
                 created_at=now,
@@ -495,6 +482,8 @@ class InstitutionService:
             self.db.refresh(student)
             
             student.institution_id = invitation.institution_id
+            if getattr(invitation, "batch_id", None):
+                student.batch_id = invitation.batch_id
             
             # Mark invitation as consumed (REQ-9.2)
             invitation.status = "consumed"
@@ -614,6 +603,8 @@ class InstitutionService:
                     kcet_student_id=student.kcet_student_id,
                     linked_at=student.created_at,
                     student_subtype=student.student_subtype or "institution_linked",
+                    batch_id=student.batch_id,
+                    batch_name=student.batch.name if getattr(student, "batch", None) else None,
                 )
                 for student in students
             ]

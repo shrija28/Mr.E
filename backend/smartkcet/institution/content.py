@@ -74,8 +74,8 @@ logger = logging.getLogger("smartkcet.institution.content")
 
 router = Blueprint("institution_content", __name__)
 
-# Limits (mirrors admin limits)
-MAX_FILE_SIZE_MB = 20
+# Limits (supports large textbooks and papers without restriction)
+MAX_FILE_SIZE_MB = 1000
 MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
 MAX_FILES_PER_BATCH = 10
 PAGE_SIZE = 50
@@ -297,13 +297,22 @@ def _counts_by_subject(session: Session, institution_id: uuid.UUID)-> dict[str, 
 # ---------------------------------------------------------------------------
 
 @router.route("/content/upload/single", methods=["POST"])
-def upload_single_file(subject: Optional[str], file_type: str, file: UploadFile)-> Any:    
+def upload_single_file(subject: Optional[str] = None, file_type: str = "question_paper", file: Any = None)-> Any:    
     payload = require_institution_admin()
-    from flask import g
+    from flask import g, request
     db = getattr(g, "db", None)
     session = db
     """Upload a single file and return per-file status for progress tracking."""
     inst_id = _institution_id(payload)
+
+    if subject is None:
+        subject = request.form.get("subject") or request.args.get("subject")
+    if file_type is None or file_type == "question_paper":
+        file_type = request.form.get("file_type") or request.args.get("file_type") or "question_paper"
+    if file is None:
+        file = request.files.get("file")
+    if file is None:
+        return _validation_error("file is required", field="file")
 
     if not check_subscription_active(db, inst_id):
         raise HTTPException(
@@ -412,13 +421,23 @@ def upload_single_file(subject: Optional[str], file_type: str, file: UploadFile)
 # ---------------------------------------------------------------------------
 
 @router.route("/content/upload", methods=["POST"])
-def upload_institution_content(subject: Optional[str], file_type: str, files: List[UploadFile])-> Any:    
+def upload_institution_content(subject: Optional[str] = None, file_type: str = "question_paper", files: Optional[List[Any]] = None)-> Any:    
     payload = require_institution_admin()
-    from flask import g
+    from flask import g, request
     db = getattr(g, "db", None)
     session = db
     """Batch upload question papers to the institution's question bank."""
     inst_id = _institution_id(payload)
+
+    if subject is None:
+        subject = request.form.get("subject") or request.args.get("subject")
+    if file_type is None or file_type == "question_paper":
+        file_type = request.form.get("file_type") or request.args.get("file_type") or "question_paper"
+    if not files:
+        files = request.files.getlist("files") or request.files.getlist("file")
+
+    if not files:
+        return _validation_error("At least one file is required", field="files")
 
     if not check_subscription_active(db, inst_id):
         raise HTTPException(

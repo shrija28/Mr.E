@@ -63,7 +63,7 @@ def _serialise(t: SyllabusTopic)-> dict[str, Any]:
 
 TEXTBOOKS_DIR = PathlibPath(__file__).resolve().parent.parent.parent / "data" / "textbooks"
 
-@router.route("/syllabus/textbook/{filename}")
+@router.route("/syllabus/textbook/<filename>")
 def download_textbook(filename: str)-> FileResponse:
     """Download/view an associated textbook file."""
     file_path = TEXTBOOKS_DIR / filename
@@ -174,7 +174,7 @@ def list_syllabus_public()-> Any:
     }
 
 
-@router.route("/syllabus/{subject}")
+@router.route("/syllabus/<subject>")
 def get_syllabus_by_subject(subject: str)-> Any:    
     from flask import g
     db = getattr(g, "db", None)

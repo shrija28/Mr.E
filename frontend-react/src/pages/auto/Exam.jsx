@@ -170,8 +170,16 @@ const Exam = () => {
   const [examName, setExamName] = useState(searchParams.get('name') || 'KCET Exam');
   const [setLabel, setSetLabel] = useState(searchParams.get('label') || 'A');
 
+  // Published exams state for test selection
+  const [publishedSubjects, setPublishedSubjects] = useState([]);
+  const [loadingPublished, setLoadingPublished] = useState(false);
+  const [publishedError, setPublishedError] = useState('');
+  const [remainingAttempts, setRemainingAttempts] = useState(null);
+  const [selectedSubjectFilter, setSelectedSubjectFilter] = useState('ALL');
+  const [searchQuery, setSearchQuery] = useState('');
+
   const [questions, setQuestions] = useState([]);
-  const [loadingQuestions, setLoadingQuestions] = useState(true);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
   const [loadError, setLoadError] = useState('');
 
   const [started, setStarted] = useState(false);
@@ -296,13 +304,15 @@ const Exam = () => {
   };
 
   useEffect(() => {
-    startCamera();
+    if (examSetId && !submitResult) {
+      startCamera();
+    }
     return () => {
       if (cameraStream) {
         cameraStream.getTracks().forEach(t => t.stop());
       }
     };
-  }, []);
+  }, [examSetId, submitResult]);
 
   // Attach stream to video elements when stream or cameraActive changes
   useEffect(() => {
@@ -448,47 +458,118 @@ const Exam = () => {
       });
   }, []);
 
-  // 2. Resolve exam set and fetch real questions
+  // Synchronize state with URL search params
   useEffect(() => {
-    const resolveAndFetchQuestions = async () => {
+    const currentSet = searchParams.get('set') || '';
+    setExamSetId(currentSet);
+    if (searchParams.get('subject')) setSubject(searchParams.get('subject'));
+    if (searchParams.get('name')) setExamName(searchParams.get('name'));
+    if (searchParams.get('label')) setSetLabel(searchParams.get('label'));
+  }, [searchParams]);
+
+  // Fetch published exams when no exam is currently chosen
+  const fetchPublishedExams = async () => {
+    setLoadingPublished(true);
+    setPublishedError('');
+    try {
+      const res = await fetch('/api/student/exams', { credentials: 'include' });
+      const data = await res.json();
+      if (res.ok && data.subjects) {
+        setPublishedSubjects(data.subjects);
+        if (data.remaining_attempts) {
+          setRemainingAttempts(data.remaining_attempts);
+        }
+      } else {
+        setPublishedError(data.message || 'Could not load published exams.');
+      }
+    } catch (err) {
+      setPublishedError('Network error while retrieving published exams.');
+    } finally {
+      setLoadingPublished(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!examSetId) {
+      fetchPublishedExams();
+    }
+  }, [examSetId]);
+
+  // Handle selecting an exam from published tests list
+  const handleSelectExam = (exam, subjGroup, targetSet) => {
+    const setObj = targetSet || (exam.sets && exam.sets.length > 0 ? exam.sets[0] : null);
+    if (!setObj) {
+      alert("No question sets available for this exam.");
+      return;
+    }
+    const setId = setObj.exam_set_id;
+    const subj = subjGroup.subject || 'General';
+    const name = exam.exam_name || `${subj} Mock Exam`;
+    const label = setObj.set_label || 'A';
+
+    setExamSetId(setId);
+    setSubject(subj);
+    setExamName(name);
+    setSetLabel(label);
+    setSearchParams({
+      set: setId,
+      subject: subj,
+      name: name,
+      label: label
+    });
+  };
+
+  // Handle going back to published exam selection
+  const handleBackToExamSelection = () => {
+    if (cameraStream) {
+      cameraStream.getTracks().forEach(t => t.stop());
+      setCameraStream(null);
+      setCameraActive(false);
+    }
+    setExamSetId('');
+    setQuestions([]);
+    setStarted(false);
+    setSubmitResult(null);
+    setAnswers({});
+    setLoadError('');
+    setSearchParams({});
+    fetchPublishedExams();
+  };
+
+  // Filtered list of published exams
+  const filteredExamsList = React.useMemo(() => {
+    const list = [];
+    publishedSubjects.forEach(subjGroup => {
+      if (selectedSubjectFilter !== 'ALL' && subjGroup.subject.toLowerCase() !== selectedSubjectFilter.toLowerCase()) {
+        return;
+      }
+      (subjGroup.exams || []).forEach(exam => {
+        const title = exam.exam_name || `${subjGroup.subject} Mock Exam`;
+        if (searchQuery.trim()) {
+          const q = searchQuery.toLowerCase();
+          const matchTitle = title.toLowerCase().includes(q);
+          const matchSubject = subjGroup.subject.toLowerCase().includes(q);
+          if (!matchTitle && !matchSubject) return;
+        }
+        list.push({ exam, subjGroup });
+      });
+    });
+    return list;
+  }, [publishedSubjects, selectedSubjectFilter, searchQuery]);
+
+  // Fetch questions once a specific exam set is selected
+  useEffect(() => {
+    if (!examSetId) {
+      setLoadingQuestions(false);
+      return;
+    }
+
+    const fetchQuestions = async () => {
       setLoadingQuestions(true);
       setLoadError('');
 
-      let targetSetId = examSetId;
-
-      // If no set ID in URL, find the first available published exam set from the backend
-      if (!targetSetId || targetSetId === 'mock') {
-        try {
-          const listRes = await fetch('/api/student/exams', { credentials: 'include' });
-          const listData = await listRes.json();
-          if (listRes.ok && listData.subjects && listData.subjects.length > 0) {
-            for (const subj of listData.subjects) {
-              if (subj.exams && subj.exams.length > 0) {
-                const firstExam = subj.exams[0];
-                if (firstExam.sets && firstExam.sets.length > 0) {
-                  targetSetId = firstExam.sets[0].exam_set_id;
-                  setExamSetId(targetSetId);
-                  setSubject(subj.subject);
-                  setExamName(firstExam.exam_name || `${subj.subject} Exam`);
-                  setSetLabel(firstExam.sets[0].set_label || 'A');
-                  break;
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.error("Failed to query available exams", e);
-        }
-      }
-
-      if (!targetSetId || targetSetId === 'mock') {
-        setLoadError('No active exams found. Please ask an administrator to create and publish an exam.');
-        setLoadingQuestions(false);
-        return;
-      }
-
       try {
-        const res = await fetch(`/api/student/exams/${targetSetId}`, { credentials: 'include' });
+        const res = await fetch(`/api/student/exams/${examSetId}`, { credentials: 'include' });
         const data = await res.json();
         if (res.ok && data.questions && data.questions.length > 0) {
           setQuestions(data.questions.map((q, idx) => ({
@@ -510,7 +591,7 @@ const Exam = () => {
       }
     };
 
-    resolveAndFetchQuestions();
+    fetchQuestions();
   }, [examSetId]);
 
   const handleSubmitExamRef = useRef(null);
@@ -641,83 +722,386 @@ const Exam = () => {
 
   return (
     <>
-      <style>{`
-        html, body { 
-          overflow-y: auto !important; 
-          overflow-x: hidden !important; 
-          height: auto !important;
-          min-height: 100vh !important;
-        }
-        .nav, .navbar { display: none !important; }
-        .main-content { 
-          margin-left: 0 !important; 
-          padding: 0 !important; 
-          max-width: 100% !important; 
-          min-height: 100vh !important;
-          overflow-y: auto !important;
-        }
-        .exam-layout {
-          display: grid !important;
-          grid-template-columns: 280px 1fr !important;
-          gap: 24px !important;
-          max-width: 1200px !important;
-          margin: 0 auto !important;
-          padding: 20px 20px 80px 20px !important;
-          box-sizing: border-box !important;
-        }
-        @media (max-width: 900px) {
-          .exam-layout {
-            grid-template-columns: 1fr !important;
+      {/* Styles applied specifically when inside an exam session */}
+      {examSetId && (
+        <style>{`
+          html, body { 
+            overflow-y: auto !important; 
+            overflow-x: hidden !important; 
+            height: auto !important;
+            min-height: 100vh !important;
           }
-        }
-        .exam-sidebar {
-          position: sticky !important;
-          top: 76px !important;
-          max-height: calc(100vh - 96px) !important;
-          overflow-y: auto !important;
-          scrollbar-width: thin !important;
-          padding-bottom: 20px !important;
-        }
-        .exam-sidebar::-webkit-scrollbar {
-          width: 5px;
-        }
-        .exam-sidebar::-webkit-scrollbar-thumb {
-          background: rgba(124, 58, 237, 0.3);
-          border-radius: 4px;
-        }
-        .overlay {
-          position: fixed !important;
-          inset: 0 !important;
-          background: rgba(0, 0, 0, 0.85) !important;
-          backdrop-filter: blur(8px) !important;
-          -webkit-backdrop-filter: blur(8px) !important;
-          z-index: 9999 !important;
-          display: flex !important;
-          justify-content: center !important;
-          align-items: flex-start !important;
-          overflow-y: auto !important;
-          -webkit-overflow-scrolling: touch !important;
-          padding: 30px 16px 60px 16px !important;
-          box-sizing: border-box !important;
-        }
-        .overlay::-webkit-scrollbar {
-          width: 6px;
-        }
-        .overlay::-webkit-scrollbar-thumb {
-          background: rgba(124, 58, 237, 0.4);
-          border-radius: 4px;
-        }
-        .entry-modal {
-          background: var(--s1) !important;
-          border: 1px solid var(--border2) !important;
-          border-radius: var(--r) !important;
-          padding: 24px 22px !important;
-          max-width: 500px !important;
-          width: 100% !important;
-          margin: auto 0 !important;
-          box-sizing: border-box !important;
-        }
-      `}</style>
+          .nav, .navbar { display: none !important; }
+          .main-content { 
+            margin-left: 0 !important; 
+            padding: 0 !important; 
+            max-width: 100% !important; 
+            min-height: 100vh !important;
+            overflow-y: auto !important;
+          }
+          .exam-layout {
+            display: grid !important;
+            grid-template-columns: 280px 1fr !important;
+            gap: 24px !important;
+            max-width: 1200px !important;
+            margin: 0 auto !important;
+            padding: 20px 20px 80px 20px !important;
+            box-sizing: border-box !important;
+          }
+          @media (max-width: 900px) {
+            .exam-layout {
+              grid-template-columns: 1fr !important;
+            }
+          }
+          .exam-sidebar {
+            position: sticky !important;
+            top: 76px !important;
+            max-height: calc(100vh - 96px) !important;
+            overflow-y: auto !important;
+            scrollbar-width: thin !important;
+            padding-bottom: 20px !important;
+          }
+          .exam-sidebar::-webkit-scrollbar {
+            width: 5px;
+          }
+          .exam-sidebar::-webkit-scrollbar-thumb {
+            background: rgba(124, 58, 237, 0.3);
+            border-radius: 4px;
+          }
+          .overlay {
+            position: fixed !important;
+            inset: 0 !important;
+            background: rgba(0, 0, 0, 0.85) !important;
+            backdrop-filter: blur(8px) !important;
+            -webkit-backdrop-filter: blur(8px) !important;
+            z-index: 9999 !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: flex-start !important;
+            overflow-y: auto !important;
+            -webkit-overflow-scrolling: touch !important;
+            padding: 30px 16px 60px 16px !important;
+            box-sizing: border-box !important;
+          }
+          .overlay::-webkit-scrollbar {
+            width: 6px;
+          }
+          .overlay::-webkit-scrollbar-thumb {
+            background: rgba(124, 58, 237, 0.4);
+            border-radius: 4px;
+          }
+          .entry-modal {
+            background: var(--s1) !important;
+            border: 1px solid var(--border2) !important;
+            border-radius: var(--r) !important;
+            padding: 24px 22px !important;
+            max-width: 500px !important;
+            width: 100% !important;
+            margin: auto 0 !important;
+            box-sizing: border-box !important;
+          }
+        `}</style>
+      )}
+
+      {/* Published Exams Selection Screen (Shown when student visits Exam page without selecting a test yet) */}
+      {!examSetId && !submitResult && (
+        <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '30px 20px 80px', minHeight: '80vh' }}>
+          {/* Header Banner */}
+          <div style={{ marginBottom: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '4px 12px', borderRadius: '20px', background: 'rgba(124,58,237,0.12)', color: 'var(--purple-l, #a855f7)', fontSize: '0.82rem', fontWeight: 700, marginBottom: '10px' }}>
+                <span>📝</span> Select Examination
+              </div>
+              <h1 style={{ fontSize: '2.1rem', fontWeight: 800, color: 'var(--text)', margin: '0 0 8px 0', letterSpacing: '-0.5px' }}>
+                Available <span style={{ background: 'linear-gradient(135deg, #a855f7, #38bdf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Practice Exams</span>
+              </h1>
+              <p style={{ fontSize: '0.95rem', color: 'var(--muted)', margin: 0 }}>
+                Please choose which published test you want to answer to begin your exam
+              </p>
+            </div>
+
+            {remainingAttempts && (
+              <div style={{
+                background: 'var(--s1)',
+                border: '1px solid var(--border2)',
+                borderRadius: '14px',
+                padding: '12px 18px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                boxShadow: 'var(--shadow)'
+              }}>
+                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'rgba(124,58,237,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>
+                  🎯
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: 'var(--muted)', letterSpacing: '0.5px' }}>
+                    Exam Attempts
+                  </div>
+                  <div style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--text)' }}>
+                    {remainingAttempts.is_unlimited ? (
+                      <span style={{ color: 'var(--green)' }}>Unlimited Practice</span>
+                    ) : (
+                      <span>
+                        <strong style={{ color: 'var(--purple-l)' }}>{remainingAttempts.remaining_attempts ?? remainingAttempts.max_attempts}</strong> / {remainingAttempts.max_attempts} Left
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Filter & Search Bar */}
+          <div style={{
+            background: 'var(--s1)',
+            border: '1px solid var(--border)',
+            borderRadius: '14px',
+            padding: '16px 20px',
+            marginBottom: '24px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '16px'
+          }}>
+            {/* Subject Tabs */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {['ALL', 'Biology', 'Physics', 'Chemistry', 'Mathematics'].map(subj => {
+                const isActive = selectedSubjectFilter === subj;
+                const count = subj === 'ALL'
+                  ? publishedSubjects.reduce((acc, s) => acc + (s.exams?.length || 0), 0)
+                  : (publishedSubjects.find(s => s.subject.toLowerCase() === subj.toLowerCase())?.exams?.length || 0);
+
+                return (
+                  <button
+                    key={subj}
+                    type="button"
+                    onClick={() => setSelectedSubjectFilter(subj)}
+                    style={{
+                      padding: '7px 16px',
+                      borderRadius: '20px',
+                      border: isActive ? '1px solid var(--purple-l)' : '1px solid var(--border)',
+                      background: isActive ? 'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(37,99,235,0.2))' : 'var(--s2)',
+                      color: isActive ? 'var(--purple-l, #a855f7)' : 'var(--muted)',
+                      fontWeight: isActive ? 700 : 500,
+                      fontSize: '0.85rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <span>{subj === 'ALL' ? 'All Subjects' : subj}</span>
+                    <span style={{
+                      fontSize: '0.72rem',
+                      padding: '1px 6px',
+                      borderRadius: '10px',
+                      background: isActive ? 'rgba(124,58,237,0.3)' : 'rgba(0,0,0,0.15)',
+                      color: isActive ? '#fff' : 'var(--muted)'
+                    }}>
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Search Input */}
+            <div style={{ minWidth: '240px', flex: '1 1 240px', maxWidth: '340px' }}>
+              <input
+                type="text"
+                placeholder="Search test by name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="text-input"
+                style={{
+                  width: '100%',
+                  padding: '8px 14px',
+                  borderRadius: '10px',
+                  fontSize: '0.88rem',
+                  background: 'var(--s2)',
+                  border: '1px solid var(--border)'
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Loading State */}
+          {loadingPublished && (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--muted)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '10px' }}>⏳</div>
+              <p style={{ fontWeight: 600 }}>Loading available published exams...</p>
+            </div>
+          )}
+
+          {/* Error State */}
+          {publishedError && !loadingPublished && (
+            <div style={{ padding: '16px 20px', background: 'rgba(239,68,68,0.1)', border: '1px solid var(--red)', borderRadius: '12px', color: 'var(--red)', marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>⚠️ {publishedError}</span>
+              <button type="button" className="btn-outline small" onClick={fetchPublishedExams}>Retry</button>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loadingPublished && !publishedError && filteredExamsList.length === 0 && (
+            <div style={{
+              background: 'var(--s1)',
+              border: '1px solid var(--border)',
+              borderRadius: '16px',
+              padding: '60px 20px',
+              textAlign: 'center',
+              color: 'var(--muted)'
+            }}>
+              <div style={{ fontSize: '3rem', marginBottom: '14px' }}>📝</div>
+              <h3 style={{ fontSize: '1.25rem', color: 'var(--text)', marginBottom: '8px', fontWeight: 700 }}>
+                {searchQuery || selectedSubjectFilter !== 'ALL' ? 'No Matching Exams Found' : 'No Published Exams Available'}
+              </h3>
+              <p style={{ maxWidth: '420px', margin: '0 auto', fontSize: '0.9rem', lineHeight: 1.5 }}>
+                {searchQuery || selectedSubjectFilter !== 'ALL'
+                  ? 'Try changing your subject filter or search keyword to find available exams.'
+                  : 'New mock exams will appear here as soon as they are created and published by your administrator.'}
+              </p>
+              {(searchQuery || selectedSubjectFilter !== 'ALL') && (
+                <button
+                  type="button"
+                  className="btn-outline small"
+                  style={{ marginTop: '16px' }}
+                  onClick={() => { setSelectedSubjectFilter('ALL'); setSearchQuery(''); }}
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Published Exams Cards Grid */}
+          {!loadingPublished && filteredExamsList.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+              {filteredExamsList.map(({ exam, subjGroup }) => {
+                const defaultSet = exam.sets && exam.sets.length > 0 ? exam.sets[0] : null;
+                const subjectName = subjGroup.subject || 'General';
+
+                const badgeColor = subjectName === 'Biology'
+                  ? { bg: 'rgba(5,150,105,0.12)', text: '#059669', border: 'rgba(5,150,105,0.3)' }
+                  : subjectName === 'Physics'
+                    ? { bg: 'rgba(37,99,235,0.12)', text: '#2563eb', border: 'rgba(37,99,235,0.3)' }
+                    : subjectName === 'Chemistry'
+                      ? { bg: 'rgba(124,58,237,0.12)', text: '#7c3aed', border: 'rgba(124,58,237,0.3)' }
+                      : { bg: 'rgba(217,119,6,0.12)', text: '#d97706', border: 'rgba(217,119,6,0.3)' };
+
+                return (
+                  <div
+                    key={exam.exam_id}
+                    style={{
+                      background: 'var(--s1)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '16px',
+                      padding: '22px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      gap: '16px',
+                      transition: 'all 0.25s ease',
+                      boxShadow: 'var(--shadow)'
+                    }}
+                  >
+                    <div>
+                      {/* Card Header: Subject Tag & Duration */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <span style={{
+                          padding: '4px 10px',
+                          borderRadius: '6px',
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          background: badgeColor.bg,
+                          color: badgeColor.text,
+                          border: `1px solid ${badgeColor.border}`
+                        }}>
+                          {subjectName}
+                        </span>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          ⏱ 80 Mins
+                        </span>
+                      </div>
+
+                      {/* Exam Title */}
+                      <h3 style={{ fontSize: '1.18rem', fontWeight: 700, color: 'var(--text)', margin: '0 0 10px 0', lineHeight: 1.4 }}>
+                        {exam.exam_name || `${subjectName} Mock Exam`}
+                      </h3>
+
+                      {/* Details specs */}
+                      <div style={{
+                        background: 'var(--s2)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '10px',
+                        padding: '10px 14px',
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr',
+                        gap: '8px',
+                        fontSize: '0.82rem',
+                        color: 'var(--muted)',
+                        marginBottom: '8px'
+                      }}>
+                        <div>
+                          <span>Questions:</span>{' '}
+                          <strong style={{ color: 'var(--text)' }}>60 MCQs</strong>
+                        </div>
+                        <div>
+                          <span>Max Marks:</span>{' '}
+                          <strong style={{ color: 'var(--text)' }}>60 Marks</strong>
+                        </div>
+                        <div>
+                          <span>Set:</span>{' '}
+                          <strong style={{ color: 'var(--purple-l)' }}>Set {defaultSet?.set_label || 'A'}</strong>
+                        </div>
+                        <div>
+                          <span>Proctoring:</span>{' '}
+                          <strong style={{ color: 'var(--green)' }}>AI Camera</strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <div>
+                      {defaultSet ? (
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          onClick={() => handleSelectExam(exam, subjGroup, defaultSet)}
+                          style={{
+                            width: '100%',
+                            justifyContent: 'center',
+                            padding: '10px 16px',
+                            fontSize: '0.92rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                        >
+                          Take Exam →
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-primary"
+                          disabled
+                          style={{ width: '100%', opacity: 0.5, cursor: 'not-allowed' }}
+                        >
+                          Unavailable
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Top bar during exam */}
       <div className="exam-topbar" id="examTopbar" style={{ display: started && !submitResult ? "flex" : "none" }}>
@@ -756,10 +1140,29 @@ const Exam = () => {
       </div>
 
       {/* Entry Modal / Pre-Exam Screen */}
-      {!started && !submitResult && (
+      {examSetId && !started && !submitResult && (
         <div className="overlay" style={{ display: "flex" }}>
           <div className="entry-modal" style={{ maxWidth: '520px', width: '90%' }}>
             <div className="entry-modal-top">
+              <button
+                type="button"
+                onClick={handleBackToExamSelection}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--purple-l, #a855f7)',
+                  cursor: 'pointer',
+                  fontSize: '0.84rem',
+                  fontWeight: 600,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  marginBottom: '10px',
+                  alignSelf: 'flex-start'
+                }}
+              >
+                ← Back to Published Tests
+              </button>
               <div className="entry-icon">🎓</div>
               <h2>{examName}</h2>
               <p>{subject} Examination</p>
@@ -769,8 +1172,8 @@ const Exam = () => {
               {loadError ? (
                 <div style={{ padding: '16px', background: 'rgba(239,68,68,0.1)', border: '1px solid var(--red)', borderRadius: '8px', color: 'var(--red)', marginBottom: '16px', textAlign: 'center' }}>
                   <p style={{ fontWeight: 600 }}>{loadError}</p>
-                  <button className="btn-outline small" style={{ marginTop: '12px' }} onClick={() => navigate(-1)}>
-                    ← Go Back
+                  <button className="btn-outline small" style={{ marginTop: '12px' }} onClick={handleBackToExamSelection}>
+                    ← Choose a Different Test
                   </button>
                 </div>
               ) : (
@@ -1937,10 +2340,10 @@ const Exam = () => {
                 <button 
                   type="button" 
                   className="btn-outline" 
-                  onClick={() => window.location.reload()}
+                  onClick={handleBackToExamSelection}
                   style={{ padding: '10px 20px', fontSize: '0.9rem' }}
                 >
-                  🔄 Retake / Try Another Mock
+                  🔄 Take Another Published Mock
                 </button>
                 <button 
                   type="button" 

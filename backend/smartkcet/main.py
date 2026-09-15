@@ -44,6 +44,7 @@ def create_app():
         static_url_path='/assets'
     )
     CORS(app, resources={r"/*": {"origins": "*"}})
+    app.config['MAX_CONTENT_LENGTH'] = 1024 * 1024 * 1024  # 1 GB for large textbook uploads
 
     from .db.session import SessionLocal
     from flask import g
@@ -85,6 +86,10 @@ def create_app():
     app.register_blueprint(exam_access_router)
     app.register_blueprint(pages_router)
     app.register_blueprint(legacy_router)
+
+    from .admin.syllabus import list_syllabus_public, get_syllabus_by_subject
+    app.add_url_rule("/api/syllabus", "public_syllabus", list_syllabus_public, methods=["GET"])
+    app.add_url_rule("/api/syllabus/<subject>", "public_syllabus_subject", get_syllabus_by_subject, methods=["GET"])
 
     @app.route("/api/health", methods=["GET"])
     def api_health():

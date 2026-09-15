@@ -15,17 +15,14 @@ const AdminUpload = () => {
   const [docType, setDocType] = useState("question_paper");
   const [browseError, setBrowseError] = useState("");
   
-  const handleBrowseClick = () => {
-    if (!subject) {
-      setBrowseError("Please select a Subject before browsing files.");
-      return;
-    }
-    if (!docType) {
-      setBrowseError("Please select a Document Type before browsing files.");
+  const handleDropZoneClick = (e) => {
+    if (e.target.closest('#adminBrowseBtn') || e.target.closest('label') || e.target.tagName === 'INPUT') {
       return;
     }
     setBrowseError("");
-    fileInputRef.current.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
   };
 
   const handleFileChange = (e) => {
@@ -155,18 +152,51 @@ const AdminUpload = () => {
               </select>
             </div>
 
-            <div className="drop-zone" id="dropZone" onClick={handleBrowseClick} style={{ cursor: 'pointer' }}>
+            <div className="drop-zone" id="dropZone" onClick={handleDropZoneClick} style={{ cursor: 'pointer' }}>
               <div className="drop-zone-content">
                 <div className="drop-icon">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
                 </div>
                 <p className="drop-title">Drop your {docType === 'textbook' ? 'textbooks' : 'papers'} here</p>
                 <p className="drop-sub">PDF, DOC, DOCX, TXT format supported</p>
-                <button type="button" className="btn-primary" style={{ backgroundColor: 'var(--blue)', color: '#fff', border: 'none' }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <label
+                  htmlFor="adminFileInput"
+                  id="adminBrowseBtn"
+                  className="btn-primary"
+                  style={{
+                    backgroundColor: 'var(--blue)',
+                    color: '#fff',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    userSelect: 'none'
+                  }}
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ pointerEvents: 'none' }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                   Browse Files
-                </button>
-                <input type="file" ref={fileInputRef} onChange={handleFileChange} multiple accept=".pdf,.doc,.docx,.txt" hidden/>
+                </label>
+                <input
+                  type="file"
+                  id="adminFileInput"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    e.target.value = null;
+                  }}
+                  multiple
+                  accept=".pdf,.doc,.docx,.txt"
+                  style={{
+                    position: 'absolute',
+                    opacity: 0,
+                    width: '1px',
+                    height: '1px',
+                    pointerEvents: 'none',
+                    overflow: 'hidden'
+                  }}
+                />
               </div>
             </div>
             

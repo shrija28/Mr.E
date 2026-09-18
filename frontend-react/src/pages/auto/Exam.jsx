@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 // High-precision face & liveness analyzer that verifies an actual human face is present
@@ -190,7 +190,69 @@ const Exam = () => {
   const [timeLeft, setTimeLeft] = useState(EXAM_DURATION_SEC);
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [navFilter, setNavFilter] = useState('all'); // 'all' | 'incorrect' | 'correct' | 'skipped'
   const [reviewFilter, setReviewFilter] = useState('all'); // 'all' | 'correct' | 'incorrect' | 'skipped'
+
+  // Memoized evaluated reviews for instant review mode on question paper
+  const evaluatedReviews = useMemo(() => {
+    if (!submitResult) return [];
+    const list = submitResult.detailed_reviews || submitResult.ai_analysis?.detailed_reviews;
+    if (list && Array.isArray(list) && list.length > 0) return list;
+
+    // Fallback calculation from questions & student answers
+    return questions.map((q, idx) => {
+      const studentChoice = answers[idx];
+      const isAns = studentChoice !== undefined && studentChoice !== null;
+      const isSkipped = !isAns && (skipped instanceof Set ? skipped.has(idx) : Boolean(skipped?.[idx]));
+      const correctIdx = 0;
+      return {
+        question_number: idx + 1,
+        question_text: q.text,
+        options: q.options || [],
+        student_option_index: isAns ? Number(studentChoice) : null,
+        student_answer: isAns && q.options ? q.options[studentChoice] : (isSkipped ? "Skipped" : "Not Answered"),
+        correct_option_index: correctIdx,
+        correct_answer: q.options ? q.options[correctIdx] : "Option A",
+        is_correct: isAns && Number(studentChoice) === correctIdx,
+        is_unanswered: !isAns,
+        topic: q.topic || "General",
+        subtype: q.subtype || "theory_definition",
+        subtype_label: q.subtype_label || "⚡ KCET Standard",
+        explanation: q.explanation || "Derived directly from syllabus textbook principles and formulas.",
+        ai_insight: isAns ? "KCET syllabus conceptual pattern." : "Question skipped."
+      };
+    });
+  }, [submitResult, questions, answers, skipped]);
+
+  // Memoized evaluation summary (scores, counts, topic performance)
+  const evalSummary = useMemo(() => {
+    if (!submitResult) return null;
+    const aiAnalysis = submitResult.ai_analysis;
+    const summary = aiAnalysis?.summary || {};
+    const totalVal = submitResult.total_marks ?? summary.total ?? questions.length;
+    const scoreVal = submitResult.score ?? summary.score ?? 0;
+    const pctVal = submitResult.percentage ?? summary.percentage ?? Math.round((scoreVal / Math.max(1, totalVal)) * 100);
+    const correctCount = submitResult.correct_count ?? summary.score ?? scoreVal;
+    const incorrectCount = submitResult.incorrect_count ?? Math.max(0, totalVal - scoreVal - (submitResult.unanswered_count || 0));
+    const unansCount = submitResult.unanswered_count ?? Math.max(0, totalVal - (correctCount + incorrectCount));
+    return {
+      score: scoreVal,
+      total: totalVal,
+      percentage: pctVal,
+      correctCount,
+      incorrectCount,
+      unansCount,
+      band: summary.performance_band || (pctVal >= 85 ? "Outstanding Mastery" : pctVal >= 65 ? "Strong Competency" : pctVal >= 45 ? "Developing Competency" : "Foundational Review Needed"),
+      pacing: summary.pacing_assessment || `Exam completed in ${Math.floor((submitResult.time_taken_sec || 0)/60)}m ${(submitResult.time_taken_sec || 0)%60}s.`,
+      verdict: summary.overall_verdict || `Student demonstrated ${pctVal >= 50 ? 'competency' : 'review needed'} across ${subject} KCET syllabus concepts with an overall score of ${pctVal}%.`,
+      topicMap: aiAnalysis?.topic_breakdown || {},
+      subtypeMap: aiAnalysis?.subtype_breakdown || summary.subtype_breakdown || {},
+      blueprintPerf: aiAnalysis?.blueprint_performance || summary.blueprint_performance || null,
+      blueprintDiag: summary.blueprint_diagnosis || (aiAnalysis?.blueprint_performance?.diagnosis) || '',
+      actionPlan: aiAnalysis?.action_plan || []
+    };
+  }, [submitResult, questions.length, subject]);
 
   const videoRef = useRef(null);
   const videoPreviewRef = useRef(null);
@@ -215,6 +277,35 @@ const Exam = () => {
   const resumeGracePeriodRef = useRef(false);
   const resumeGraceTimeoutRef = useRef(null);
   const prevFrameRef = useRef(null);
+
+  // Anti-Cheat & Tab Switch Tracking (2-Strike System)
+  const [tabViolations, setTabViolations] = useState(0);
+  const tabViolationsRef = useRef(0);
+  const [tabSwitchAlert, setTabSwitchAlert] = useState(false);
+  const tabSwitchAlertRef = useRef(false);
+  const blurTimeoutRef = useRef(null);
+
+  // Floating Security Alert Toast (Copy, Paste, DevTools prevention)
+  const [securityToast, setSecurityToast] = useState({ show: false, message: '' });
+  const securityToastTimerRef = useRef(null);
+
+  const showSecurityToast = (message) => {
+    if (securityToastTimerRef.current) clearTimeout(securityToastTimerRef.current);
+    setSecurityToast({ show: true, message });
+    securityToastTimerRef.current = setTimeout(() => {
+      setSecurityToast({ show: false, message: '' });
+    }, 3500);
+  };
+
+  useEffect(() => {
+    tabSwitchAlertRef.current = tabSwitchAlert;
+  }, [tabSwitchAlert]);
+
+  const handleResumeFromTabSwitch = () => {
+    tabSwitchAlertRef.current = false;
+    setTabSwitchAlert(false);
+    window.focus();
+  };
 
   // Synchronize faceMissingAlertRef
   useEffect(() => {
@@ -351,6 +442,9 @@ const Exam = () => {
       setFaceStatus(result.reason);
 
       if (started && !submitResult) {
+        // If tab switch warning modal is currently open, pause face strike evaluation so strikes do not conflict
+        if (tabSwitchAlertRef.current) return;
+
         // STATE A: Warning 1 Modal is Currently Open (Waiting for student to realign face)
         if (faceMissingAlertRef.current) {
           if (result.detected) {
@@ -458,6 +552,159 @@ const Exam = () => {
       });
   }, []);
 
+  // ── Tab Switch & Focus Monitoring (2-Strike System) ──────────────────────
+  useEffect(() => {
+    if (!started || submitResult) return;
+
+    const triggerTabViolation = () => {
+      // Don't trigger if already submitted or warning modal already active
+      if (tabSwitchAlertRef.current) return;
+
+      if (tabViolationsRef.current === 0) {
+        tabViolationsRef.current = 1;
+        setTabViolations(1);
+        tabSwitchAlertRef.current = true;
+        setTabSwitchAlert(true);
+        showSecurityToast('🚨 Tab switch detected! You must remain on this exam tab.');
+      } else if (tabViolationsRef.current >= 1) {
+        tabViolationsRef.current = 2;
+        setTabViolations(2);
+        tabSwitchAlertRef.current = true;
+        setTabSwitchAlert(true);
+        const reason = 'Student switched tabs for the second time. In accordance with examination regulations, your test was automatically cancelled and submitted.';
+        setAutoSubmittedReason(reason);
+        setTimeout(() => {
+          handleSubmitExamRef.current?.(reason);
+        }, 1200);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden || document.visibilityState === 'hidden') {
+        triggerTabViolation();
+      }
+    };
+
+    const handleBlur = () => {
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = setTimeout(() => {
+        if (document.hidden || !document.hasFocus()) {
+          triggerTabViolation();
+        }
+      }, 350);
+    };
+
+    const handleFocus = () => {
+      if (blurTimeoutRef.current) {
+        clearTimeout(blurTimeoutRef.current);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    };
+  }, [started, submitResult]);
+
+  // ── Anti-Cheat: Suppress Copy, Cut, Paste, Right Click & Shortcuts ─────────
+  useEffect(() => {
+    if (!started || submitResult) return;
+
+    const handleCopy = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.clipboardData) {
+        e.clipboardData.clearData();
+      }
+      showSecurityToast('🚫 Copying question text or options is strictly prohibited.');
+    };
+
+    const handlePaste = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showSecurityToast('🚫 Pasting is strictly prohibited during the examination.');
+    };
+
+    const handleCut = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showSecurityToast('🚫 Cutting content is disabled during the examination.');
+    };
+
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showSecurityToast('🚫 Right-click context menu is disabled during the exam.');
+    };
+
+    const handleDragStart = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleSelectStart = (e) => {
+      const target = e.target;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) {
+        return;
+      }
+      e.preventDefault();
+    };
+
+    const handleKeyDown = (e) => {
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      const key = e.key ? e.key.toLowerCase() : '';
+
+      // Block Ctrl+C (Copy), Ctrl+V (Paste), Ctrl+X (Cut), Ctrl+A (Select All), Ctrl+U (Source), Ctrl+P (Print), Ctrl+S (Save)
+      if (isCtrlOrCmd && ['c', 'v', 'x', 'a', 'u', 'p', 's'].includes(key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        const actionLabels = {
+          c: 'Copying',
+          v: 'Pasting',
+          x: 'Cutting',
+          a: 'Select All',
+          u: 'Viewing source',
+          p: 'Printing',
+          s: 'Saving page'
+        };
+        showSecurityToast(`🚫 ${actionLabels[key] || 'Shortcut'} is strictly disabled during the exam.`);
+        return;
+      }
+
+      // Block DevTools shortcuts: F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C
+      if (e.key === 'F12' || (isCtrlOrCmd && e.shiftKey && ['i', 'j', 'c'].includes(key))) {
+        e.preventDefault();
+        e.stopPropagation();
+        showSecurityToast('🚫 Developer Tools inspection is strictly disabled.');
+        return;
+      }
+    };
+
+    document.addEventListener('copy', handleCopy, true);
+    document.addEventListener('paste', handlePaste, true);
+    document.addEventListener('cut', handleCut, true);
+    document.addEventListener('contextmenu', handleContextMenu, true);
+    document.addEventListener('dragstart', handleDragStart, true);
+    document.addEventListener('selectstart', handleSelectStart, true);
+    window.addEventListener('keydown', handleKeyDown, true);
+
+    return () => {
+      document.removeEventListener('copy', handleCopy, true);
+      document.removeEventListener('paste', handlePaste, true);
+      document.removeEventListener('cut', handleCut, true);
+      document.removeEventListener('contextmenu', handleContextMenu, true);
+      document.removeEventListener('dragstart', handleDragStart, true);
+      document.removeEventListener('selectstart', handleSelectStart, true);
+      window.removeEventListener('keydown', handleKeyDown, true);
+    };
+  }, [started, submitResult]);
+
   // Synchronize state with URL search params
   useEffect(() => {
     const currentSet = searchParams.get('set') || '';
@@ -530,7 +777,11 @@ const Exam = () => {
     setQuestions([]);
     setStarted(false);
     setSubmitResult(null);
+    setShowAiModal(false);
     setAnswers({});
+    setSkipped(new Set());
+    setCurrentQ(0);
+    setNavFilter('all');
     setLoadError('');
     setSearchParams({});
     fetchPublishedExams();
@@ -577,6 +828,8 @@ const Exam = () => {
             text: q.q,
             options: Array.isArray(q.opts) ? q.opts : (typeof q.opts === 'string' ? JSON.parse(q.opts) : []),
             topic: q.topic || 'General',
+            subtype: q.subtype || 'theory_definition',
+            explanation: q.exp || q.explanation || '',
             marks: q.marks || 1
           })));
           if (data.subject) setSubject(data.subject);
@@ -622,12 +875,18 @@ const Exam = () => {
       });
 
       const data = await res.json();
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        setCameraStream(null);
+        setCameraActive(false);
+      }
       if (res.ok) {
         setSubmitResult({
           ...data,
           autoSubmitted: Boolean(effectiveReason),
           violationReason: effectiveReason
         });
+        setCurrentQ(0);
       } else {
         // Fallback calculation if backend reports already submitted or schema issue
         const answeredCount = Object.keys(answers).length;
@@ -642,8 +901,14 @@ const Exam = () => {
           autoSubmitted: Boolean(effectiveReason),
           violationReason: effectiveReason
         });
+        setCurrentQ(0);
       }
     } catch (err) {
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(t => t.stop());
+        setCameraStream(null);
+        setCameraActive(false);
+      }
       const answeredCount = Object.keys(answers).length;
       setSubmitResult({
         score: answeredCount,
@@ -656,6 +921,7 @@ const Exam = () => {
         autoSubmitted: Boolean(effectiveReason),
         violationReason: effectiveReason
       });
+      setCurrentQ(0);
     } finally {
       setSubmitting(false);
     }
@@ -674,8 +940,8 @@ const Exam = () => {
     }
 
     const timer = setInterval(() => {
-      // Pause exam clock while proctoring warning modal is open so student does not lose test time
-      if (faceMissingAlertRef.current) return;
+      // Pause exam clock while proctoring or tab switch warning modal is open so student does not lose test time
+      if (faceMissingAlertRef.current || tabSwitchAlertRef.current) return;
 
       setTimeLeft(prev => {
         if (prev <= 1) {
@@ -701,6 +967,7 @@ const Exam = () => {
   }, []);
 
   const handleAnswer = (optionIdx) => {
+    if (submitResult) return; // Read-only evaluation mode
     setAnswers(prev => ({ ...prev, [currentQ]: optionIdx }));
     setSkipped(prev => {
       const next = new Set(prev);
@@ -710,8 +977,77 @@ const Exam = () => {
   };
 
   const handleSkip = () => {
-    setSkipped(prev => new Set(prev).add(currentQ));
-    if (currentQ < questions.length - 1) setCurrentQ(prev => prev + 1);
+    if (submitResult) return;
+    setAnswers(prev => {
+      if (prev[currentQ] === undefined) return prev;
+      const next = { ...prev };
+      delete next[currentQ];
+      return next;
+    });
+    setSkipped(prev => {
+      const next = new Set(prev);
+      next.add(currentQ);
+      return next;
+    });
+    if (currentQ < questions.length - 1) {
+      setCurrentQ(prev => prev + 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (!submitResult && answers[currentQ] === undefined) {
+      setSkipped(prev => {
+        const next = new Set(prev);
+        next.add(currentQ);
+        return next;
+      });
+    }
+    if (currentQ < questions.length - 1) {
+      setCurrentQ(prev => prev + 1);
+    }
+  };
+
+  const handlePrev = () => {
+    if (!submitResult && answers[currentQ] === undefined) {
+      setSkipped(prev => {
+        const next = new Set(prev);
+        next.add(currentQ);
+        return next;
+      });
+    }
+    if (currentQ > 0) {
+      setCurrentQ(prev => prev - 1);
+    }
+  };
+
+  const handleSelectQ = (targetIdx) => {
+    if (!submitResult && answers[currentQ] === undefined) {
+      setSkipped(prev => {
+        const next = new Set(prev);
+        next.add(currentQ);
+        return next;
+      });
+    }
+    setCurrentQ(targetIdx);
+  };
+
+  // Quick navigation to jump to next question where student made a mistake
+  const handleNextMistake = () => {
+    if (!submitResult || !evaluatedReviews || evaluatedReviews.length === 0) return;
+    // Search forward
+    for (let i = currentQ + 1; i < evaluatedReviews.length; i++) {
+      if (!evaluatedReviews[i].is_correct && !evaluatedReviews[i].is_unanswered) {
+        setCurrentQ(i);
+        return;
+      }
+    }
+    // Search from start
+    for (let i = 0; i <= currentQ; i++) {
+      if (!evaluatedReviews[i].is_correct && !evaluatedReviews[i].is_unanswered) {
+        setCurrentQ(i);
+        return;
+      }
+    }
   };
 
   const formatTime = (seconds) => {
@@ -731,6 +1067,15 @@ const Exam = () => {
             height: auto !important;
             min-height: 100vh !important;
           }
+          ${(started && !submitResult) ? `
+          body, html, .exam-layout, .exam-layout *, .question-panel, .question-panel *, .q-body, .q-answer-area {
+            -webkit-user-select: none !important;
+            -moz-user-select: none !important;
+            -ms-user-select: none !important;
+            user-select: none !important;
+            -webkit-touch-callout: none !important;
+          }
+          ` : ''}
           .nav, .navbar { display: none !important; }
           .main-content { 
             margin-left: 0 !important; 
@@ -1103,39 +1448,84 @@ const Exam = () => {
         </div>
       )}
       
-      {/* Top bar during exam */}
-      <div className="exam-topbar" id="examTopbar" style={{ display: started && !submitResult ? "flex" : "none" }}>
+      {/* Top bar during exam or evaluation review */}
+      <div className="exam-topbar" id="examTopbar" style={{ display: started ? "flex" : "none" }}>
         <div className="exam-topbar-left">
           <div className="brand-icon small">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
-          <span className="exam-title-text" style={{ color: "#fff" }}>Mr.<span className="brand-ai">E</span></span>
+          <span className="exam-title-text" style={{ color: "#fff" }}>Vyasa<span className="brand-ai">Prep</span></span>
         </div>
         <div className="exam-topbar-center">
           <span className="exam-badge set-badge" id="topbarSet">{examName}</span>
           <span className="exam-badge subject-badge" id="topbarSubject">{subject}</span>
-          {faceViolations === 1 && (
+          {submitResult ? (
             <span style={{
-              padding: '4px 10px',
+              padding: '4px 12px',
               borderRadius: '12px',
-              background: 'rgba(234,179,8,0.22)',
-              border: '1px solid rgba(234,179,8,0.6)',
-              color: '#facc15',
-              fontSize: '0.75rem',
-              fontWeight: 800,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px'
+              background: 'rgba(16,185,129,0.18)',
+              border: '1px solid rgba(16,185,129,0.5)',
+              color: '#34d399',
+              fontSize: '0.8rem',
+              fontWeight: 800
             }}>
-              ⚠️ Warning: 1/2 (Final Chance!)
+              ✓ Exam Evaluated
             </span>
+          ) : (
+            (tabViolations === 1 || faceViolations === 1) ? (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                {tabViolations === 1 && (
+                  <span style={{
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    background: 'rgba(239,68,68,0.22)',
+                    border: '1px solid rgba(239,68,68,0.6)',
+                    color: '#f87171',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    ⚠️ Tab Warning: 1/2
+                  </span>
+                )}
+                {faceViolations === 1 && (
+                  <span style={{
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    background: 'rgba(234,179,8,0.22)',
+                    border: '1px solid rgba(234,179,8,0.6)',
+                    color: '#facc15',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    ⚠️ Face Warning: 1/2
+                  </span>
+                )}
+              </div>
+            ) : null
           )}
         </div>
         <div className="exam-topbar-right">
-          <div className="timer-block">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            <span id="timerDisplay" className="timer-text">{formatTime(timeLeft)}</span>
-          </div>
+          {submitResult ? (
+            <button 
+              type="button" 
+              className="btn-outline" 
+              onClick={() => navigate('/dashboard')}
+              style={{ padding: '6px 14px', fontSize: '0.82rem', fontWeight: 700 }}
+            >
+              Dashboard →
+            </button>
+          ) : (
+            <div className="timer-block">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span id="timerDisplay" className="timer-text">{formatTime(timeLeft)}</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -1642,166 +2032,722 @@ const Exam = () => {
         </div>
       )}
 
-      {/* Live Exam Layout */}
-      {started && !submitResult && questions.length > 0 && (
-        <div className="exam-layout">
-          <aside className="exam-sidebar">
-            <div id="proctorContainer" style={{
-              marginBottom: "15px",
-              borderRadius: "8px",
-              overflow: "hidden",
-              background: "#000",
-              border: (cameraActive && faceDetected)
-                ? (faceViolations === 1 ? "1.5px solid rgba(234,179,8,0.7)" : "1.5px solid rgba(16,185,129,0.6)")
-                : "1.5px solid rgba(239,68,68,0.7)",
-              aspectRatio: "4/3",
-              maxHeight: "150px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              position: "relative"
-            }}>
-              <video
-                ref={(el) => {
-                  videoRef.current = el;
-                  attachStream(el);
-                }}
-                autoPlay
-                muted
-                playsInline
-                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: "scaleX(-1)" }}
-              />
-              <div style={{
-                position: "absolute",
-                top: "6px",
-                left: "6px",
-                fontSize: "0.65rem",
-                fontWeight: 800,
-                padding: "2px 6px",
-                borderRadius: "4px",
-                background: faceViolations === 0 ? "rgba(16,185,129,0.85)" : faceViolations === 1 ? "rgba(234,179,8,0.9)" : "rgba(239,68,68,0.9)",
-                color: faceViolations === 1 ? "#000" : "#fff"
-              }}>
-                {faceViolations === 0 ? "Strikes: 0/2" : `Strikes: ${faceViolations}/2`}
-              </div>
+      {/* Floating Security Alert Toast */}
+      {securityToast.show && (
+        <div
+          className="security-toast-container"
+          style={{
+            position: 'fixed',
+            top: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 9999999,
+            background: '#18181b',
+            border: '1.5px solid #ef4444',
+            color: '#fca5a5',
+            padding: '12px 22px',
+            borderRadius: '12px',
+            boxShadow: '0 8px 30px rgba(239,68,68,0.45)',
+            fontSize: '0.9rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
+          }}
+        >
+          <span style={{ fontSize: '1.25rem' }}>🔒</span>
+          <span>{securityToast.message}</span>
+        </div>
+      )}
+
+      {/* Mid-Exam Tab Switch Violation Modal (2-Strike System) */}
+      {started && tabSwitchAlert && !submitResult && (
+        <div className="overlay" style={{ display: 'flex', zIndex: 999998, background: 'rgba(0,0,0,0.95)' }}>
+          <div className="entry-modal" style={{
+            maxWidth: '520px',
+            width: '92%',
+            textAlign: 'center',
+            border: tabViolations >= 2 ? '2.5px solid var(--red)' : '2px solid #eab308',
+            boxShadow: tabViolations >= 2 ? '0 0 35px rgba(239,68,68,0.5)' : '0 0 30px rgba(234,179,8,0.4)',
+            borderRadius: '16px',
+            padding: '30px 24px'
+          }}>
+            <div style={{ marginBottom: '14px' }}>
               <span style={{
-                position: "absolute",
-                bottom: "6px",
-                right: "6px",
-                fontSize: "0.68rem",
-                fontWeight: 700,
-                padding: "2px 6px",
-                borderRadius: "4px",
-                background: (cameraActive && faceDetected) ? "rgba(16,185,129,0.9)" : "rgba(239,68,68,0.9)",
-                color: "#fff"
+                fontSize: '0.82rem',
+                fontWeight: 800,
+                letterSpacing: '0.5px',
+                padding: '4px 14px',
+                borderRadius: '20px',
+                background: tabViolations >= 2 ? 'rgba(239,68,68,0.22)' : 'rgba(234,179,8,0.2)',
+                border: tabViolations >= 2 ? '1px solid rgba(239,68,68,0.6)' : '1px solid rgba(234,179,8,0.6)',
+                color: tabViolations >= 2 ? '#f87171' : '#facc15'
               }}>
-                {(cameraActive && faceDetected) ? "● Face Verified" : "● Face Missing"}
+                {tabViolations >= 2 ? '🚨 TAB VIOLATION: DISQUALIFIED (2 OF 2)' : '⚠️ TAB SWITCH DETECTED (STRIKE 1 OF 2)'}
               </span>
             </div>
 
-            <div className="sidebar-section-title">Question Navigator</div>
+            <div style={{ fontSize: '3.4rem', marginBottom: '10px' }}>
+              {tabViolations >= 2 ? '🚫' : '📑'}
+            </div>
+
+            <h2 style={{
+              color: tabViolations >= 2 ? 'var(--red)' : '#facc15',
+              marginBottom: '12px',
+              fontSize: '1.45rem',
+              fontWeight: 800
+            }}>
+              {tabViolations >= 2 ? 'Test Automatically Cancelled & Submitted!' : 'Tab Switch Detected!'}
+            </h2>
+
+            {tabViolations < 2 ? (
+              <div style={{
+                background: 'rgba(234,179,8,0.14)',
+                border: '1.5px solid rgba(234,179,8,0.5)',
+                borderRadius: '10px',
+                padding: '14px 16px',
+                marginBottom: '16px',
+                color: '#fef08a',
+                fontSize: '0.92rem',
+                lineHeight: '1.5',
+                textAlign: 'center',
+                fontWeight: 700
+              }}>
+                ⚠️ <strong>FINAL WARNING:</strong> You switched away from the exam tab. Tab switching, window unfocusing, and copying questions are strictly prohibited during the exam. If you switch tabs again, your test will be <strong>automatically submitted immediately</strong>!
+              </div>
+            ) : (
+              <div style={{
+                background: 'rgba(239,68,68,0.2)',
+                border: '2px solid rgba(239,68,68,0.6)',
+                borderRadius: '10px',
+                padding: '16px',
+                marginBottom: '16px',
+                color: '#fca5a5',
+                fontSize: '0.95rem',
+                lineHeight: '1.5',
+                textAlign: 'center',
+                fontWeight: 700
+              }}>
+                🚫 Multiple tab switches were detected. Under examination anti-cheat regulations, your exam has been terminated and auto-submitted.
+              </div>
+            )}
+
+            <p style={{ color: 'var(--text)', marginBottom: '18px', fontSize: '0.88rem', lineHeight: '1.6' }}>
+              {tabViolations < 2
+                ? 'You must keep this examination window active and focused at all times. Please click below to return to your exam.'
+                : 'Evaluating your answers and compiling your performance summary...'}
+            </p>
+
+            {tabViolations < 2 ? (
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={handleResumeFromTabSwitch}
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  padding: '12px',
+                  fontSize: '0.96rem',
+                  fontWeight: 800,
+                  background: 'linear-gradient(135deg, #7c3aed, #2563eb)',
+                  cursor: 'pointer'
+                }}
+              >
+                ✓ I Understand — Resume Exam
+              </button>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--red-l)', fontSize: '0.9rem', fontWeight: 700 }}>
+                <span className="spinner" style={{ width: '16px', height: '16px', border: '2px solid rgba(239,68,68,0.3)', borderTopColor: '#ef4444', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.8s linear infinite' }}></span>
+                Submitting Exam Responses...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Exam Layout (Handles both Live Test & Evaluated Review Mode) */}
+      {started && questions.length > 0 && (
+        <div className={`exam-layout ${started && !submitResult ? 'secure-anti-cheat' : ''}`}>
+          <aside className="exam-sidebar">
+            {submitResult ? (
+              <div style={{
+                marginBottom: "15px",
+                borderRadius: "10px",
+                padding: "16px 14px",
+                background: "linear-gradient(135deg, rgba(124,58,237,0.18), rgba(37,99,235,0.14))",
+                border: "1.5px solid rgba(124,58,237,0.4)",
+                textAlign: "center"
+              }}>
+                <div style={{ fontSize: "0.72rem", fontWeight: 700, color: "var(--muted, #9ca3af)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Marks Awarded
+                </div>
+                <div style={{ fontSize: "1.8rem", fontWeight: 900, color: (evalSummary?.percentage ?? 0) >= 50 ? "#10b981" : "#f59e0b", margin: "4px 0" }}>
+                  {evalSummary?.score ?? 0} <span style={{ fontSize: "0.95rem", color: "var(--muted, #9ca3af)", fontWeight: 500 }}>/ {evalSummary?.total ?? questions.length}</span>
+                </div>
+                <div style={{ fontSize: "0.82rem", color: "#fff", fontWeight: 700 }}>
+                  {evalSummary?.percentage ?? 0}% Marks ({evalSummary?.correctCount ?? 0} Correct)
+                </div>
+              </div>
+            ) : (
+              <div id="proctorContainer" style={{
+                marginBottom: "15px",
+                borderRadius: "8px",
+                overflow: "hidden",
+                background: "#000",
+                border: (cameraActive && faceDetected)
+                  ? (faceViolations === 1 ? "1.5px solid rgba(234,179,8,0.7)" : "1.5px solid rgba(16,185,129,0.6)")
+                  : "1.5px solid rgba(239,68,68,0.7)",
+                aspectRatio: "4/3",
+                maxHeight: "150px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                position: "relative"
+              }}>
+                <video
+                  ref={(el) => {
+                    videoRef.current = el;
+                    attachStream(el);
+                  }}
+                  autoPlay
+                  muted
+                  playsInline
+                  style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: "scaleX(-1)" }}
+                />
+                <div style={{
+                  position: "absolute",
+                  top: "6px",
+                  left: "6px",
+                  fontSize: "0.65rem",
+                  fontWeight: 800,
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  background: faceViolations === 0 ? "rgba(16,185,129,0.85)" : faceViolations === 1 ? "rgba(234,179,8,0.9)" : "rgba(239,68,68,0.9)",
+                  color: faceViolations === 1 ? "#000" : "#fff"
+                }}>
+                  {faceViolations === 0 ? "Strikes: 0/2" : `Strikes: ${faceViolations}/2`}
+                </div>
+                <span style={{
+                  position: "absolute",
+                  bottom: "6px",
+                  right: "6px",
+                  fontSize: "0.68rem",
+                  fontWeight: 700,
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  background: (cameraActive && faceDetected) ? "rgba(16,185,129,0.9)" : "rgba(239,68,68,0.9)",
+                  color: "#fff"
+                }}>
+                  {(cameraActive && faceDetected) ? "● Face Verified" : "● Face Missing"}
+                </span>
+              </div>
+            )}
+
+            <div className="sidebar-section-title">
+              {submitResult ? 'Evaluation Navigator' : 'Question Navigator'}
+            </div>
+
+            {submitResult && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px', marginBottom: '10px' }}>
+                {[
+                  { id: 'all', label: `All (${questions.length})` },
+                  { id: 'incorrect', label: `✗ Wrong (${evalSummary?.incorrectCount ?? 0})` },
+                  { id: 'correct', label: `✓ Right (${evalSummary?.correctCount ?? 0})` },
+                  { id: 'skipped', label: `○ Skip (${evalSummary?.unansCount ?? 0})` }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setNavFilter(tab.id)}
+                    style={{
+                      padding: '5px 4px',
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: navFilter === tab.id ? 'var(--purple, #7c3aed)' : 'var(--s2, #1a1d26)',
+                      color: navFilter === tab.id ? '#fff' : 'var(--muted, #9ca3af)',
+                      cursor: 'pointer',
+                      textAlign: 'center'
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div className="q-grid">
-              {questions.map((q, i) => (
-                <button
-                  key={q.id}
-                  onClick={() => setCurrentQ(i)}
-                  className={`q-grid-btn ${answers[i] !== undefined ? 'answered' : skipped.has(i) ? 'skipped' : ''} ${i === currentQ ? 'current' : ''}`.trim()}
-                >
-                  {i + 1}
-                </button>
-              ))}
+              {questions.map((q, i) => {
+                const rev = evaluatedReviews[i];
+                const isAnswered = answers[i] !== undefined;
+                const isSkipped = submitResult 
+                  ? Boolean(rev?.is_unanswered) 
+                  : (!isAnswered && (skipped instanceof Set ? skipped.has(i) : Boolean(skipped?.[i])));
+                const isCorrect = submitResult ? Boolean(rev?.is_correct) : false;
+                const isIncorrect = submitResult ? (!isCorrect && !isSkipped) : false;
+                const isCurrent = i === currentQ;
+
+                if (submitResult) {
+                  if (navFilter === 'incorrect' && !isIncorrect) return null;
+                  if (navFilter === 'correct' && !isCorrect) return null;
+                  if (navFilter === 'skipped' && !isSkipped) return null;
+                }
+
+                let btnClass = 'q-grid-btn';
+                if (submitResult) {
+                  if (isCorrect) btnClass += ' correct';
+                  else if (isIncorrect) btnClass += ' incorrect';
+                  else if (isSkipped) btnClass += ' skipped';
+                } else {
+                  if (isAnswered) btnClass += ' answered';
+                  else if (isSkipped) btnClass += ' skipped';
+                }
+                if (isCurrent) btnClass += ' current';
+
+                return (
+                  <button
+                    key={q.id || i}
+                    onClick={() => handleSelectQ(i)}
+                    className={btnClass}
+                    style={{
+                      ...(submitResult ? (
+                        isCorrect ? { background: '#d1fae5', borderColor: '#10b981', color: '#065f46', fontWeight: 800 } :
+                        isIncorrect ? { background: '#fee2e2', borderColor: '#ef4444', color: '#991b1b', fontWeight: 800 } :
+                        { background: '#fef08a', borderColor: '#eab308', color: '#854d0e', fontWeight: 800 }
+                      ) : (
+                        isAnswered ? { background: '#d1fae5', borderColor: '#10b981', color: '#065f46', fontWeight: 800 } :
+                        isSkipped ? { background: '#fef08a', borderColor: '#eab308', color: '#854d0e', fontWeight: 800 } : {}
+                      )),
+                      ...(isCurrent ? { 
+                        boxShadow: '0 0 0 3px #8b5cf6',
+                        ...((!submitResult && !isAnswered && !isSkipped) ? { background: '#ede9fe', borderColor: '#8b5cf6', color: '#5b21b6', fontWeight: 800 } : {})
+                      } : {})
+                    }}
+                  >
+                    {i + 1}
+                  </button>
+                );
+              })}
             </div>
 
             <div className="q-legend">
-              <div className="legend-row"><span className="legend-box answered"></span>Answered</div>
-              <div className="legend-row"><span className="legend-box skipped"></span>Skipped</div>
-              <div className="legend-row"><span className="legend-box current"></span>Current</div>
-              <div className="legend-row"><span className="legend-box unanswered"></span>Not visited</div>
+              {submitResult ? (
+                <>
+                  <div className="legend-row">
+                    <span className="legend-box correct" style={{ background: '#10b981', border: '1.5px solid #059669' }}></span>
+                    Correct (+1 Mark)
+                  </div>
+                  <div className="legend-row">
+                    <span className="legend-box incorrect" style={{ background: '#ef4444', border: '1.5px solid #dc2626' }}></span>
+                    Incorrect (0 Marks)
+                  </div>
+                  <div className="legend-row">
+                    <span className="legend-box skipped" style={{ background: '#eab308', border: '1.5px solid #ca8a04' }}></span>
+                    Skipped (0 Marks)
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="legend-row">
+                    <span className="legend-box answered" style={{ background: '#10b981', border: '1.5px solid #059669' }}></span>
+                    Answered
+                  </div>
+                  <div className="legend-row">
+                    <span className="legend-box skipped" style={{ background: '#eab308', border: '1.5px solid #ca8a04' }}></span>
+                    Skipped
+                  </div>
+                  <div className="legend-row">
+                    <span className="legend-box current" style={{ background: '#8b5cf6', border: '1.5px solid #7c3aed' }}></span>
+                    Current
+                  </div>
+                </>
+              )}
             </div>
 
-            <div className="sidebar-progress">
-              <div className="sidebar-prog-label">
-                <span>{Object.keys(answers).length}</span> / <span>{questions.length}</span> answered
-              </div>
-              <div className="sidebar-prog-bar">
-                <div className="sidebar-prog-fill" style={{ width: `${(Object.keys(answers).length / Math.max(1, questions.length)) * 100}%` }}></div>
-              </div>
-            </div>
+            {!submitResult ? (
+              <>
+                <div className="sidebar-progress">
+                  <div className="sidebar-prog-label">
+                    <span>{Object.keys(answers).length}</span> / <span>{questions.length}</span> answered
+                  </div>
+                  <div className="sidebar-prog-bar">
+                    <div className="sidebar-prog-fill" style={{ width: `${(Object.keys(answers).length / Math.max(1, questions.length)) * 100}%` }}></div>
+                  </div>
+                </div>
 
-            <button className="btn-submit-exam" onClick={handleSubmitExam} disabled={submitting}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-              {submitting ? 'Submitting...' : 'Submit Paper'}
-            </button>
+                <button className="btn-submit-exam" onClick={() => handleSubmitExam()} disabled={submitting}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+                  {submitting ? 'Submitting...' : 'Submit Paper'}
+                </button>
+              </>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '14px' }}>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setShowAiModal(true)}
+                  style={{ width: '100%', padding: '10px', fontSize: '0.84rem', fontWeight: 700, justifyContent: 'center' }}
+                >
+                  📊 Full AI Diagnostic Report
+                </button>
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={() => navigate('/dashboard')}
+                  style={{ width: '100%', padding: '9px', fontSize: '0.82rem', justifyContent: 'center' }}
+                >
+                  Return to Dashboard
+                </button>
+              </div>
+            )}
           </aside>
 
           <div className="exam-content">
-            <div className="exam-top-bar">
-              <div className="exam-top-prog">
-                <div className="exam-top-prog-fill" style={{ width: `${((currentQ + 1) / questions.length) * 100}%` }}></div>
-              </div>
-            </div>
-
-            {questions[currentQ] && (
-              <div className="question-panel">
-                <div className="q-meta-row">
-                  <span className="q-num-badge">Question {currentQ + 1}</span>
-                  <span className="q-type-chip">MCQ</span>
-                  <span className="q-topic-chip">{questions[currentQ].topic}</span>
-                  <span className="q-marks-chip">{questions[currentQ].marks} mark</span>
-                </div>
-
-                <div className="q-body" style={{ fontSize: '1.15rem', fontWeight: 500, color: 'var(--text)', marginBottom: '24px', lineHeight: '1.6' }}>
-                  {questions[currentQ].text}
-                </div>
-
-                <div className="q-answer-area">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {questions[currentQ].options.map((opt, idx) => {
-                      const isSelected = answers[currentQ] === idx;
-                      return (
-                        <button 
-                          key={idx}
-                          onClick={() => handleAnswer(idx)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '16px', width: '100%',
-                            padding: '16px 20px', background: isSelected ? 'rgba(124,58,237,0.15)' : 'var(--s2)',
-                            border: `1.5px solid ${isSelected ? 'var(--purple-l)' : 'var(--border)'}`,
-                            borderRadius: '12px', cursor: 'pointer', textAlign: 'left',
-                            transition: 'all 0.2s',
-                            boxShadow: isSelected ? '0 0 0 3px rgba(124,58,237,0.25)' : 'none'
-                          }}
-                        >
-                          <span style={{
-                            width: '32px', height: '32px', borderRadius: '50%',
-                            background: isSelected ? 'var(--purple)' : 'var(--s1)',
-                            color: isSelected ? '#fff' : 'var(--text)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            fontWeight: 600, fontSize: '0.9rem',
-                            border: isSelected ? 'none' : '1px solid var(--border)'
-                          }}>
-                            {String.fromCharCode(65 + idx)}
-                          </span>
-                          <span style={{ fontSize: '1rem', color: isSelected ? 'var(--purple-l)' : 'var(--text)', fontWeight: isSelected ? 600 : 400 }}>
-                            {opt}
-                          </span>
-                        </button>
-                      );
-                    })}
+            {submitResult && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(124,58,237,0.15), rgba(37,99,235,0.1))',
+                border: '1.5px solid rgba(124,58,237,0.35)',
+                borderRadius: '14px',
+                padding: '16px 20px',
+                marginBottom: '18px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '14px'
+              }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '1.4rem' }}>🎯</span>
+                    <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#fff' }}>
+                      KCET Examination Evaluated
+                    </span>
+                    <span style={{
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      padding: '3px 12px',
+                      borderRadius: '14px',
+                      background: (evalSummary?.percentage ?? 0) >= 50 ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)',
+                      color: (evalSummary?.percentage ?? 0) >= 50 ? '#34d399' : '#f87171',
+                      border: `1px solid ${(evalSummary?.percentage ?? 0) >= 50 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'}`
+                    }}>
+                      Total Marks: {evalSummary?.score ?? 0} / {evalSummary?.total ?? questions.length} ({evalSummary?.percentage ?? 0}%)
+                    </span>
                   </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '0.86rem', marginTop: '6px' }}>
+                    <span style={{ color: '#10b981', fontWeight: 700 }}>
+                      ✓ {evalSummary?.correctCount ?? 0} Correct (+{evalSummary?.correctCount ?? 0} Marks)
+                    </span>
+                    <span style={{ color: '#ef4444', fontWeight: 700 }}>
+                      ✗ {evalSummary?.incorrectCount ?? 0} Incorrect (0 Marks)
+                    </span>
+                    <span style={{ color: '#eab308', fontWeight: 700 }}>
+                      ○ {evalSummary?.unansCount ?? 0} Skipped (0 Marks)
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    onClick={() => setShowAiModal(true)}
+                    style={{ padding: '8px 16px', fontSize: '0.85rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <span>📊</span> Full AI Diagnostic
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-outline"
+                    onClick={handleBackToExamSelection}
+                    style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+                  >
+                    Take Another Exam
+                  </button>
                 </div>
               </div>
             )}
 
+            {!submitResult && (
+              <div className="exam-top-bar">
+                <div className="exam-top-prog">
+                  <div className="exam-top-prog-fill" style={{ width: `${((currentQ + 1) / questions.length) * 100}%` }}></div>
+                </div>
+              </div>
+            )}
+
+            {questions[currentQ] && (() => {
+              const currRev = submitResult ? evaluatedReviews[currentQ] : null;
+              const isRevCorrect = currRev ? currRev.is_correct : false;
+              const isRevSkipped = currRev ? currRev.is_unanswered : false;
+
+              return (
+                <div className={`question-panel ${started && !submitResult ? 'secure-anti-cheat' : ''}`}>
+                  <div className="q-meta-row" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+                    <span className="q-num-badge">Question {currentQ + 1} of {questions.length}</span>
+                    <span className="q-type-chip">MCQ</span>
+                    <span className="q-topic-chip">{currRev?.topic || questions[currentQ].topic || 'General'}</span>
+                    <span className="q-marks-chip">{questions[currentQ].marks || 1} mark</span>
+
+                    {submitResult && (
+                      <div style={{ marginLeft: 'auto' }}>
+                        {isRevCorrect ? (
+                          <span style={{
+                            background: '#d1fae5',
+                            border: '1.5px solid #10b981',
+                            color: '#065f46',
+                            fontWeight: 800,
+                            padding: '4px 12px',
+                            borderRadius: '16px',
+                            fontSize: '0.82rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            ✓ Correct (+1 Mark)
+                          </span>
+                        ) : !isRevSkipped ? (
+                          <span style={{
+                            background: '#fee2e2',
+                            border: '1.5px solid #ef4444',
+                            color: '#991b1b',
+                            fontWeight: 800,
+                            padding: '4px 12px',
+                            borderRadius: '16px',
+                            fontSize: '0.82rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            ✗ Incorrect (0 Marks)
+                          </span>
+                        ) : (
+                          <span style={{
+                            background: '#fef08a',
+                            border: '1.5px solid #eab308',
+                            color: '#854d0e',
+                            fontWeight: 800,
+                            padding: '4px 12px',
+                            borderRadius: '16px',
+                            fontSize: '0.82rem',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}>
+                            ○ Skipped (0 Marks)
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="q-body" style={{ fontSize: '1.15rem', fontWeight: 500, color: 'var(--text)', marginBottom: '24px', lineHeight: '1.6' }}>
+                    {questions[currentQ].text}
+                  </div>
+
+                  {/* Options Area */}
+                  <div className="q-answer-area">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {questions[currentQ].options.map((opt, idx) => {
+                        if (submitResult) {
+                          const isCorrectChoice = (currRev?.correct_option_index !== undefined && currRev?.correct_option_index !== null)
+                            ? (idx === currRev.correct_option_index)
+                            : (idx === 0);
+                          const isStudentChoice = (currRev?.student_option_index !== undefined && currRev?.student_option_index !== null)
+                            ? (idx === currRev.student_option_index)
+                            : (answers[currentQ] === idx);
+
+                          let optBorder = 'rgba(255,255,255,0.08)';
+                          let optBg = 'var(--s2)';
+                          let optTextColor = 'var(--text)';
+                          let tag = null;
+
+                          if (isCorrectChoice) {
+                            optBorder = '#10b981';
+                            optBg = 'rgba(16,185,129,0.12)';
+                            optTextColor = '#34d399';
+                            tag = (
+                              <span style={{
+                                fontSize: '0.76rem',
+                                fontWeight: 800,
+                                color: '#10b981',
+                                background: 'rgba(16,185,129,0.22)',
+                                border: '1px solid rgba(16,185,129,0.4)',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                marginLeft: 'auto'
+                              }}>
+                                {isStudentChoice ? "✓ Your Answer (Correct +1 Mark)" : "✓ Correct Answer"}
+                              </span>
+                            );
+                          } else if (isStudentChoice) {
+                            optBorder = '#ef4444';
+                            optBg = 'rgba(239,68,68,0.12)';
+                            optTextColor = '#f87171';
+                            tag = (
+                              <span style={{
+                                fontSize: '0.76rem',
+                                fontWeight: 800,
+                                color: '#ef4444',
+                                background: 'rgba(239,68,68,0.22)',
+                                border: '1px solid rgba(239,68,68,0.4)',
+                                padding: '4px 10px',
+                                borderRadius: '6px',
+                                marginLeft: 'auto'
+                              }}>
+                                ✗ Your Answer (Incorrect)
+                              </span>
+                            );
+                          }
+
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '16px',
+                                width: '100%',
+                                padding: '16px 20px',
+                                background: optBg,
+                                border: `2px solid ${optBorder}`,
+                                borderRadius: '12px',
+                                textAlign: 'left',
+                                boxSizing: 'border-box'
+                              }}
+                            >
+                              <span style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                background: isCorrectChoice ? '#10b981' : isStudentChoice ? '#ef4444' : 'var(--s1)',
+                                color: isCorrectChoice || isStudentChoice ? '#fff' : 'var(--text)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 700,
+                                fontSize: '0.9rem',
+                                border: isCorrectChoice || isStudentChoice ? 'none' : '1px solid var(--border)',
+                                flexShrink: 0
+                              }}>
+                                {String.fromCharCode(65 + idx)}
+                              </span>
+                              <span style={{ fontSize: '1rem', color: optTextColor, fontWeight: isCorrectChoice || isStudentChoice ? 600 : 400 }}>
+                                {opt}
+                              </span>
+                              {tag}
+                            </div>
+                          );
+                        }
+
+                        // Live mode option button
+                        const isSelected = answers[currentQ] === idx;
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => handleAnswer(idx)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '16px',
+                              width: '100%',
+                              padding: '16px 20px',
+                              background: isSelected ? 'rgba(124,58,237,0.15)' : 'var(--s2)',
+                              border: `1.5px solid ${isSelected ? 'var(--purple-l)' : 'var(--border)'}`,
+                              borderRadius: '12px',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              transition: 'all 0.2s',
+                              boxShadow: isSelected ? '0 0 0 3px rgba(124,58,237,0.25)' : 'none'
+                            }}
+                          >
+                            <span style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '50%',
+                              background: isSelected ? 'var(--purple)' : 'var(--s1)',
+                              color: isSelected ? '#fff' : 'var(--text)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 600,
+                              fontSize: '0.9rem',
+                              border: isSelected ? 'none' : '1px solid var(--border)'
+                            }}>
+                              {String.fromCharCode(65 + idx)}
+                            </span>
+                            <span style={{ fontSize: '1rem', color: isSelected ? 'var(--purple-l)' : 'var(--text)', fontWeight: isSelected ? 600 : 400 }}>
+                              {opt}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Evaluation Mode: Pedagogical Solution Card */}
+                  {submitResult && (
+                    <div style={{
+                      marginTop: '22px',
+                      background: 'rgba(124,58,237,0.08)',
+                      border: '1.5px solid rgba(124,58,237,0.3)',
+                      borderRadius: '12px',
+                      padding: '18px 22px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '1.25rem' }}>💡</span>
+                        <span style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--purple-l, #c084fc)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                          Verified Solution & Conceptual Rationale
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.96rem', color: 'var(--text, #f3f4f6)', lineHeight: '1.65', marginBottom: currRev?.ai_insight ? '10px' : '0' }}>
+                        {currRev?.explanation || questions[currentQ].explanation || "Derived directly from KCET syllabus textbook principles and standard formulas."}
+                      </div>
+                      {currRev?.ai_insight && (
+                        <div style={{ fontSize: '0.85rem', color: 'var(--muted, #9ca3af)', borderTop: '1px solid rgba(124,58,237,0.2)', paddingTop: '8px', marginTop: '8px' }}>
+                          <strong style={{ color: 'var(--purple-l)' }}>Examiner Note:</strong> {currRev.ai_insight}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* Bottom Nav Row */}
             <div className="exam-nav-row">
-              <button className="btn-outline exam-nav-btn" disabled={currentQ === 0} onClick={() => setCurrentQ(prev => prev - 1)}>
+              <button className="btn-outline exam-nav-btn" disabled={currentQ === 0} onClick={handlePrev}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
                 Previous
               </button>
+
               <div className="exam-nav-center">
-                <button className="btn-skip" onClick={handleSkip}>Skip</button>
+                {submitResult ? (
+                  (evalSummary?.incorrectCount ?? 0) > 0 && (
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      onClick={handleNextMistake}
+                      style={{
+                        borderColor: 'rgba(239,68,68,0.6)',
+                        color: '#f87171',
+                        background: 'rgba(239,68,68,0.1)',
+                        fontWeight: 700,
+                        fontSize: '0.82rem',
+                        padding: '6px 14px'
+                      }}
+                    >
+                      ⚡ Jump to Next Mistake
+                    </button>
+                  )
+                ) : (
+                  <button className="btn-skip" onClick={handleSkip}>Skip</button>
+                )}
                 <span className="q-position">{currentQ + 1} of {questions.length}</span>
               </div>
-              <button className="btn-primary exam-nav-btn" disabled={currentQ === questions.length - 1} onClick={() => setCurrentQ(prev => prev + 1)}>
+
+              <button className="btn-primary exam-nav-btn" disabled={currentQ === questions.length - 1} onClick={handleNext}>
                 Next
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>
               </button>
@@ -1810,554 +2756,270 @@ const Exam = () => {
         </div>
       )}
 
-      {/* Submission Result Screen: Comprehensive AI Analysis Dashboard */}
-      {submitResult && (() => {
-        const aiAnalysis = submitResult.ai_analysis;
-        const summary = aiAnalysis?.summary || {};
-        const scoreVal = submitResult.score ?? summary.score ?? 0;
-        const totalVal = submitResult.total_marks ?? summary.total ?? questions.length;
-        const pctVal = submitResult.percentage ?? summary.percentage ?? Math.round((scoreVal / Math.max(1, totalVal)) * 100);
-        const correctCount = submitResult.correct_count ?? summary.score ?? scoreVal;
-        const incorrectCount = submitResult.incorrect_count ?? Math.max(0, totalVal - scoreVal - (submitResult.unanswered_count || 0));
-        const unansCount = submitResult.unanswered_count ?? Math.max(0, totalVal - (correctCount + incorrectCount));
-        const band = summary.performance_band || (pctVal >= 85 ? "Outstanding Mastery" : pctVal >= 65 ? "Strong Competency" : pctVal >= 45 ? "Developing Competency" : "Foundational Review Needed");
-        const pacing = summary.pacing_assessment || `Exam completed in ${Math.floor((submitResult.time_taken_sec || 0)/60)}m ${(submitResult.time_taken_sec || 0)%60}s.`;
-        const verdict = summary.overall_verdict || `Student demonstrated ${band.toLowerCase()} across ${subject} KCET syllabus concepts with an overall score of ${pctVal}%.`;
-        const topicMap = aiAnalysis?.topic_breakdown || {};
-        const subtypeMap = aiAnalysis?.subtype_breakdown || summary.subtype_breakdown || {};
-        const blueprintPerf = aiAnalysis?.blueprint_performance || summary.blueprint_performance || null;
-        const blueprintDiag = summary.blueprint_diagnosis || blueprintPerf?.diagnosis || '';
-        const actionPlan = aiAnalysis?.action_plan || [];
-
-        // Build reviews list from ai_analysis or synthesize from questions
-        let reviews = aiAnalysis?.detailed_reviews || [];
-        if (!reviews || reviews.length === 0) {
-          reviews = questions.map((q, idx) => {
-            const studentChoice = answers[idx];
-            const isAns = studentChoice !== undefined && studentChoice !== null;
-            const qSubtype = q.subtype || "theory_definition";
-            return {
-              question_number: idx + 1,
-              question_text: q.text,
-              options: q.options || [],
-              student_option_index: isAns ? Number(studentChoice) : null,
-              student_answer: isAns && q.options ? q.options[studentChoice] : "Not Answered",
-              correct_option_index: 0,
-              correct_answer: q.options ? q.options[0] : "Option A",
-              is_correct: isAns && Number(studentChoice) === 0,
-              is_unanswered: !isAns,
-              topic: q.topic || "General",
-              subtype: qSubtype,
-              subtype_label: qSubtype === 'direct_formula' ? '⚡ Direct Formula' :
-                qSubtype === 'multi_step' ? '🧩 Multi-Step Problem' :
-                qSubtype === 'physical_numerical' ? '🔢 Physical Numerical' :
-                qSubtype === 'fact_reaction' ? '🧪 Reaction & Fact' : '📖 Pure Theory',
-              explanation: q.explanation || "Comprehensive conceptual solution derived from syllabus textbook principles.",
-              ai_insight: isAns 
-                ? "Conceptual question requiring application of core textbook definitions and standard KCET problem patterns."
-                : "Question skipped. Reviewing standard formulas will allow quicker recall during exams."
-            };
-          });
-        }
-
-        // Apply filter
-        const filteredReviews = reviews.filter(r => {
-          if (reviewFilter === 'correct') return r.is_correct;
-          if (reviewFilter === 'incorrect') return !r.is_correct && !r.is_unanswered;
-          if (reviewFilter === 'skipped') return r.is_unanswered;
-          if (reviewFilter === 'calculations') {
-            return r.subtype === 'direct_formula' || r.subtype === 'multi_step' || r.subtype === 'physical_numerical';
-          }
-          if (reviewFilter === 'theory') {
-            return r.subtype === 'theory_definition' || r.subtype === 'fact_reaction';
-          }
-          return true;
-        });
-
-
-        return (
-          <div className="overlay" style={{ display: "flex", alignItems: "flex-start", padding: "30px 16px" }}>
-            <div 
-              className="entry-modal" 
-              style={{ 
-                maxWidth: '920px', 
-                width: '100%', 
-                margin: '0 auto', 
-                textAlign: 'left', 
-                maxHeight: '90vh', 
-                overflowY: 'auto', 
-                padding: '28px',
-                borderRadius: '16px',
-                background: 'var(--s1, #13151b)',
-                border: '1px solid rgba(255,255,255,0.12)',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.6)'
-              }}
-            >
-              {/* Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '20px', marginBottom: '24px' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '1.8rem' }}>🤖</span>
-                    <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, color: 'var(--text, #fff)' }}>
-                      AI Performance & Answer Diagnostics
-                    </h2>
-                  </div>
-                  <p style={{ margin: 0, color: 'var(--muted, #9ca3af)', fontSize: '0.9rem' }}>
-                    {examName} • {subject} • KCET Diagnostic Evaluation
-                  </p>
-                </div>
-                <button 
-                  className="btn-primary" 
-                  onClick={() => navigate('/dashboard')}
-                  style={{ padding: '10px 20px', fontSize: '0.9rem', fontWeight: 700 }}
-                >
-                  Return to Dashboard
-                </button>
-              </div>
-
-              {/* Proctoring Violation Notice Banner */}
-              {submitResult.autoSubmitted && (
-                <div style={{
-                  padding: '16px 20px',
-                  background: 'rgba(239, 68, 68, 0.14)',
-                  border: '1.5px solid rgba(239, 68, 68, 0.5)',
-                  borderRadius: '12px',
-                  marginBottom: '22px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '14px',
-                  textAlign: 'left'
-                }}>
-                  <span style={{ fontSize: '2.2rem' }}>🚫</span>
-                  <div>
-                    <div style={{ fontWeight: 800, color: 'var(--red-l, #f87171)', fontSize: '1.02rem' }}>
-                      Exam Automatically Submitted (Proctoring Violation)
-                    </div>
-                    <div style={{ fontSize: '0.86rem', color: 'var(--text)', marginTop: '4px', lineHeight: '1.4' }}>
-                      {submitResult.violationReason || 'Your test was automatically submitted because your face was not recognized for the second time during the exam.'} All questions answered prior to termination have been evaluated below.
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Top Score & AI Assessment Card */}
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.08))',
-                border: '1px solid rgba(124,58,237,0.3)',
-                borderRadius: '14px',
-                padding: '22px',
-                marginBottom: '24px'
-              }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--muted, #9ca3af)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Overall Score</div>
-                    <div style={{ fontSize: '2.6rem', fontWeight: 900, color: pctVal >= 60 ? 'var(--green, #10b981)' : 'var(--yellow, #f59e0b)', lineHeight: 1.1, marginTop: '4px' }}>
-                      {scoreVal} <span style={{ fontSize: '1.3rem', color: 'var(--muted, #9ca3af)', fontWeight: 500 }}>/ {totalVal}</span>
-                    </div>
-                    <div style={{ fontSize: '0.92rem', color: 'var(--text, #fff)', fontWeight: 600, marginTop: '6px' }}>
-                      {pctVal}% Final Accuracy
-                    </div>
-                  </div>
-
-                  <div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--muted, #9ca3af)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>AI Performance Band</div>
-                    <div style={{ 
-                      display: 'inline-block',
-                      marginTop: '6px',
-                      padding: '6px 14px',
-                      borderRadius: '20px',
-                      background: pctVal >= 75 ? 'rgba(16,185,129,0.2)' : pctVal >= 50 ? 'rgba(124,58,237,0.25)' : 'rgba(239,68,68,0.2)',
-                      color: pctVal >= 75 ? '#34d399' : pctVal >= 50 ? '#c084fc' : '#f87171',
-                      fontWeight: 700,
-                      fontSize: '0.95rem',
-                      border: `1px solid ${pctVal >= 75 ? 'rgba(16,185,129,0.4)' : pctVal >= 50 ? 'rgba(124,58,237,0.4)' : 'rgba(239,68,68,0.4)'}`
-                    }}>
-                      ⚡ {band}
-                    </div>
-                    <div style={{ fontSize: '0.82rem', color: 'var(--muted, #9ca3af)', marginTop: '8px' }}>
-                      ⏱ {pacing}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', textAlign: 'center' }}>
-                    <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '10px', padding: '10px' }}>
-                      <div style={{ color: 'var(--green, #10b981)', fontWeight: 800, fontSize: '1.3rem' }}>{correctCount}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--muted, #9ca3af)' }}>Correct</div>
-                    </div>
-                    <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px', padding: '10px' }}>
-                      <div style={{ color: 'var(--red, #ef4444)', fontWeight: 800, fontSize: '1.3rem' }}>{incorrectCount}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--muted, #9ca3af)' }}>Incorrect</div>
-                    </div>
-                    <div style={{ background: 'rgba(156,163,175,0.1)', border: '1px solid rgba(156,163,175,0.25)', borderRadius: '10px', padding: '10px' }}>
-                      <div style={{ color: '#9ca3af', fontWeight: 800, fontSize: '1.3rem' }}>{unansCount}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--muted, #9ca3af)' }}>Skipped</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* AI Verdict Quote */}
-                <div style={{ marginTop: '18px', padding: '12px 16px', background: 'rgba(0,0,0,0.25)', borderRadius: '10px', borderLeft: '4px solid var(--purple, #7c3aed)' }}>
-                  <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--purple-l, #c084fc)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
-                    AI Evaluator Insight
-                  </div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text, #e5e7eb)', lineHeight: 1.5 }}>
-                    "{verdict}"
-                  </div>
-                </div>
-              </div>
-
-              {/* KCET Blueprint & Calculation vs Theory Diagnostic */}
-              {(blueprintPerf || Object.keys(subtypeMap).length > 0) && (
-                <div style={{
-                  background: 'var(--s2, #1a1d26)',
-                  border: '1px solid rgba(124,58,237,0.3)',
-                  borderRadius: '14px',
-                  padding: '20px',
-                  marginBottom: '26px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '1.25rem' }}>🎯</span>
-                      <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text, #fff)' }}>
-                        KCET Blueprint & Calculation Breakdown Diagnostic
-                      </h3>
-                    </div>
-                    {blueprintPerf?.type && (
-                      <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '12px', background: 'rgba(124,58,237,0.2)', color: 'var(--purple-l, #c084fc)', border: '1px solid rgba(124,58,237,0.4)' }}>
-                        {blueprintPerf.type === 'physics' ? '⚡ Physics 55% Calculations / 45% Theory Pattern' : '🧪 Chemistry 10% Numericals / 90% Facts Pattern'}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Subtype Breakdown Grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '14px' }}>
-                    {Object.entries(subtypeMap).map(([stKey, stData]) => {
-                      const stPct = stData.accuracy_pct ?? 0;
-                      const isHigh = stPct >= 70;
-                      const isMed = stPct >= 40;
-                      const barColor = isHigh ? '#10b981' : isMed ? '#f59e0b' : '#ef4444';
-
-                      return (
-                        <div key={stKey} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '12px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text, #e5e7eb)' }}>
-                              {stData.label || stKey.replace('_', ' ')}
-                            </span>
-                            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: barColor }}>
-                              {stPct}%
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--muted, #9ca3af)', marginBottom: '6px' }}>
-                            <span>{stData.correct} of {stData.total} correct</span>
-                          </div>
-                          <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{ width: `${Math.min(100, Math.max(0, stPct))}%`, height: '100%', background: barColor }}></div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Blueprint Diagnosis text */}
-                  {blueprintDiag && (
-                    <div style={{ padding: '10px 14px', background: 'rgba(124,58,237,0.08)', borderRadius: '8px', borderLeft: '3px solid var(--purple, #7c3aed)', fontSize: '0.86rem', color: 'var(--text, #d1d5db)' }}>
-                      <strong style={{ color: 'var(--purple-l, #c084fc)' }}>Blueprint Strategy:</strong> {blueprintDiag}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Topic Mastery Breakdown */}
-              {Object.keys(topicMap).length > 0 && (
-                <div style={{ marginBottom: '26px' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '14px', color: 'var(--text, #fff)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>📊</span> Syllabus Topic Mastery Matrix
-                  </h3>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
-                    {Object.entries(topicMap).map(([tName, tData]) => {
-                      const tPct = tData.accuracy_pct ?? 0;
-                      const level = tData.mastery_level || (tPct >= 75 ? 'Mastered' : tPct >= 50 ? 'Intermediate' : 'Review Needed');
-                      const badgeColor = level === 'Mastered' ? '#10b981' : level === 'Intermediate' ? '#f59e0b' : '#ef4444';
-                      const badgeBg = level === 'Mastered' ? 'rgba(16,185,129,0.15)' : level === 'Intermediate' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)';
-
-                      return (
-                        <div key={tName} style={{ background: 'var(--s2, #1a1d26)', border: '1px solid var(--border, rgba(255,255,255,0.08))', borderRadius: '10px', padding: '14px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text, #fff)' }}>{tName}</span>
-                            <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 8px', borderRadius: '12px', background: badgeBg, color: badgeColor }}>
-                              {level}
-                            </span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--muted, #9ca3af)', marginBottom: '6px' }}>
-                            <span>Accuracy: {tPct}%</span>
-                            <span>{tData.correct}/{tData.total} correct</span>
-                          </div>
-                          <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
-                            <div style={{ width: `${Math.min(100, Math.max(0, tPct))}%`, height: '100%', background: badgeColor, transition: 'width 0.4s ease' }}></div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Action Plan */}
-              {actionPlan.length > 0 && (
-                <div style={{
-                  background: 'rgba(245,158,11,0.08)',
-                  border: '1px solid rgba(245,158,11,0.25)',
-                  borderRadius: '12px',
-                  padding: '18px 20px',
-                  marginBottom: '26px'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '1.2rem' }}>💡</span>
-                    <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: '#fbbf24' }}>
-                      Targeted AI Revision Action Plan
-                    </h3>
-                  </div>
-                  <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text, #e5e7eb)', fontSize: '0.88rem', lineHeight: 1.6 }}>
-                    {actionPlan.map((step, sIdx) => (
-                      <li key={sIdx} style={{ marginBottom: '6px' }}>{step}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Question-by-Question Solution Review */}
+      {/* Comprehensive AI Diagnostic & Blueprint Analysis Modal (Opened via View Full AI Diagnostic button) */}
+      {showAiModal && submitResult && evalSummary && (
+        <div className="overlay" style={{ display: "flex", alignItems: "flex-start", padding: "30px 16px" }}>
+          <div
+            className="ai-report-modal"
+            style={{
+              maxHeight: '90vh',
+              overflowY: 'auto'
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '20px', marginBottom: '24px' }}>
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 700, margin: 0, color: 'var(--text, #fff)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>📋</span> Detailed Question Solutions & Concept Explanations
-                  </h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '1.8rem' }}>🤖</span>
+                  <h2 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0, color: 'var(--text, #fff)' }}>
+                    AI Performance & Syllabus Diagnostics
+                  </h2>
+                </div>
+                <p style={{ margin: 0, color: 'var(--muted, #9ca3af)', fontSize: '0.9rem' }}>
+                  {examName} • {subject} • KCET Diagnostic Evaluation
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => setShowAiModal(false)}
+                style={{ padding: '8px 16px', fontSize: '0.88rem', fontWeight: 700 }}
+              >
+                ✕ Close Report
+              </button>
+            </div>
 
-                  {/* Filter Tabs */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', background: 'var(--s2, #1a1d26)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                    {[
-                      { id: 'all', label: `All (${reviews.length})` },
-                      { id: 'correct', label: `✓ Correct (${correctCount})` },
-                      { id: 'incorrect', label: `✗ Incorrect (${incorrectCount})` },
-                      { id: 'skipped', label: `○ Skipped (${unansCount})` },
-                      { id: 'calculations', label: `⚡ Calculations (${reviews.filter(r => r.subtype === 'direct_formula' || r.subtype === 'multi_step' || r.subtype === 'physical_numerical').length})` },
-                      { id: 'theory', label: `📖 Theory & Facts (${reviews.filter(r => r.subtype === 'theory_definition' || r.subtype === 'fact_reaction').length})` }
-                    ].map(tab => (
-                      <button
-                        key={tab.id}
-                        type="button"
-                        onClick={() => setReviewFilter(tab.id)}
-                        style={{
-                          background: reviewFilter === tab.id ? 'var(--purple, #7c3aed)' : 'transparent',
-                          color: reviewFilter === tab.id ? '#fff' : 'var(--muted, #9ca3af)',
-                          border: 'none',
-                          borderRadius: '6px',
-                          padding: '6px 12px',
-                          fontSize: '0.78rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
+            {/* Proctoring Violation Notice Banner */}
+            {submitResult.autoSubmitted && (
+              <div style={{
+                padding: '16px 20px',
+                background: 'rgba(239, 68, 68, 0.14)',
+                border: '1.5px solid rgba(239, 68, 68, 0.5)',
+                borderRadius: '12px',
+                marginBottom: '22px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '14px',
+                textAlign: 'left'
+              }}>
+                <span style={{ fontSize: '2.2rem' }}>🚫</span>
+                <div>
+                  <div style={{ fontWeight: 800, color: 'var(--red-l, #f87171)', fontSize: '1.02rem' }}>
+                    Exam Automatically Submitted (Proctoring Violation)
+                  </div>
+                  <div style={{ fontSize: '0.86rem', color: 'var(--text)', marginTop: '4px', lineHeight: '1.4' }}>
+                    {submitResult.violationReason || 'Your test was automatically submitted because your face was not recognized for the second time during the exam.'}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Top Score Card */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(37,99,235,0.08))',
+              border: '1px solid rgba(124,58,237,0.3)',
+              borderRadius: '14px',
+              padding: '22px',
+              marginBottom: '24px'
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '20px', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--muted, #9ca3af)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Overall Score</div>
+                  <div style={{ fontSize: '2.6rem', fontWeight: 900, color: evalSummary.percentage >= 60 ? 'var(--green, #10b981)' : 'var(--yellow, #f59e0b)', lineHeight: 1.1, marginTop: '4px' }}>
+                    {evalSummary.score} <span style={{ fontSize: '1.3rem', color: 'var(--muted, #9ca3af)', fontWeight: 500 }}>/ {evalSummary.total}</span>
+                  </div>
+                  <div style={{ fontSize: '0.92rem', color: 'var(--text, #fff)', fontWeight: 600, marginTop: '6px' }}>
+                    {evalSummary.percentage}% Final Accuracy
                   </div>
                 </div>
 
-                {/* Review Cards */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  {filteredReviews.length === 0 ? (
-                    <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', background: 'var(--s2)', borderRadius: '10px' }}>
-                      No questions match this filter.
-                    </div>
-                  ) : (
-                    filteredReviews.map((item, idx) => {
-                      const isCorrect = item.is_correct;
-                      const isSkipped = item.is_unanswered;
-                      const cardBorder = isCorrect ? 'rgba(16,185,129,0.35)' : isSkipped ? 'rgba(156,163,175,0.2)' : 'rgba(239,68,68,0.35)';
-                      const badgeBg = isCorrect ? 'rgba(16,185,129,0.15)' : isSkipped ? 'rgba(156,163,175,0.15)' : 'rgba(239,68,68,0.15)';
-                      const badgeColor = isCorrect ? '#34d399' : isSkipped ? '#9ca3af' : '#f87171';
-                      const badgeLabel = isCorrect ? '✓ Correct (+1)' : isSkipped ? '○ Skipped (0)' : '✗ Incorrect (0)';
+                <div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--muted, #9ca3af)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>AI Performance Band</div>
+                  <div style={{ 
+                    display: 'inline-block',
+                    marginTop: '6px',
+                    padding: '6px 14px',
+                    borderRadius: '20px',
+                    background: evalSummary.percentage >= 75 ? 'rgba(16,185,129,0.2)' : evalSummary.percentage >= 50 ? 'rgba(124,58,237,0.25)' : 'rgba(239,68,68,0.2)',
+                    color: evalSummary.percentage >= 75 ? '#34d399' : evalSummary.percentage >= 50 ? '#c084fc' : '#f87171',
+                    fontWeight: 700,
+                    fontSize: '0.95rem',
+                    border: `1px solid ${evalSummary.percentage >= 75 ? 'rgba(16,185,129,0.4)' : evalSummary.percentage >= 50 ? 'rgba(124,58,237,0.4)' : 'rgba(239,68,68,0.4)'}`
+                  }}>
+                    ⚡ {evalSummary.band}
+                  </div>
+                  <div style={{ fontSize: '0.82rem', color: 'var(--muted, #9ca3af)', marginTop: '8px' }}>
+                    ⏱ {evalSummary.pacing}
+                  </div>
+                </div>
 
-                      return (
-                        <div 
-                          key={idx} 
-                          style={{ 
-                            background: 'var(--s2, #1a1d26)', 
-                            border: `1px solid ${cardBorder}`, 
-                            borderRadius: '12px', 
-                            padding: '18px 20px',
-                            transition: 'border-color 0.2s'
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                              <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text, #fff)' }}>
-                                Q{item.question_number}
-                              </span>
-                              <span style={{ fontSize: '0.75rem', background: 'rgba(124,58,237,0.15)', color: 'var(--purple-l, #c084fc)', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
-                                {item.topic || 'General'}
-                              </span>
-                              {(item.subtype_label || item.subtype) && (
-                                <span style={{
-                                  fontSize: '0.73rem',
-                                  background: (item.subtype === 'multi_step')
-                                    ? 'rgba(245,158,11,0.15)'
-                                    : (item.subtype === 'direct_formula' || item.subtype === 'physical_numerical')
-                                    ? 'rgba(59,130,246,0.15)'
-                                    : 'rgba(16,185,129,0.15)',
-                                  color: (item.subtype === 'multi_step')
-                                    ? '#fbbf24'
-                                    : (item.subtype === 'direct_formula' || item.subtype === 'physical_numerical')
-                                    ? '#60a5fa'
-                                    : '#34d399',
-                                  border: `1px solid ${
-                                    (item.subtype === 'multi_step')
-                                      ? 'rgba(245,158,11,0.3)'
-                                      : (item.subtype === 'direct_formula' || item.subtype === 'physical_numerical')
-                                      ? 'rgba(59,130,246,0.3)'
-                                      : 'rgba(16,185,129,0.3)'
-                                  }`,
-                                  padding: '2px 8px',
-                                  borderRadius: '6px',
-                                  fontWeight: 600
-                                }}>
-                                  {item.subtype_label || (
-                                    item.subtype === 'direct_formula' ? '⚡ Direct Formula' :
-                                    item.subtype === 'multi_step' ? '🧩 Multi-Step Problem' :
-                                    item.subtype === 'physical_numerical' ? '🔢 Physical Numerical' :
-                                    item.subtype === 'fact_reaction' ? '🧪 Reaction & Fact' :
-                                    '📖 Pure Theory'
-                                  )}
-                                </span>
-                              )}
-                            </div>
-                            <span style={{ fontSize: '0.78rem', fontWeight: 700, padding: '4px 10px', borderRadius: '12px', background: badgeBg, color: badgeColor }}>
-                              {badgeLabel}
-                            </span>
-                          </div>
-
-
-                          {/* Question Text */}
-                          <p style={{ fontSize: '0.98rem', fontWeight: 600, color: 'var(--text, #f3f4f6)', marginBottom: '14px', lineHeight: 1.5 }}>
-                            {item.question_text}
-                          </p>
-
-                          {/* Options display if available */}
-                          {item.options && Array.isArray(item.options) && item.options.length > 0 && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
-                              {item.options.map((opt, optIdx) => {
-                                const isCorrectChoice = optIdx === item.correct_option_index;
-                                const isStudentChoice = optIdx === item.student_option_index;
-
-                                let optBorder = 'rgba(255,255,255,0.06)';
-                                let optBg = 'rgba(255,255,255,0.02)';
-                                let optTextColor = 'var(--text, #d1d5db)';
-                                let tag = null;
-
-                                if (isCorrectChoice) {
-                                  optBorder = 'rgba(16,185,129,0.5)';
-                                  optBg = 'rgba(16,185,129,0.12)';
-                                  optTextColor = '#34d399';
-                                  tag = <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#34d399', marginLeft: 'auto' }}>✓ Correct Answer</span>;
-                                } else if (isStudentChoice) {
-                                  optBorder = 'rgba(239,68,68,0.5)';
-                                  optBg = 'rgba(239,68,68,0.12)';
-                                  optTextColor = '#f87171';
-                                  tag = <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#f87171', marginLeft: 'auto' }}>Your Answer</span>;
-                                }
-
-                                return (
-                                  <div 
-                                    key={optIdx} 
-                                    style={{ 
-                                      display: 'flex', 
-                                      alignItems: 'center', 
-                                      gap: '12px', 
-                                      padding: '10px 14px', 
-                                      background: optBg, 
-                                      border: `1px solid ${optBorder}`, 
-                                      borderRadius: '8px', 
-                                      fontSize: '0.88rem', 
-                                      color: optTextColor 
-                                    }}
-                                  >
-                                    <span style={{ 
-                                      width: '24px', 
-                                      height: '24px', 
-                                      borderRadius: '50%', 
-                                      background: isCorrectChoice ? '#10b981' : isStudentChoice ? '#ef4444' : 'rgba(255,255,255,0.08)',
-                                      color: isCorrectChoice || isStudentChoice ? '#fff' : 'var(--muted)',
-                                      display: 'flex', 
-                                      alignItems: 'center', 
-                                      justifyContent: 'center', 
-                                      fontSize: '0.75rem', 
-                                      fontWeight: 700 
-                                    }}>
-                                      {String.fromCharCode(65 + optIdx)}
-                                    </span>
-                                    <span>{opt}</span>
-                                    {tag}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-
-                          {/* AI Solution & Conceptual Rationale */}
-                          <div style={{
-                            background: 'rgba(124,58,237,0.07)',
-                            border: '1px solid rgba(124,58,237,0.22)',
-                            borderRadius: '10px',
-                            padding: '12px 16px',
-                            marginTop: '10px'
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                              <span style={{ fontSize: '0.95rem' }}>🧠</span>
-                              <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--purple-l, #c084fc)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                                AI Solution Breakdown & Concept
-                              </span>
-                            </div>
-                            <div style={{ fontSize: '0.88rem', color: 'var(--text, #e5e7eb)', lineHeight: 1.5, marginBottom: item.ai_insight ? '8px' : '0' }}>
-                              {item.explanation || 'Refer to standard KCET syllabus formula and textbook derivations.'}
-                            </div>
-                            {item.ai_insight && (
-                              <div style={{ fontSize: '0.8rem', color: 'var(--muted, #9ca3af)', borderTop: '1px solid rgba(124,58,237,0.15)', paddingTop: '6px', marginTop: '6px' }}>
-                                <strong style={{ color: 'var(--purple-l)' }}>Diagnostic Insight:</strong> {item.ai_insight}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', textAlign: 'center' }}>
+                  <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '10px', padding: '10px' }}>
+                    <div style={{ color: 'var(--green, #10b981)', fontWeight: 800, fontSize: '1.3rem' }}>{evalSummary.correctCount}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--muted, #9ca3af)' }}>Correct</div>
+                  </div>
+                  <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '10px', padding: '10px' }}>
+                    <div style={{ color: 'var(--red, #ef4444)', fontWeight: 800, fontSize: '1.3rem' }}>{evalSummary.incorrectCount}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--muted, #9ca3af)' }}>Incorrect</div>
+                  </div>
+                  <div style={{ background: 'rgba(156,163,175,0.1)', border: '1px solid rgba(156,163,175,0.25)', borderRadius: '10px', padding: '10px' }}>
+                    <div style={{ color: '#9ca3af', fontWeight: 800, fontSize: '1.3rem' }}>{evalSummary.unansCount}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--muted, #9ca3af)' }}>Skipped</div>
+                  </div>
                 </div>
               </div>
 
-              {/* Footer Actions */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '28px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
-                <button 
-                  type="button" 
-                  className="btn-outline" 
-                  onClick={handleBackToExamSelection}
-                  style={{ padding: '10px 20px', fontSize: '0.9rem' }}
-                >
-                  🔄 Take Another Published Mock
-                </button>
-                <button 
-                  type="button" 
-                  className="btn-primary" 
-                  onClick={() => navigate('/dashboard')}
-                  style={{ padding: '10px 24px', fontSize: '0.9rem', fontWeight: 700 }}
-                >
-                  Go to Student Dashboard →
-                </button>
+              {/* AI Verdict Quote */}
+              <div style={{ marginTop: '18px', padding: '12px 16px', background: 'rgba(0,0,0,0.25)', borderRadius: '10px', borderLeft: '4px solid var(--purple, #7c3aed)' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--purple-l, #c084fc)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                  AI Evaluator Verdict
+                </div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text, #e5e7eb)', lineHeight: 1.5 }}>
+                  "{evalSummary.verdict}"
+                </div>
               </div>
             </div>
+
+            {/* KCET Blueprint & Calculation vs Theory Diagnostic */}
+            {(evalSummary.blueprintPerf || Object.keys(evalSummary.subtypeMap).length > 0) && (
+              <div style={{
+                background: 'var(--s2, #1a1d26)',
+                border: '1px solid rgba(124,58,237,0.3)',
+                borderRadius: '14px',
+                padding: '20px',
+                marginBottom: '26px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', marginBottom: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.25rem' }}>🎯</span>
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: 0, color: 'var(--text, #fff)' }}>
+                      KCET Blueprint & Calculation Breakdown Diagnostic
+                    </h3>
+                  </div>
+                  {evalSummary.blueprintPerf?.type && (
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '4px 10px', borderRadius: '12px', background: 'rgba(124,58,237,0.2)', color: 'var(--purple-l, #c084fc)', border: '1px solid rgba(124,58,237,0.4)' }}>
+                      {evalSummary.blueprintPerf.type === 'physics' ? '⚡ Physics 55% Calculations / 45% Theory Pattern' : '🧪 Chemistry 10% Numericals / 90% Facts Pattern'}
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+                  {Object.entries(evalSummary.subtypeMap).map(([stKey, stData]) => {
+                    const stPct = stData.accuracy_pct ?? 0;
+                    const isHigh = stPct >= 70;
+                    const isMed = stPct >= 40;
+                    const barColor = isHigh ? '#10b981' : isMed ? '#f59e0b' : '#ef4444';
+
+                    return (
+                      <div key={stKey} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '12px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text, #e5e7eb)' }}>
+                            {stData.label || stKey.replace('_', ' ')}
+                          </span>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 800, color: barColor }}>
+                            {stPct}%
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--muted, #9ca3af)', marginBottom: '6px' }}>
+                          <span>{stData.correct} of {stData.total} correct</span>
+                        </div>
+                        <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.min(100, Math.max(0, stPct))}%`, height: '100%', background: barColor }}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {evalSummary.blueprintDiag && (
+                  <div style={{ padding: '10px 14px', background: 'rgba(124,58,237,0.08)', borderRadius: '8px', borderLeft: '3px solid var(--purple, #7c3aed)', fontSize: '0.86rem', color: 'var(--text, #d1d5db)' }}>
+                    <strong style={{ color: 'var(--purple-l, #c084fc)' }}>Blueprint Strategy:</strong> {evalSummary.blueprintDiag}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Syllabus Topic Mastery Breakdown */}
+            {Object.keys(evalSummary.topicMap).length > 0 && (
+              <div style={{ marginBottom: '26px' }}>
+                <h3 style={{ fontSize: '1.15rem', fontWeight: 700, marginBottom: '14px', color: 'var(--text, #fff)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>📊</span> Syllabus Topic Mastery Matrix
+                </h3>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
+                  {Object.entries(evalSummary.topicMap).map(([tName, tData]) => {
+                    const tPct = tData.accuracy_pct ?? 0;
+                    const level = tData.mastery_level || (tPct >= 75 ? 'Mastered' : tPct >= 50 ? 'Intermediate' : 'Review Needed');
+                    const badgeColor = level === 'Mastered' ? '#10b981' : level === 'Intermediate' ? '#f59e0b' : '#ef4444';
+                    const badgeBg = level === 'Mastered' ? 'rgba(16,185,129,0.15)' : level === 'Intermediate' ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)';
+
+                    return (
+                      <div key={tName} style={{ background: 'var(--s2, #1a1d26)', border: '1px solid var(--border, rgba(255,255,255,0.08))', borderRadius: '10px', padding: '14px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text, #fff)' }}>{tName}</span>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 700, padding: '3px 8px', borderRadius: '12px', background: badgeBg, color: badgeColor }}>
+                            {level}
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--muted, #9ca3af)', marginBottom: '6px' }}>
+                          <span>Accuracy: {tPct}%</span>
+                          <span>{tData.correct}/{tData.total} correct</span>
+                        </div>
+                        <div style={{ width: '100%', height: '6px', background: 'rgba(255,255,255,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.min(100, Math.max(0, tPct))}%`, height: '100%', background: badgeColor, transition: 'width 0.4s ease' }}></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Action Plan */}
+            {evalSummary.actionPlan.length > 0 && (
+              <div style={{
+                background: 'rgba(245,158,11,0.08)',
+                border: '1px solid rgba(245,158,11,0.25)',
+                borderRadius: '12px',
+                padding: '18px 20px',
+                marginBottom: '26px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '1.2rem' }}>💡</span>
+                  <h3 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: '#fbbf24' }}>
+                    Targeted AI Revision Action Plan
+                  </h3>
+                </div>
+                <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text, #e5e7eb)', fontSize: '0.88rem', lineHeight: 1.6 }}>
+                  {evalSummary.actionPlan.map((step, sIdx) => (
+                    <li key={sIdx} style={{ marginBottom: '6px' }}>{step}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Modal Footer Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '28px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => setShowAiModal(false)}
+                style={{ padding: '10px 20px', fontSize: '0.9rem' }}
+              >
+                Back to Question Reviews
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => navigate('/dashboard')}
+                style={{ padding: '10px 24px', fontSize: '0.9rem', fontWeight: 700 }}
+              >
+                Go to Student Dashboard →
+              </button>
+            </div>
           </div>
-        );
-      })()}
+        </div>
+      )}
     </>
   );
 };

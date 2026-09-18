@@ -28,8 +28,8 @@ class ContactMessageResponse(BaseModel):
 
 
 # Contact email addresses
-CONTACT_SUPPORT_EMAIL = "support@smartkcet.com"
-CONTACT_INFO_EMAIL = "info@smartkcet.com"
+CONTACT_SUPPORT_EMAIL = "support@vyasaprep.com"
+CONTACT_INFO_EMAIL = "info@vyasaprep.com"
 
 
 @router.route("/contact", methods=["POST"])

@@ -5,7 +5,7 @@ const StudentSubscription = () => {
     <main style={{ padding: '24px' }}>
       <header style={{ marginBottom: '24px' }}>
         <h1 style={{ fontSize: '1.8rem', fontWeight: '800' }}>Subscription</h1>
-        <p style={{ color: 'var(--muted)' }}>Manage your Mr.E premium subscription.</p>
+        <p style={{ color: 'var(--muted)' }}>Manage your VyasaPrep premium subscription.</p>
       </header>
 
       <div className="section-card" style={{ padding: '32px', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>

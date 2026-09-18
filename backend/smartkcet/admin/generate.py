@@ -158,40 +158,97 @@ def generate()-> Any:
     subject_name = selected.value
     required_total = len(SET_LABELS) * QUESTIONS_PER_SET  # 4 * 60 = 240
 
+    body_data = request.get_json(silent=True) or {}
+    req_filenames = body_data.get("filenames")
+    req_topics = body_data.get("topics")
+
+    from ..rag.topic_matcher import get_uploaded_topics_for_subject, is_topic_matching, match_filename_to_topic, SUBJECT_CHAPTERS
+    official_chapters = SUBJECT_CHAPTERS.get(subject_name, [])
+
+    if req_topics and isinstance(req_topics, list) and len(req_topics) > 0:
+        uploaded_topics = [t for t in req_topics if any(is_topic_matching(t, [ch]) for ch in official_chapters)]
+    elif req_filenames and isinstance(req_filenames, list) and len(req_filenames) > 0:
+        mapped = [match_filename_to_topic(fn, subject_name) for fn in req_filenames]
+        uploaded_topics = [t for t in set(mapped) if any(is_topic_matching(t, [ch]) for ch in official_chapters)]
+    else:
+        uploaded_topics = get_uploaded_topics_for_subject(session, subject_name)
+    logger.info("Subject %s has active uploaded topics: %s", subject_name, uploaded_topics)
+
     # Query all questions for this subject from the DB
     stmt = (
         select(Question)
         .where(Question.subject == subject_name)
     )
-    all_questions = list(session.execute(stmt).scalars().all())
+    db_questions = list(session.execute(stmt).scalars().all())
+
+    # If uploaded topics exist, filter strictly to questions matching uploaded topics
+    if uploaded_topics:
+        all_questions = [q for q in db_questions if is_topic_matching(q.topic, uploaded_topics)]
+        logger.info(
+            "Filtered %d DB questions to %d matching uploaded topics for %s",
+            len(db_questions),
+            len(all_questions),
+            subject_name,
+        )
+    else:
+        all_questions = db_questions
+
     existing_texts = set(q.question_text for q in all_questions if q.question_text)
 
-    # If fewer than 240 questions in DB, generate from uploaded material & syllabus
+    # If fewer than 240 questions in DB, generate strictly from uploaded material & syllabus
     if len(all_questions) < required_total:
         needed = required_total - len(all_questions)
         from ..rag.mcq_extractor import extract_or_generate_mcqs, is_valid_question
 
-        # Extract text context from uploaded textbook chunks for this subject
-        context_text = ""
-        try:
-            chunks_path = stores._chunks_path(selected)
-            if chunks_path.exists():
-                import json
-                with open(chunks_path, "r", encoding="utf-8") as cf:
-                    chunks = json.load(cf)
-                if chunks and isinstance(chunks, list) and len(chunks) > 0:
-                    sample_size = min(30, len(chunks))
-                    sample_chunks = chunks[:sample_size] if len(chunks) <= sample_size else random.sample(chunks, sample_size)
-                    context_text = "\n\n".join(sample_chunks)
-                    logger.info("Loaded %d uploaded chunks from %s for generation context", len(sample_chunks), chunks_path.name)
-        except Exception as e:
-            logger.warning("Could not read uploaded chunks for context: %s", e)
-
-        topup_mcqs = extract_or_generate_mcqs(context_text, topic=subject_name, min_questions=needed + 10, used_questions=existing_texts)
         batch_id = uuid.uuid4()
+        topup_mcqs = []
+
+        if uploaded_topics:
+            # Top up strictly across each uploaded topic so no topic is missed and zero unuploaded topics leak
+            target_per_topic = (required_total + len(uploaded_topics) - 1) // len(uploaded_topics)
+            for top in uploaded_topics:
+                curr_topic_qs = sum(1 for q in all_questions if is_topic_matching(q.topic, [top]))
+                shortfall = max(0, target_per_topic - curr_topic_qs)
+                if shortfall > 0:
+                    topic_mcqs = extract_or_generate_mcqs(
+                        "",
+                        topic=subject_name,
+                        min_questions=shortfall,
+                        used_questions=existing_texts,
+                        allowed_topics=[top],
+                    )
+                    for mcq in topic_mcqs:
+                        mcq["topic"] = top
+                    topup_mcqs.extend(topic_mcqs)
+                    for mcq in topic_mcqs:
+                        existing_texts.add(mcq.get("q", "").strip())
+        else:
+            # Extract text context from uploaded textbook chunks for this subject
+            context_text = ""
+            try:
+                chunks_path = stores._chunks_path(selected)
+                if chunks_path.exists():
+                    import json
+                    with open(chunks_path, "r", encoding="utf-8") as cf:
+                        chunks = json.load(cf)
+                    if chunks and isinstance(chunks, list) and len(chunks) > 0:
+                        sample_size = min(30, len(chunks))
+                        sample_chunks = chunks[:sample_size] if len(chunks) <= sample_size else random.sample(chunks, sample_size)
+                        context_text = "\n\n".join(sample_chunks)
+                        logger.info("Loaded %d uploaded chunks from %s for generation context", len(sample_chunks), chunks_path.name)
+            except Exception as e:
+                logger.warning("Could not read uploaded chunks for context: %s", e)
+
+            topup_mcqs = extract_or_generate_mcqs(
+                context_text,
+                topic=subject_name,
+                min_questions=needed + 10,
+                used_questions=existing_texts,
+            )
+
         for mcq in topup_mcqs:
             q_text = mcq.get("q", "").strip()
-            if not q_text or q_text in existing_texts:
+            if not q_text:
                 continue
             if not is_valid_question(q_text, mcq.get("opts", []), subject=subject_name):
                 continue
@@ -208,7 +265,6 @@ def generate()-> Any:
             )
             session.add(row)
             all_questions.append(row)
-            existing_texts.add(q_text)
 
         try:
             session.commit()
@@ -234,22 +290,60 @@ def generate()-> Any:
             distinct_questions.append(q)
     all_questions = distinct_questions
 
-    # Shuffle questions randomly
-    random.shuffle(all_questions)
+    from ..rag.blueprint import calculate_chapter_quotas
+    blueprint_quotas = calculate_chapter_quotas(
+        subject_name,
+        uploaded_topics if uploaded_topics else None,
+        QUESTIONS_PER_SET,
+    )
 
-    # Partition questions into 4 non-overlapping sets of 60 questions each
+    # Partition questions into 4 non-overlapping sets of 60 questions each adhering to blueprint quotas
+    sets_rows: list[list[Question]] = [[] for _ in range(len(SET_LABELS))]
+    by_topic: dict[str, list[Question]] = {}
+    topic_pool = uploaded_topics if uploaded_topics else list(blueprint_quotas.keys())
+
+    for q in all_questions:
+        assigned = None
+        for ut in topic_pool:
+            if is_topic_matching(q.topic, [ut]):
+                assigned = ut
+                break
+        if not assigned:
+            assigned = q.topic or "General"
+        by_topic.setdefault(assigned, []).append(q)
+
+    # Shuffle questions within each topic pool
+    for top_name, top_qs in by_topic.items():
+        random.shuffle(top_qs)
+
+    # Allocate questions into each of the 4 sets strictly following official chapter quotas
+    for s_idx in range(len(SET_LABELS)):
+        for top_name, target_q in blueprint_quotas.items():
+            t_list = by_topic.get(top_name, [])
+            for _ in range(target_q):
+                if t_list and len(sets_rows[s_idx]) < QUESTIONS_PER_SET:
+                    sets_rows[s_idx].append(t_list.pop(0))
+
+    # Fill any minor shortfalls from remaining questions
+    placed_ids = set(id(q) for s in sets_rows for q in s)
+    remaining = [q for q in all_questions if id(q) not in placed_ids]
+    random.shuffle(remaining)
+    for s in sets_rows:
+        while len(s) < QUESTIONS_PER_SET and remaining:
+            s.append(remaining.pop())
+
     batch_id = uuid.uuid4()
     sets: list[list[dict]] = []
 
     for i, label in enumerate(SET_LABELS):
-        start = i * QUESTIONS_PER_SET
-        end = start + QUESTIONS_PER_SET
-        set_rows = all_questions[start:end]
-
+        set_rows = sets_rows[i]
+        random.shuffle(set_rows)  # Shuffle so topics interleave naturally
         set_questions = [
             _question_row_to_dict(row, label, idx)
             for idx, row in enumerate(set_rows)
         ]
+        if uploaded_topics:
+            set_questions = [q for q in set_questions if is_topic_matching(q.get("topic"), uploaded_topics)]
         sets.append(set_questions)
 
     total_added = sum(len(s) for s in sets)
@@ -267,6 +361,7 @@ def generate()-> Any:
         "subject": subject_name,
         "sets": sets,
     }
+
 
 
 __all__ = ["router", "SET_LABELS", "QUESTIONS_PER_SET"]

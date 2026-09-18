@@ -45,7 +45,7 @@ def hash_password(password: str)-> str:
 
 
 def get_next_kcet_id(session: Session, counter: int = None)-> str:
-    """Generate the next student ID (MrE0001, MrE0002, etc.).
+    """Generate the next student ID (VP0001, VP0002, etc.).
     
     Args:
         session: Database session
@@ -54,21 +54,21 @@ def get_next_kcet_id(session: Session, counter: int = None)-> str:
     from sqlalchemy import func
 
     if counter is not None:
-        return f"MrE{counter:04d}"
+        return f"VP{counter:04d}"
 
     # Get max ID from database
     max_result = session.query(func.max(User.kcet_student_id)).filter(
-        (User.kcet_student_id.like("MrE%")) | (User.kcet_student_id.like("ID%")) | (User.kcet_student_id.like("KCET%"))
+        (User.kcet_student_id.like("VP%")) | (User.kcet_student_id.like("MrE%")) | (User.kcet_student_id.like("ID%")) | (User.kcet_student_id.like("KCET%"))
     ).scalar()
 
     if max_result is None:
-        return "MrE0001"
+        return "VP0001"
 
     try:
-        max_num = int(max_result.replace("MrE", "").replace("ID", "").replace("KCET", ""))
-        return f"MrE{max_num + 1:04d}"
+        max_num = int(max_result.replace("VP", "").replace("MrE", "").replace("ID", "").replace("KCET", ""))
+        return f"VP{max_num + 1:04d}"
     except (ValueError, AttributeError):
-        return "MrE0001"
+        return "VP0001"
 
 
 def seed_test_institutions(session: Session, count: int = 3)-> list[Institution]:

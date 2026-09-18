@@ -11,7 +11,7 @@ const Landing = () => {
   <!-- Hero Section -->
   <main style="position:relative;z-index:1;padding:60px 20px;max-width:900px;margin:0 auto;">
     <div class="section-card" style="text-align:center;padding:48px 32px;margin-bottom:32px;">
-      <h1 style="font-size:2.2rem;margin-bottom:12px;">Mr.E</h1>
+      <h1 style="font-size:2.2rem;margin-bottom:12px;">VyasaPrep</h1>
       <p style="color:var(--muted2);font-size:1.1rem;max-width:600px;margin:0 auto 28px;">
         AI-powered KCET exam preparation platform. Practice with curated question sets across all four subjects and track your progress on the leaderboard.
       </p>
@@ -70,7 +70,7 @@ const Landing = () => {
     <!-- CTA -->
     <div class="section-card" style="text-align:center;padding:32px;">
       <h2 style="margin-bottom:12px;">Ready to start preparing?</h2>
-      <p style="color:var(--muted2);margin-bottom:20px;">Join Mr.E and begin your KCET exam preparation today.</p>
+      <p style="color:var(--muted2);margin-bottom:20px;">Join VyasaPrep and begin your KCET exam preparation today.</p>
       <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
         <a href="/register" class="btn-primary">Get Started</a>
         <a href="/login" class="btn-primary">Sign In</a>

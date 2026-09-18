@@ -75,7 +75,7 @@ const RazorpaySubscription = () => {
         key: order.key_id,
         amount: order.amount,
         currency: order.currency,
-        name: 'Mr.E',
+        name: 'VyasaPrep',
         description: order.description,
         order_id: order.order_id,
         prefill: order.prefill,

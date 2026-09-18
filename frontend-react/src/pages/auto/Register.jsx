@@ -14,7 +14,7 @@ const Register = () => {
   <main style="display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 60px);padding:20px;">
     <div class="section-card" style="max-width:420px;width:100%;padding:32px;">
       <h2 style="margin-bottom:8px;">Create Account</h2>
-      <p class="input-label" style="margin-bottom:24px;text-transform:none;font-size:0.9rem;">Register for Mr.E</p>
+      <p class="input-label" style="margin-bottom:24px;text-transform:none;font-size:0.9rem;">Register for VyasaPrep</p>
 
       <div id="registerError" style="display:none;background:rgba(220,38,38,0.1);border:1px solid var(--red);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:0.85rem;color:var(--red-l);"></div>
       <div id="registerSuccess" style="display:none;background:rgba(5,150,105,0.1);border:1px solid var(--green);border-radius:var(--rs);padding:10px 14px;margin-bottom:16px;font-size:0.85rem;color:var(--green-l);"></div>

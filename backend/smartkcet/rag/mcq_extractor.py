@@ -14,7 +14,8 @@ from __future__ import annotations
 import logging
 import random
 import re
-from typing import List, Optional
+from typing import List, Optional, Iterable
+from .topic_matcher import is_topic_matching
 
 logger = logging.getLogger("smartkcet.rag.mcq_extractor")
 
@@ -887,7 +888,7 @@ def infer_question_subtype(q_text: str, opts: List[str], subject: str = "General
         multi_step_keywords = [
             "then", "increased by", "decreased by", "ratio", "if the",
             "striking", "combination", "work done by", "neutral point",
-            "fringe width", "carnot", "stretched", "resonance"
+            "fringe width", "carnot", "stretched", "resonance", "maximum height"
         ]
         if (has_num or has_math_op) and any(kw in text_full for kw in multi_step_keywords):
             return "multi_step"
@@ -896,29 +897,86 @@ def infer_question_subtype(q_text: str, opts: List[str], subject: str = "General
         return "theory_definition"
 
     elif "chem" in subj_lower:
-        has_num = bool(re.search(r"\b\d+(\.\d+)?\s*(g/mol|kj/mol|j/k|molar|mol/l|atm|s⁻¹|s\^-1|k|v|coulomb)\b", text_full, re.IGNORECASE))
+        has_num = bool(re.search(r"\b\d+(\.\d+)?\s*(g/mol|kj/mol|j/k|molar|mol/l|atm|s⁻¹|s\^-1|k|v|coulomb|ml|mol|m)\b", text_full, re.IGNORECASE))
         num_keywords = [
-            "molar mass", "percentage by mass", "mass percentage", "half-life",
-            "freezing point", "osmotic pressure", "rate constant", "emf of cell",
-            "coulombs", "zero-order", "first-order", "depression in", "elevation in"
+            "molarity", "molality", "normality", "mole fraction", "molar mass",
+            "percentage by mass", "mass percentage", "half-life", "freezing point",
+            "osmotic pressure", "rate constant", "emf of cell", "coulombs",
+            "zero-order", "first-order", "depression in", "elevation in",
+            "calculate the", "determine the mass", "volume of", "solubility product",
+            "equilibrium constant", "activation energy", "faraday's constant", "ph of"
         ]
-        if has_num or any(kw in text_full for kw in num_keywords):
+        if has_num and any(kw in text_full for kw in num_keywords) or any(kw in text_full for kw in ["molarity", "molality", "osmotic pressure", "half-life", "rate constant"]):
             return "physical_numerical"
+        
+        theory_keywords = [
+            "definition", "law", "principle", "rule", "theory", "vsepr",
+            "hybridization", "hybridisation", "isoelectronic", "aufbau",
+            "hund's", "pauli", "le chatelier", "coordination number", "isomerism"
+        ]
+        if any(kw in text_full for kw in theory_keywords):
+            return "theory_definition"
+
+        return "fact_reaction"
+
+    elif "math" in subj_lower:
+        multi_step_math = [
+            "area bounded", "differential equation", "maxima", "minima", "tangent and normal",
+            "shortest distance", "plane passing through", "angle between planes", "bayes",
+            "locus", "conic", "eccentricity", "coordinates of", "equation of the circle"
+        ]
+        if any(kw in text_full for kw in multi_step_math):
+            return "multi_step"
+
+        concept_math = [
+            "reflexive", "symmetric", "transitive", "equivalence", "bijection", "one-one", "onto",
+            "tautology", "contradiction", "truth table", "domain of", "range of", "identity element"
+        ]
+        if any(kw in text_full for kw in concept_math):
+            return "concept_application"
+
+        return "direct_formula"
+
+    elif "bio" in subj_lower:
+        concept_bio = [
+            "pedigree", "dihybrid", "monohybrid", "ratio", "cross", "genotype",
+            "phenotype", "recombinant dna", "transcription", "translation",
+            "replication fork", "lac operon", "pcr", "mechanism of", "pathway"
+        ]
+        if any(kw in text_full for kw in concept_bio):
+            return "concept_application"
+
+        theory_bio = [
+            "defined as", "principle of", "cell theory", "hardy-weinberg",
+            "ecological succession", "mitosis", "meiosis", "trophic level"
+        ]
+        if any(kw in text_full for kw in theory_bio):
+            return "theory_definition"
+
         return "fact_reaction"
 
     return "theory_definition"
 
 
-def _generate_subject_variations(topic: str, needed: int, used_texts: set[str], subtype_filter: Optional[str] = None) -> List[dict]:
+def _generate_subject_variations(
+    topic: str,
+    needed: int,
+    used_texts: set[str],
+    subtype_filter: Optional[str] = None,
+    allowed_topics: Optional[Iterable[str]] = None,
+) -> List[dict]:
     """Generates authentic, high-quality parameterized KCET syllabus MCQs for any shortfall,
     strictly partitioned by blueprint subtype, pairing each generator with dedicated parameters.
     """
     topic_lower = topic.lower()
     generated: List[dict] = []
+    allowed_list = list(allowed_topics) if allowed_topics else None
 
     def _add_q(q_dict: dict) -> bool:
         q_text = q_dict.get("q", "").strip()
         if not q_text or q_text in used_texts:
+            return False
+        if allowed_list and not is_topic_matching(q_dict.get("topic", ""), allowed_list):
             return False
         if is_valid_question(q_text, q_dict.get("opts", []), subject=topic):
             generated.append(q_dict)
@@ -1787,7 +1845,8 @@ def _generate_subject_variations(topic: str, needed: int, used_texts: set[str], 
 
     # ── 4. Biology Templates ─────────────────────────────────────────────────
     else:
-        for bq in BIOLOGY_BANK:
+        bio_pool = [bq for bq in BIOLOGY_BANK if (not allowed_list or is_topic_matching(bq.get("topic", ""), allowed_list))]
+        for bq in bio_pool:
             if bq["q"] not in used_texts:
                 q = {
                     "q": bq["q"],
@@ -1802,7 +1861,14 @@ def _generate_subject_variations(topic: str, needed: int, used_texts: set[str], 
     return generated
 
 
-def generate_fallback_mcqs(text: str, topic: str = "General", max_questions: int = 60, used_questions: Optional[set[str]] = None) -> List[dict]:
+def generate_fallback_mcqs(
+    text: str,
+    topic: str = "General",
+    max_questions: int = 60,
+    used_questions: Optional[set[str]] = None,
+    allowed_topics: Optional[Iterable[str]] = None,
+) -> List[dict]:
+
     """Generate high-quality fallback questions adhering strictly to KCET blueprint percentages:
     
     Physics (60 Questions per Set):
@@ -1925,8 +1991,13 @@ def generate_fallback_mcqs(text: str, topic: str = "General", max_questions: int
             results.extend(variations)
 
     else:
-        bank = [q for q in BIOLOGY_BANK if q["q"] not in used_texts]
-        selected = random.sample(bank, min(max_questions, len(bank)))
+        allowed_list = list(allowed_topics) if allowed_topics else None
+        bank = [
+            q for q in BIOLOGY_BANK
+            if q["q"] not in used_texts and (not allowed_list or is_topic_matching(q.get("topic", ""), allowed_list))
+        ]
+        random.shuffle(bank)
+        selected = bank[:min(max_questions, len(bank))]
         for q in selected:
             results.append({
                 "q": q["q"], "opts": list(q["opts"]), "ans": q["ans"],
@@ -1935,7 +2006,7 @@ def generate_fallback_mcqs(text: str, topic: str = "General", max_questions: int
             used_texts.add(q["q"])
         if len(results) < max_questions:
             needed = max_questions - len(results)
-            variations = _generate_subject_variations(topic, needed, used_texts)
+            variations = _generate_subject_variations(topic, needed, used_texts, allowed_topics=allowed_list)
             results.extend(variations)
 
     # Randomize order while preserving balanced representation
@@ -1944,14 +2015,27 @@ def generate_fallback_mcqs(text: str, topic: str = "General", max_questions: int
     return results[:max_questions]
 
 
-def extract_or_generate_mcqs(text: str, topic: str = "General", min_questions: int = 60, used_questions: Optional[set[str]] = None) -> List[dict]:
+def extract_or_generate_mcqs(
+    text: str,
+    topic: str = "General",
+    min_questions: int = 60,
+    used_questions: Optional[set[str]] = None,
+    allowed_topics: Optional[Iterable[str]] = None,
+) -> List[dict]:
     """Extract MCQs from uploaded text via pattern matching or Groq LLM RAG extraction,
     ensuring all returned MCQs strictly contain valid 'subtype' blueprint classifications.
     Defaults to 60 questions per set.
     """
     used_set: set[str] = set(used_questions) if used_questions else set()
+    allowed_list = list(allowed_topics) if allowed_topics else None
+
     extracted = extract_mcqs_from_text(text, topic=topic)
-    extracted = [q for q in extracted if q["q"] not in used_set and is_valid_question(q["q"], q["opts"], subject=topic)]
+    extracted = [
+        q for q in extracted
+        if q["q"] not in used_set
+        and is_valid_question(q["q"], q["opts"], subject=topic)
+        and (not allowed_list or is_topic_matching(q.get("topic", ""), allowed_list))
+    ]
 
     for q in extracted:
         if "subtype" not in q or not q["subtype"]:
@@ -1982,6 +2066,8 @@ def extract_or_generate_mcqs(text: str, topic: str = "General", min_questions: i
             )
             for q in llm_results:
                 if q.get("q") not in used_set and is_valid_question(q.get("q", ""), q.get("opts", []), subject=topic):
+                    if allowed_list and not is_topic_matching(q.get("topic", ""), allowed_list):
+                        continue
                     if "subtype" not in q or not q["subtype"]:
                         q["subtype"] = infer_question_subtype(q.get("q", ""), q.get("opts", []), topic)
                     rag_questions.append(q)
@@ -1993,7 +2079,9 @@ def extract_or_generate_mcqs(text: str, topic: str = "General", min_questions: i
     combined = extracted + rag_questions
     if len(combined) < min_questions:
         still_needed = min_questions - len(combined)
-        fallback = generate_fallback_mcqs(text, topic=topic, max_questions=still_needed, used_questions=used_set)
+        fallback = generate_fallback_mcqs(
+            text, topic=topic, max_questions=still_needed, used_questions=used_set, allowed_topics=allowed_list
+        )
         combined.extend(fallback)
 
     # Ensure every question has subtype

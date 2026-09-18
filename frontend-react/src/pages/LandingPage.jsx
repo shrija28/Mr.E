@@ -9,7 +9,7 @@ const LandingPage = () => {
       {/* Hero Section */}
       <main style={{ position: 'relative', zIndex: 1, padding: '60px 20px', maxWidth: '900px', margin: '0 auto' }}>
         <div className="section-card" style={{ textAlign: 'center', padding: '48px 32px', marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '2.2rem', marginBottom: '12px' }}>Mr.E</h1>
+          <h1 style={{ fontSize: '2.2rem', marginBottom: '12px' }}>VyasaPrep</h1>
           <p style={{ color: 'var(--muted2)', fontSize: '1.1rem', maxWidth: '600px', margin: '0 auto 28px' }}>
             AI-powered KCET exam preparation platform. Practice with curated question sets across all four subjects and track your progress on the leaderboard.
           </p>

@@ -500,16 +500,16 @@ def admin_login()-> Any:
     if not email_str or not password_str:
         return _generic_auth_failure()
 
-    # Fixed Admin Credentials
-    FIXED_ADMIN_EMAIL = "admin@mre.com"
+    # Fixed Admin Credentials (supports VyasaPrep and legacy mre login)
+    ALLOWED_ADMIN_EMAILS = {"admin@vyasaprep.com", "admin@mre.com"}
     FIXED_ADMIN_PASSWORD = "admin"
 
     authenticated = False
     admin_email = email_str
 
-    if email_str == FIXED_ADMIN_EMAIL and password_str == FIXED_ADMIN_PASSWORD:
+    if email_str in ALLOWED_ADMIN_EMAILS and password_str == FIXED_ADMIN_PASSWORD:
         authenticated = True
-        admin_email = FIXED_ADMIN_EMAIL
+        admin_email = email_str
 
     if not authenticated:
         # No Set-Cookie header is written.  No token is issued.  The
@@ -652,18 +652,16 @@ def me()-> Any:
 
     # For students, always re-read from DB to get current subtype/institution
     if role == "student":
-        target_sub = sub.replace("KCET", "MrE").replace("ID", "MrE") if sub else sub
         user = session.execute(
             select(User).where(
-                (User.kcet_student_id == sub) | (User.kcet_student_id == target_sub)
+                (User.kcet_student_id == sub)
+                | (User.kcet_student_id == sub.replace("KCET", "VP").replace("ID", "VP"))
+                | (User.kcet_student_id == sub.replace("VP", "MrE"))
             )
         ).scalars().first()
         if user:
             result["display_name"] = user.display_name
-            sid = user.kcet_student_id or target_sub
-            if sid and (sid.startswith("KCET") or sid.startswith("ID")):
-                sid = sid.replace("KCET", "MrE").replace("ID", "MrE")
-            result["kcet_student_id"] = sid
+            result["kcet_student_id"] = user.kcet_student_id or sub
             # Always use DB values — these are the ground truth
             result["student_subtype"] = user.student_subtype
             result["institution_id"] = str(user.institution_id) if user.institution_id else None

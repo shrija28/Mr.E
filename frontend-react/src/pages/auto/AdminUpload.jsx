@@ -89,14 +89,18 @@ const AdminUpload = () => {
     setErrorMessage('');
 
     try {
+      const payload = { subject };
+      if (files && files.length > 0) {
+        payload.filenames = files.map((f) => f.name);
+      }
       const res = await fetch('/api/admin/generate', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject }),
+        body: JSON.stringify(payload),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setErrorMessage(data.message || data.error || 'Failed to generate question sets');
         setGenerateStatus('idle');
@@ -240,7 +244,7 @@ const AdminUpload = () => {
           </div>
         </div>
 
-        {uploadStatus === 'done' && (
+        {(uploadStatus === 'done' || subject) && (
           <div className="section-card generate-card" id="generateCard">
             <div className="section-card-header">
               <div className="section-icon green">

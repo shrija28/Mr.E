@@ -1009,5 +1009,9 @@ _EXTRA_BIO: List[Dict[str, Any]] = [
 ]
 BIOLOGY_BANK.extend(_EXTRA_BIO)
 
-__all__ = ["BIOLOGY_BANK"]
+from .uploaded_chapters_bio_bank import UPLOADED_CHAPTERS_BIO_BANK
+BIOLOGY_BANK.extend(UPLOADED_CHAPTERS_BIO_BANK)
+
+__all__ = ["BIOLOGY_BANK", "UPLOADED_CHAPTERS_BIO_BANK"]
+
 

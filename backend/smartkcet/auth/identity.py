@@ -30,16 +30,16 @@ from sqlalchemy.orm import Session
 from ..db.models import User
 from ..db.subscription_models import Institution
 
-# Public regex — accepts MrE####, ID#### and legacy KCET#### formats
-KCET_ID_RE = re.compile(r"^(MrE|ID|KCET)\d{4}$")
+# Public regex — accepts VP####, Vyasa####, MrE####, ID#### and legacy KCET#### formats
+KCET_ID_RE = re.compile(r"^(VP|Vyasa|MrE|ID|KCET)\d{4}$")
 INSTITUTION_ID_RE = re.compile(r"^[a-z]+\d{4}$")
 
-_PREFIX = "MrE"
+_PREFIX = "VP"
 _DIGITS = 4
 
 
 def format_kcet_id(n: int)-> str:
-    """Format ``n`` as a zero-padded Student ID (e.g. MrE0001)."""
+    """Format ``n`` as a zero-padded Student ID (e.g. VP0001)."""
 
     if n < 0:
         raise ValueError("sequence number must be non-negative")
@@ -53,6 +53,10 @@ def parse_kcet_id(kcet_id: str)-> int | None:
         return None
     if not KCET_ID_RE.match(kcet_id):
         return None
+    if kcet_id.startswith("Vyasa"):
+        return int(kcet_id[5:])
+    if kcet_id.startswith("VP"):
+        return int(kcet_id[2:])
     if kcet_id.startswith("MrE"):
         return int(kcet_id[3:])
     if kcet_id.startswith("KCET"):

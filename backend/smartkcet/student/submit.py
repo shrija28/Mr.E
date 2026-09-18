@@ -92,6 +92,8 @@ def _serialise_submission(sub: Submission)-> dict[str, Any]:
     """Map a :class:`Submission` ORM row to the JSON shape the dashboard expects."""
 
     submitted_at = sub.submitted_at
+    answers_dict = sub.answers if isinstance(sub.answers, dict) else {}
+    ai_data = answers_dict.get("__ai_analysis__") if isinstance(answers_dict, dict) else None
     return {
         "id": str(sub.id),
         "user_id": str(sub.user_id),
@@ -106,7 +108,10 @@ def _serialise_submission(sub: Submission)-> dict[str, Any]:
         "status": sub.status,
         "pass_flag": float(sub.score_pct) >= 50.0,
         "idempotency_key": sub.idempotency_key,
+        "ai_analysis": ai_data,
+        "detailed_reviews": ai_data.get("detailed_reviews", []) if isinstance(ai_data, dict) else [],
     }
+
 
 
 def _load_exam_set_questions(session: Session, exam_set_id: uuid.UUID)-> list[dict[str, Any]]:
@@ -248,11 +253,14 @@ def submit()-> Any:
         if isinstance(rep_answers, dict) and "__ai_analysis__" in rep_answers:
             ai_data = rep_answers["__ai_analysis__"]
             replay_body["ai_analysis"] = ai_data
+            replay_body["detailed_reviews"] = ai_data.get("detailed_reviews", []) if isinstance(ai_data, dict) else []
             summ = ai_data.get("summary", {}) if isinstance(ai_data, dict) else {}
-            replay_body["score"] = summ.get("score")
-            replay_body["total_marks"] = summ.get("total")
-            replay_body["correct_count"] = summ.get("score")
-            replay_body["incorrect_count"] = max(0, (summ.get("total") or 0) - (summ.get("score") or 0))
+            replay_body["score"] = summ.get("score", summ.get("correct_count", 0))
+            replay_body["total_marks"] = summ.get("total", 60)
+            replay_body["percentage"] = summ.get("percentage", 0.0)
+            replay_body["correct_count"] = summ.get("correct_count", summ.get("score", 0))
+            replay_body["incorrect_count"] = summ.get("incorrect_count", 0)
+            replay_body["unanswered_count"] = summ.get("unanswered_count", 0)
         return make_response(jsonify(replay_body), 200)
 
     # ---- Step 4: load questions + score + persist --------------------
@@ -356,19 +364,20 @@ def submit()-> Any:
         # Usage tracking is important but should not fail the submission
         logger.warning("usage tracking record_attempt raised: %s", exc)
 
-    earned = int(score.get("earned", 0))
-    total = int(score.get("total", len(questions)))
-    pct = float(score.get("percentage", 0.0))
-    q_res = score.get("questionResults", [])
-    correct = sum(1 for q in q_res if q.get("earned", 0) > 0)
-    unans = sum(1 for q in q_res if not q.get("studentAnswer"))
-    incorrect = max(0, total - correct - unans)
+    summ = ai_analysis.get("summary", {}) if isinstance(ai_analysis, dict) else {}
+    earned = int(summ.get("score", score.get("earned", 0)))
+    total = int(summ.get("total", score.get("total", len(questions))))
+    pct = float(summ.get("percentage", score.get("percentage", 0.0)))
+    correct = int(summ.get("correct_count", earned))
+    incorrect = int(summ.get("incorrect_count", max(0, total - correct)))
+    unans = int(summ.get("unanswered_count", max(0, total - correct - incorrect)))
 
     response_body: dict[str, Any] = {
         "submission_id": str(submission.id),
         "submission": _serialise_submission(submission),
         "idempotent_replay": False,
         "ai_analysis": ai_analysis,
+        "detailed_reviews": ai_analysis.get("detailed_reviews", []),
         "score": earned,
         "total_marks": total,
         "percentage": pct,

@@ -75,8 +75,8 @@ def create_app():
     app.register_blueprint(subscription_router, url_prefix='/api/subscription')
 
     print('\n========================================')
-    print('PLATFORM CREDENTIALS:')
-    print('Admin Login: admin@mre.com / admin')
+    print('VYASAPREP PLATFORM CREDENTIALS:')
+    print('Admin Login: admin@vyasaprep.com / admin (or admin@mre.com / admin)')
     print('Institution: Authenticates via registered institution accounts')
     print('========================================\n')
     app.register_blueprint(institution_router, url_prefix='/api/institution')
@@ -153,4 +153,6 @@ def create_app():
 
     return app
 
-__all__ = ["create_app", "STARTUP_CONFIG"]
+app = create_app()
+
+__all__ = ["create_app", "STARTUP_CONFIG", "app"]

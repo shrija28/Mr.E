@@ -35,9 +35,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db.models import IndexedFile, Question, Subject
-from ..db.session import get_async_session as get_session
 from ..middleware.rbac import require_admin
 from ..rag.mcq_extractor import extract_or_generate_mcqs
+from ..rag.topic_matcher import match_filename_to_topic, is_topic_matching, SUBJECT_CHAPTERS
 
 # Graceful degradation for Python 3.14 compatibility
 # pytesseract is not available in Python 3.14 (pkgutil.find_loader removed)
@@ -199,7 +199,7 @@ def list_indexed_files()-> Any:
     session = db
     from flask import request
     subject = request.args.get("subject", None)
-    """Return all previously indexed files for a subject."""
+    """Return all previously indexed files for a subject, with detected chapter topics."""
 
     selected = _normalise_subject(subject)
     if selected is None:
@@ -211,26 +211,168 @@ def list_indexed_files()-> Any:
 
     stmt = (
         select(IndexedFile)
-        .where(IndexedFile.subject == selected.value)
+        .where(
+            IndexedFile.subject == selected.value,
+            IndexedFile.institution_id.is_(None),
+        )
         .order_by(IndexedFile.indexed_at.desc())
     )
     files = db.execute(stmt).scalars().all()
+    official_chapters = SUBJECT_CHAPTERS.get(selected.value, [])
+
+    response_files = []
+    for f in files:
+        topic = match_filename_to_topic(f.filename, selected.value)
+        is_official = any(is_topic_matching(topic, [ch]) for ch in official_chapters)
+        response_files.append({
+            "id": str(f.id),
+            "filename": f.filename,
+            "file_hash": f.file_hash,
+            "file_size": f.file_size,
+            "chunk_count": f.chunk_count,
+            "file_type": f.file_type,
+            "topic": topic,
+            "is_official_topic": is_official,
+            "indexed_at": f.indexed_at.isoformat() if f.indexed_at else None,
+        })
 
     return {
         "subject": selected.value,
-        "files": [
-            {
-                "id": str(f.id),
-                "filename": f.filename,
-                "file_hash": f.file_hash,
-                "file_size": f.file_size,
-                "chunk_count": f.chunk_count,
-                "file_type": f.file_type,
-                "indexed_at": f.indexed_at.isoformat() if f.indexed_at else None,
-            }
-            for f in files
-        ],
+        "files": response_files,
     }
+
+
+# ─── DELETE /upload/files/<file_id> — delete an indexed file ──────────────────
+
+
+@router.route("/upload/files/<file_id>", methods=["DELETE"])
+def delete_indexed_file(file_id: str) -> Any:
+    _admin = require_admin()
+    from flask import g
+    db = getattr(g, "db", None)
+
+    try:
+        file_uuid = uuid.UUID(file_id)
+    except ValueError:
+        return _validation_error("Invalid file ID format", field="file_id")
+
+    record = db.execute(
+        select(IndexedFile).where(
+            IndexedFile.id == file_uuid,
+            IndexedFile.institution_id.is_(None),
+        )
+    ).scalar_one_or_none()
+
+    if not record:
+        return jsonify({"error": "not_found", "message": "File not found"}), 404
+
+    filename = record.filename
+    subject_val = record.subject
+    file_topic = match_filename_to_topic(filename, subject_val)
+
+    # Delete the IndexedFile record
+    db.delete(record)
+
+    # Check if any other uploaded files for this subject share this topic
+    other_files = db.execute(
+        select(IndexedFile.filename).where(
+            IndexedFile.subject == subject_val,
+            IndexedFile.institution_id.is_(None),
+            IndexedFile.id != file_uuid,
+        )
+    ).scalars().all()
+    other_topics = {match_filename_to_topic(fn, subject_val) for fn in other_files}
+
+    deleted_q_count = 0
+    if file_topic not in other_topics:
+        # Purge questions in DB matching this topic
+        all_qs = db.execute(
+            select(Question).where(Question.subject == subject_val)
+        ).scalars().all()
+        for q in all_qs:
+            if is_topic_matching(q.topic, [file_topic]):
+                db.delete(q)
+                deleted_q_count += 1
+
+    # Remove local textbook file copy if exists
+    try:
+        from pathlib import Path
+        tb_path = Path("data/textbooks") / filename
+        if tb_path.exists():
+            tb_path.unlink()
+    except Exception as exc:
+        logger.warning("Could not unlink %s: %s", filename, exc)
+
+    db.commit()
+    logger.info(
+        "Deleted indexed file '%s' (topic '%s') and %d associated questions",
+        filename,
+        file_topic,
+        deleted_q_count,
+    )
+
+    return jsonify({
+        "success": True,
+        "message": f"Deleted '{filename}' and purged {deleted_q_count} questions from Question Bank.",
+        "deleted_questions": deleted_q_count,
+    })
+
+
+# ─── DELETE /upload/clear — clear all indexed files and questions for a subject ─
+
+
+@router.route("/upload/clear", methods=["DELETE"])
+def clear_indexed_files() -> Any:
+    _admin = require_admin()
+    from flask import g, request
+    db = getattr(g, "db", None)
+    subject = request.args.get("subject", None)
+    selected = _normalise_subject(subject)
+    if selected is None:
+        allowed = [s.value for s in Subject]
+        return _validation_error(
+            f"subject is required and must be one of {allowed}",
+            field="subject",
+        )
+
+    records = db.execute(
+        select(IndexedFile).where(
+            IndexedFile.subject == selected.value,
+            IndexedFile.institution_id.is_(None),
+        )
+    ).scalars().all()
+    file_count = len(records)
+    for r in records:
+        try:
+            from pathlib import Path
+            p = Path("data/textbooks") / r.filename
+            if p.exists():
+                p.unlink()
+        except Exception:
+            pass
+        db.delete(r)
+
+    all_qs = db.execute(
+        select(Question).where(Question.subject == selected.value)
+    ).scalars().all()
+    q_count = len(all_qs)
+    for q in all_qs:
+        db.delete(q)
+
+    try:
+        stores.clear(selected)
+    except Exception:
+        pass
+
+    db.commit()
+    logger.info("Cleared all %d files and %d questions for %s", file_count, q_count, selected.value)
+
+    return jsonify({
+        "success": True,
+        "message": f"Cleared all {file_count} files and {q_count} questions for {selected.value}.",
+        "cleared_files": file_count,
+        "cleared_questions": q_count,
+    })
 
 
 # ─── POST /upload/single — individual file upload with progress ───────────────
@@ -330,13 +472,32 @@ def upload_single(subject: Optional[str] = None, file_type: str = "question_pape
         file_type=file_type,
     )
 
-    # Extract MCQs from the full text and store in DB
+    # Persist file copy to data/textbooks
+    try:
+        from pathlib import Path
+        save_dir = Path("data/textbooks")
+        save_dir.mkdir(parents=True, exist_ok=True)
+        (save_dir / filename).write_bytes(content)
+    except Exception as exc:
+        logger.warning("Could not persist file copy to data/textbooks: %s", exc)
+
+    # Extract MCQs strictly scoped to this file's chapter topic
+    file_topic = match_filename_to_topic(filename, selected.value)
     mcq_batch_id = uuid.uuid4()
-    mcqs = extract_or_generate_mcqs(text, topic=selected.value, min_questions=5)
+    mcqs = extract_or_generate_mcqs(
+        text,
+        topic=file_topic if file_topic != "General" else selected.value,
+        min_questions=5,
+        allowed_topics=[file_topic] if file_topic != "General" else None,
+    )
+    for mcq in mcqs:
+        if file_topic != "General":
+            mcq["topic"] = file_topic
     questions_extracted = _store_mcqs_in_db(db, mcqs, selected.value, mcq_batch_id, source_type=file_type)
     logger.info(
-        "File '%s': extracted %d MCQs into question bank for %s",
+        "File '%s' (topic '%s'): extracted %d MCQs into question bank for %s",
         filename,
+        file_topic,
         questions_extracted,
         selected.value,
     )
@@ -394,8 +555,24 @@ def upload(subject: Optional[str] = None, file_type: str = "question_paper", fil
     warnings: List[str] = []
     already_indexed: List[dict[str, Any]] = []
     indexed_files = 0
-    total_chunks = 0
-    total_questions_extracted = 0
+    # Clear previously indexed files for this subject so only this uploaded batch defines the active scope
+    try:
+        old_files = db.execute(
+            select(IndexedFile).where(
+                IndexedFile.subject == selected.value,
+                IndexedFile.institution_id.is_(None),
+            )
+        ).scalars().all()
+        for of in old_files:
+            db.delete(of)
+        db.commit()
+    except Exception as e:
+        logger.warning("Could not clear previous indexed files: %s", e)
+
+    try:
+        stores.clear(selected)
+    except Exception as exc:
+        logger.warning("Failed to reset store for %s: %s", selected.value, exc)
 
     for upload_file in files:
         filename = upload_file.filename or ""
@@ -474,13 +651,32 @@ def upload(subject: Optional[str] = None, file_type: str = "question_paper", fil
             file_type=file_type,
         )
 
-        # Extract MCQs from the full text and store in DB
+        # Persist file copy to data/textbooks
+        try:
+            from pathlib import Path
+            save_dir = Path("data/textbooks")
+            save_dir.mkdir(parents=True, exist_ok=True)
+            (save_dir / filename).write_bytes(content)
+        except Exception as exc:
+            logger.warning("Could not persist file copy to data/textbooks: %s", exc)
+
+        # Extract MCQs strictly scoped to this file's chapter topic
+        file_topic = match_filename_to_topic(filename, selected.value)
         mcq_batch_id = uuid.uuid4()
-        mcqs = extract_or_generate_mcqs(text, topic=selected.value, min_questions=5)
+        mcqs = extract_or_generate_mcqs(
+            text,
+            topic=file_topic if file_topic != "General" else selected.value,
+            min_questions=5,
+            allowed_topics=[file_topic] if file_topic != "General" else None,
+        )
+        for mcq in mcqs:
+            if file_topic != "General":
+                mcq["topic"] = file_topic
         questions_extracted = _store_mcqs_in_db(db, mcqs, selected.value, mcq_batch_id, source_type=file_type)
         logger.info(
-            "File '%s': extracted %d MCQs into question bank for %s",
+            "File '%s' (topic '%s'): extracted %d MCQs into question bank for %s",
             filename,
+            file_topic,
             questions_extracted,
             selected.value,
         )

@@ -20,7 +20,7 @@ const Navbar = ({ role, links }) => {
           </svg>
         </div>
         <span className="brand-name">
-          Mr.E{role && <span className="brand-ai">{role}</span>}
+          VyasaPrep{role && <span className="brand-ai">{role}</span>}
         </span>
       </div>
       <div className="nav-links">

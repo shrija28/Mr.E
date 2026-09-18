@@ -293,7 +293,94 @@ def get_exam_set_questions(exam_set_id: str)-> Any:
         .order_by(ExamSetQuestion.order_index.asc())
     )
     rows = session.execute(stmt).all()
-    from ..rag.mcq_extractor import infer_question_subtype
+
+    from ..rag.topic_matcher import is_topic_matching
+    from ..rag.blueprint import allocate_blueprint_questions, calculate_chapter_quotas
+    from ..rag.mcq_extractor import infer_question_subtype, extract_or_generate_mcqs, is_valid_question
+
+    # Option A: Full Official KCET Syllabus Blueprint (covers all official chapters)
+    chapter_quotas = calculate_chapter_quotas(exam.subject, uploaded_topics=None, total_questions=60)
+
+    # Check whether the current set questions already conform to:
+    # 1. Exactly 60 questions
+    # 2. Covers multiple chapters matching the full blueprint quotas
+    needs_blueprint_realignment = False
+    if len(rows) != 60:
+        needs_blueprint_realignment = True
+    else:
+        # Check topic spread: if fewer than 10 distinct chapters represented in full paper, realign
+        distinct_topics = set(question.topic for question, _order in rows)
+        if len(distinct_topics) < 10:
+            needs_blueprint_realignment = True
+
+    if needs_blueprint_realignment:
+        # Fetch clean, authentic questions for this subject across the full KCET syllabus
+        from ..admin.exams import _get_clean_unique_questions
+        clean_questions = _get_clean_unique_questions(session, exam.subject)
+
+        # Guarantee at least 60 questions by topping up if necessary
+        if len(clean_questions) < 60:
+            needed = 60 - len(clean_questions)
+            used_texts = set(q.question_text for q in clean_questions if q.question_text)
+            topup_mcqs = extract_or_generate_mcqs(
+                "",
+                topic=exam.subject,
+                min_questions=needed + 10,
+                used_questions=used_texts,
+                allowed_topics=None,
+            )
+            for mcq in topup_mcqs:
+                q_text = mcq.get("q", "").strip()
+                if not q_text or q_text in used_texts:
+                    continue
+                opts = mcq.get("opts", [])
+                if not is_valid_question(q_text, opts, subject=exam.subject):
+                    continue
+                row = Question(
+                    subject=exam.subject,
+                    question_text=q_text,
+                    options=opts,
+                    correct_option=str(mcq.get("ans", 0)),
+                    topic=mcq.get("topic", exam.subject),
+                    generation_batch_id=uuid.uuid4(),
+                    institution_id=exam.institution_id,
+                    source_type="textbook",
+                    explanation=mcq.get("exp", ""),
+                )
+                session.add(row)
+                clean_questions.append(row)
+                used_texts.add(q_text)
+                if len(clean_questions) >= 60:
+                    break
+            try:
+                session.flush()
+            except Exception:
+                session.rollback()
+
+        # Apportion exactly 60 questions adhering strictly to KCET 2026 full syllabus blueprint
+        sampled_rows = allocate_blueprint_questions(
+            available_questions=clean_questions,
+            subject=exam.subject,
+            uploaded_topics=None,
+            total_questions=60,
+        )
+
+        # Atomically update the ExamSetQuestion links for this set
+        session.query(ExamSetQuestion).filter(ExamSetQuestion.exam_set_id == set_id).delete()
+        link_rows = [
+            ExamSetQuestion(
+                exam_set_id=set_id,
+                question_id=q.id,
+                order_index=oi,
+            )
+            for oi, q in enumerate(sampled_rows)
+        ]
+        session.add_all(link_rows)
+        try:
+            session.commit()
+            rows = session.execute(stmt).all()
+        except Exception:
+            session.rollback()
 
     questions = []
     for question, _order in rows:
@@ -305,6 +392,7 @@ def get_exam_set_questions(exam_set_id: str)-> Any:
             "topic": question.topic or "General",
             "ans": question.correct_option,
             "subtype": st,
+            "exp": question.explanation or "",
             "marks": 1,
         })
 

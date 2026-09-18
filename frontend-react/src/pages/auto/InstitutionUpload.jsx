@@ -184,10 +184,14 @@ const InstitutionUpload = () => {
         });
       }
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const msg = data.message || (data.detail && data.detail.message) || data.error || 'Failed to upload files';
-        setErrorMessage(msg);
+        if (res.status === 401) {
+          setErrorMessage('Authentication required. Please log in first at /login.');
+        } else {
+          const msg = data.message || (data.detail && (data.detail.message || data.detail)) || data.error || 'Failed to upload files';
+          setErrorMessage(typeof msg === 'string' ? msg : JSON.stringify(msg));
+        }
         setUploadStatus('error');
         return;
       }

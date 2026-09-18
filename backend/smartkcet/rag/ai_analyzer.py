@@ -253,6 +253,64 @@ def generate_offline_ai_analysis(
                    else "Good recall of chemical reactions; practice standard formula substitution in Solutions & Kinetics.")
             )
         }
+    elif "math" in subj_lower:
+        direct_st = subtype_stats.get("direct_formula", {"total": 0, "correct": 0})
+        multi_st = subtype_stats.get("multi_step", {"total": 0, "correct": 0})
+        concept_st = subtype_stats.get("concept_application", {"total": 0, "correct": 0})
+
+        d_total = direct_st["total"]
+        d_correct = direct_st["correct"]
+        d_pct = round((d_correct / max(1, d_total)) * 100) if d_total > 0 else 0
+
+        m_total = multi_st["total"] + concept_st["total"]
+        m_correct = multi_st["correct"] + concept_st["correct"]
+        m_pct = round((m_correct / max(1, m_total)) * 100) if m_total > 0 else 0
+
+        blueprint_performance = {
+            "type": "mathematics",
+            "formula_total": d_total,
+            "formula_correct": d_correct,
+            "formula_accuracy_pct": d_pct,
+            "multi_step_total": m_total,
+            "multi_step_correct": m_correct,
+            "multi_step_accuracy_pct": m_pct,
+            "diagnosis": (
+                f"Formula & Direct: {d_correct}/{d_total} ({d_pct}%) | "
+                f"Multi-Step Calculus & Vectors: {m_correct}/{m_total} ({m_pct}%). "
+                + ("Strong algebraic and formula accuracy; practice time management on multi-step integrals and 3D geometry."
+                   if d_pct >= m_pct
+                   else "Solid complex problem-solving; ensure basic trigonometric formulas and determinant shortcuts are fast.")
+            )
+        }
+    elif "bio" in subj_lower:
+        fact_st = subtype_stats.get("fact_reaction", {"total": 0, "correct": 0})
+        theory_st = subtype_stats.get("theory_definition", {"total": 0, "correct": 0})
+        concept_st = subtype_stats.get("concept_application", {"total": 0, "correct": 0})
+
+        f_total = fact_st["total"]
+        f_correct = fact_st["correct"]
+        f_pct = round((f_correct / max(1, f_total)) * 100) if f_total > 0 else 0
+
+        t_total = theory_st["total"] + concept_st["total"]
+        t_correct = theory_st["correct"] + concept_st["correct"]
+        t_pct = round((t_correct / max(1, t_total)) * 100) if t_total > 0 else 0
+
+        blueprint_performance = {
+            "type": "biology",
+            "factual_total": f_total,
+            "factual_correct": f_correct,
+            "factual_accuracy_pct": f_pct,
+            "conceptual_total": t_total,
+            "conceptual_correct": t_correct,
+            "conceptual_accuracy_pct": t_pct,
+            "diagnosis": (
+                f"Factual & Memory: {f_correct}/{f_total} ({f_pct}%) | "
+                f"Conceptual & Physiology: {t_correct}/{t_total} ({t_pct}%). "
+                + ("High factual recall; focus review on multi-step genetics crosses and hormonal feedback loops."
+                   if f_pct >= t_pct
+                   else "Strong physiological comprehension; revise specific anatomical terms, examples, and NCERT scientists.")
+            )
+        }
 
     # Determine performance band
     if percentage >= 85:

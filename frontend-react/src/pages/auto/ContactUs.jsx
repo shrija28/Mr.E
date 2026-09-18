@@ -330,7 +330,7 @@ const ContactUs = () => {
         <div className="contact-item">
           <span className="contact-label">Support Email</span>
           <div className="contact-value">
-            <a href="mailto:support@mre.com" className="contact-link">support@mre.com</a>
+            <a href="mailto:support@vyasaprep.com" className="contact-link">support@vyasaprep.com</a>
           </div>
           <button className="contact-copy-btn" >
             📋 Copy
@@ -339,7 +339,7 @@ const ContactUs = () => {
         <div className="contact-item">
           <span className="contact-label">General Inquiries</span>
           <div className="contact-value">
-            <a href="mailto:info@mre.com" className="contact-link">info@mre.com</a>
+            <a href="mailto:info@vyasaprep.com" className="contact-link">info@vyasaprep.com</a>
           </div>
           <button className="contact-copy-btn" >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{"width":"12px","height":"12px"}}><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>

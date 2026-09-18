@@ -1,6 +1,6 @@
-# 🚀 SmartKCET Prep / ExamForge AI
+# 🚀 VyasaPrep — KCET Preparation & Question Paper Platform
 
-A comprehensive competitive exam preparation platform for the Karnataka Common Entrance Test (**KCET**) powered by **FastAPI**, **Retrieval-Augmented Generation (RAG)**, **Groq LLMs**, **FAISS Vector Search**, and **SQLite**. SmartKCET enables automated entrance-level MCQ paper generation from textbook PDFs, instant exam evaluation, institutional management, performance analytics, and tiered student subscriptions.
+A comprehensive competitive exam preparation platform for the Karnataka Common Entrance Test (**KCET**) powered by **Flask / React**, **Retrieval-Augmented Generation (RAG)**, **Groq LLMs**, **FAISS Vector Search**, and **SQLite**. VyasaPrep enables automated entrance-level MCQ paper generation from textbook PDFs, instant exam evaluation, institutional management, performance analytics, and tiered student subscriptions.
 
 ---
 

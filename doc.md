@@ -1,10 +1,10 @@
 # 📄 Product Requirements Document (PRD)
-## Mr.E — Official KCET Question Paper Generation & Exam Platform
+## VyasaPrep — Official KCET Question Paper Generation & Exam Platform
 
 **Document Status:** Approved & Active  
 **Version:** 2.2.0  
 **Target Audience:** Engineering & Development Team, Product Management, System Architects  
-**Product Name:** Mr.E  
+**Product Name:** VyasaPrep  
 **Target Ecosystem:** Individuals involved in the KCET preparation and admission ecosystem including students, coaching institutions, and platform administrators  
 **Frontend Framework:** React 18+ Single Page Application (SPA)  
 **Backend Framework:** Flask (Python 3.10+) with Flask Blueprints  
@@ -15,7 +15,7 @@
 ## 1. 🎯 Executive Summary & Problem Statement
 
 ### 1.1 Executive Summary
-**Mr.E** is a specialized, AI-driven exam preparation and question paper extraction platform designed for individuals involved in the KCET preparation and admission ecosystem including students, coaching institutions, and platform administrators. The platform ingests textbook content and question banks, applies an automated KCET Pattern Filter to extract standard KCET-level questions, and generates official-format exam paper sets containing **exactly 60 questions per set** (matching the official KCET 60-question/60-mark 80-minute paper structure).
+**VyasaPrep** is a specialized, AI-driven exam preparation and question paper extraction platform designed for individuals involved in the KCET preparation and admission ecosystem including students, coaching institutions, and platform administrators. The platform ingests textbook content and question banks, applies an automated KCET Pattern Filter to extract standard KCET-level questions, and generates official-format exam paper sets containing **exactly 60 questions per set** (matching the official KCET 60-question/60-mark 80-minute paper structure).
 
 
 The system features an integrated **Anti-Cheating & Exam Integrity Engine** and combines a modern **React 18+ Single Page Application (SPA)** frontend (built with **Vite**, **TypeScript/JavaScript**, **React Router v6**, and **Tailwind CSS**) with a robust **Flask (Python 3.10+)** REST API backend utilizing **Flask Blueprints**, **Flask-SQLAlchemy**, **RAG Retrieval**, **Groq LLMs**, and **FAISS Vector Search**.

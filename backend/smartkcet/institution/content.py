@@ -892,7 +892,6 @@ def create_institution_exam()-> Any:
             if set_qids == base_qids and len(set_qids) > 1:
                 set_qids.reverse()
         partitions.append(set_qids)
->>>>>>> ec47da2 (updated few features)
 
     exam = Exam(
         subject=selected.value,

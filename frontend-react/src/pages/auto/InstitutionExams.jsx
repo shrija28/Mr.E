@@ -118,11 +118,7 @@ const InstitutionExams = () => {
 
       const data = await res.json();
       if (res.ok) {
-<<<<<<< HEAD:frontend-react/src/pages/auto/InstitutionExams.jsx
-        setSuccessMsg(`Exam "${data.exam_name}" created successfully and assigned to ${data.batch_name || 'All Batches'}!`);
-=======
-        setSuccessMsg(`Exam "${data.exam_name}" created successfully! Click "View Questions" below to inspect the assigned questions.`);
->>>>>>> ec47da2 (updated few features):frontend/src/pages/auto/InstitutionExams.jsx
+        setSuccessMsg(`Exam "${data.exam_name}" created successfully and assigned to ${data.batch_name || 'All Batches'}! Click "View Questions" below to inspect the assigned questions.`);
         setExamName('');
         setScheduledStart('');
         setScheduledEnd('');

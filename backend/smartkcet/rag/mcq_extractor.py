@@ -506,7 +506,6 @@ def apply_kcet_chapter_distribution(questions: List[dict], subject: str, target_
     return interleave_by_subtype(selected[:target_count])
 
 
->>>>>>> ec47da2 (updated few features)
 def is_valid_question(q_text: str, options: List[str], subject: str = "General")-> bool:
     """Return True if question text and options represent a valid, complete, clean question."""
     if not q_text or not isinstance(q_text, str):

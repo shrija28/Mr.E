@@ -36,9 +36,30 @@ except Exception as _groq_err:
         _groq_err,
     )
 
+class SmartKcetFlask(Flask):
+    """Custom Flask subclass that auto-serializes Pydantic models into JSON-compatible dictionaries."""
+
+    def make_response(self, rv):
+        from pydantic import BaseModel
+
+        def _serialize_val(val):
+            if isinstance(val, BaseModel):
+                return val.model_dump(mode="json") if hasattr(val, "model_dump") else val.dict()
+            if isinstance(val, list) and val and isinstance(val[0], BaseModel):
+                return [_serialize_val(x) for x in val]
+            return val
+
+        if isinstance(rv, tuple):
+            val = _serialize_val(rv[0])
+            rv = (val, *rv[1:])
+        else:
+            rv = _serialize_val(rv)
+        return super().make_response(rv)
+
+
 def create_app():
     frontend_dist = Path(__file__).resolve().parents[2] / 'frontend-react' / 'dist'
-    app = Flask(
+    app = SmartKcetFlask(
         __name__,
         static_folder=str(frontend_dist / 'assets'),
         static_url_path='/assets'

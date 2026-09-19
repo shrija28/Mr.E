@@ -40,7 +40,12 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      console.warn('Logout endpoint call failed:', e);
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);

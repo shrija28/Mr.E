@@ -742,9 +742,30 @@ const Exam = () => {
     }
   }, [examSetId]);
 
-  // Handle selecting an exam from published tests list
+  // Handle selecting an exam from published tests list (Assigned based on Student ID: A, B, C, D...)
   const handleSelectExam = (exam, subjGroup, targetSet) => {
-    const setObj = targetSet || (exam.sets && exam.sets.length > 0 ? exam.sets[0] : null);
+    let setObj = targetSet;
+    if (!setObj && exam.assigned_set_id && exam.sets) {
+      setObj = exam.sets.find(s => s.exam_set_id === exam.assigned_set_id);
+    }
+    if (!setObj && exam.sets && exam.sets.length > 0) {
+      let idStr = studentDetails?.id || studentDetails?.kcet_student_id || 'STD-001';
+      const digitsMatch = idStr.match(/\d+/g);
+      let assignedIndex = 0;
+      if (digitsMatch && digitsMatch.length > 0) {
+        const val = parseInt(digitsMatch[digitsMatch.length - 1], 10);
+        if (!isNaN(val) && val > 0) {
+          assignedIndex = (val - 1) % exam.sets.length;
+        }
+      } else {
+        let numHash = 0;
+        for (let i = 0; i < idStr.length; i++) {
+          numHash = (numHash * 31 + idStr.charCodeAt(i)) >>> 0;
+        }
+        assignedIndex = numHash % exam.sets.length;
+      }
+      setObj = exam.sets[assignedIndex] || exam.sets[0];
+    }
     if (!setObj) {
       alert("No question sets available for this exam.");
       return;

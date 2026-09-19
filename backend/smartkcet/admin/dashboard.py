@@ -253,6 +253,71 @@ def get_admin_dashboard()-> Any:
         select(func.count(IndexedFile.id)).where(IndexedFile.institution_id.isnot(None))
     ).scalar_one()
 
+    # ── Direct students list ──────────────────────────────────────────────────
+    direct_student_rows = session.execute(
+        select(User.id, User.display_name, User.email, User.kcet_student_id, User.created_at)
+        .where(User.role == "student", User.institution_id.is_(None))
+        .order_by(User.created_at.desc())
+        .limit(20)
+    ).all()
+
+    direct_students_list = []
+    for r in direct_student_rows:
+        sub = session.execute(
+            select(Subscription.status)
+            .where(Subscription.user_id == r[0])
+            .order_by(Subscription.created_at.desc())
+        ).scalars().first()
+        direct_students_list.append({
+            "id": str(r[0]),
+            "name": r[1] or "—",
+            "email": r[2],
+            "kcet_student_id": r[3] or "—",
+            "subscription_status": sub if sub else "active",
+            "created_at": r[4].isoformat() if r[4] else None,
+        })
+
+    # ── Recent activity (submissions, registrations) ──────────────────────────
+    recent_activity = []
+    recent_subms = session.execute(
+        select(Submission)
+        .order_by(Submission.submitted_at.desc())
+        .limit(6)
+    ).scalars().all()
+    for s in recent_subms:
+        u_name = s.user.display_name if s.user else "Student"
+        exam_title = s.exam_set.exam.exam_name or s.exam_set.exam.subject if s.exam_set and s.exam_set.exam else "Exam"
+        mins = s.time_taken_sec // 60 if s.time_taken_sec else 0
+        secs = s.time_taken_sec % 60 if s.time_taken_sec else 0
+        recent_activity.append({
+            "id": str(s.id),
+            "type": "exam_submission",
+            "title": f"{u_name} completed {exam_title}",
+            "subtitle": f"Score: {s.score_pct}% ({mins}m {secs}s)",
+            "timestamp": s.submitted_at.isoformat() if s.submitted_at else None,
+            "badge": "Exam",
+            "badge_color": "green" if s.score_pct >= 50 else "blue",
+        })
+
+    recent_users = session.execute(
+        select(User)
+        .where(User.role == "student")
+        .order_by(User.created_at.desc())
+        .limit(4)
+    ).scalars().all()
+    for u in recent_users:
+        recent_activity.append({
+            "id": str(u.id),
+            "type": "user_registration",
+            "title": f"Student registered: {u.display_name}",
+            "subtitle": f"ID: {u.kcet_student_id or '—'} • {u.email}",
+            "timestamp": u.created_at.isoformat() if u.created_at else None,
+            "badge": "Student",
+            "badge_color": "purple",
+        })
+
+    recent_activity.sort(key=lambda x: x["timestamp"] or "", reverse=True)
+
     # ── Assemble response ─────────────────────────────────────────────────────
     return {
         "generated_at": now.isoformat(),
@@ -294,6 +359,12 @@ def get_admin_dashboard()-> Any:
 
         # Recent institutions
         "recent_institutions": recent_institutions,
+
+        # Direct students
+        "direct_students": direct_students_list,
+
+        # Recent activity
+        "recent_activity": recent_activity[:10],
 
         # Alerts
         "alerts": alerts,

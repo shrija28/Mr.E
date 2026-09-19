@@ -768,47 +768,130 @@ def create_institution_exam()-> Any:
         except Exception:
             scheduled_end = None
 
-    # Count institution-scoped questions
-    id_rows = session.execute(
-        select(Question.id).where(
-            Question.subject == selected.value,
-            Question.institution_id == inst_id,
-        )
+    # STRICT NO-REPEAT RULE: Query questions ALREADY used in previous exams for this subject & institution
+    from ..rag.mcq_extractor import normalize_question_fingerprint, apply_subject_subtype_breakdown, interleave_by_subtype, infer_question_subtype, shuffle_question_options
+
+    used_q_rows = session.execute(
+        select(Question.id, Question.question_text)
+        .join(ExamSetQuestion, Question.id == ExamSetQuestion.question_id)
+        .join(ExamSet, ExamSetQuestion.exam_set_id == ExamSet.id)
+        .join(Exam, ExamSet.exam_id == Exam.id)
+        .where(Exam.subject == selected.value, Exam.institution_id == inst_id)
     ).all()
-    all_ids = [row[0] for row in id_rows]
+    used_qids = {r[0] for r in used_q_rows}
+    used_q_fingerprints = {normalize_question_fingerprint(r[1]) for r in used_q_rows if r[1]}
 
-    # Seamless fallback: if institution has fewer questions than requested, draw from platform questions!
-    if len(all_ids) < question_count:
-        needed = question_count - len(all_ids)
-        platform_rows = session.execute(
-            select(Question.id).where(
-                Question.subject == selected.value,
-                Question.institution_id.is_(None)
-            ).order_by(func.random()).limit(needed)
-        ).all()
-        all_ids.extend([row[0] for row in platform_rows])
+    # Count institution-scoped extracted questions (strictly from user uploads for this institution)
+    query_filters = [
+        Question.subject == selected.value,
+        Question.institution_id == inst_id,
+        func.length(Question.question_text) <= 220,
+    ]
+    if batch_id:
+        query_filters.append(Question.generation_batch_id == batch_id)
 
-    if len(all_ids) < 4:
+    id_rows = session.execute(
+        select(Question.id, Question.question_text).where(*query_filters)
+    ).all()
+
+    # Exclude any questions that were already assigned to previous exams or duplicated by fingerprint
+    unused_ids = []
+    seen_fingerprints = set(used_q_fingerprints)
+    for qid, qtext in id_rows:
+        fp = normalize_question_fingerprint(qtext)
+        if qid not in used_qids and fp and fp not in seen_fingerprints:
+            unused_ids.append(qid)
+            seen_fingerprints.add(fp)
+
+    num_sets = len(SET_LABELS)
+    target_per_set = max(1, question_count)
+    total_needed = target_per_set
+
+    # If available unused questions are less than total_needed, generate fresh non-repeating questions
+    if len(unused_ids) < total_needed:
+        needed = total_needed - len(unused_ids)
+        context_text = ""
+        try:
+            matched_chunks = stores.search(selected, selected.value, k=40)
+            if matched_chunks:
+                context_text = "\n\n".join(matched_chunks)
+        except Exception:
+            pass
+
+        fresh_mcqs = extract_or_generate_mcqs(context_text, topic=selected.value, min_questions=needed + 15, used_questions=seen_fingerprints)
+        gen_batch_id = uuid.uuid4()
+        for mcq in fresh_mcqs:
+            q_text = mcq.get("q", "").strip()
+            fp = normalize_question_fingerprint(q_text)
+            if not q_text or not fp or fp in seen_fingerprints:
+                continue
+            opts = mcq.get("opts", [])
+            ans = mcq.get("ans", 0)
+            if not isinstance(opts, list) or len(opts) != 4:
+                continue
+            shuffled_opts, new_ans = shuffle_question_options(opts, ans)
+            row = Question(
+                subject=selected.value,
+                question_text=q_text,
+                options=shuffled_opts,
+                correct_option=str(new_ans),
+                topic=mcq.get("topic", selected.value),
+                generation_batch_id=gen_batch_id,
+                institution_id=inst_id,
+                source_type="textbook",
+                explanation=mcq.get("exp", f"Solution derived from uploaded {selected.value} material."),
+            )
+            session.add(row)
+            session.flush()
+            unused_ids.append(row.id)
+            used_qids.add(row.id)
+            seen_fingerprints.add(fp)
+
+    if len(unused_ids) < total_needed:
         return make_response(jsonify({
             "error": "insufficient_questions",
             "subject": selected.value,
-            "count": len(all_ids),
-            "required": 4,
-            "message": f"Not enough questions available for {selected.value}. Need at least 4."
+            "count": len(unused_ids),
+            "required": total_needed,
+            "message": f"Not enough unused questions available for {selected.value}. Please upload more question papers or textbooks first."
         }), 422)
 
-    exam_size = min(len(all_ids), question_count)
-    num_sets = len(SET_LABELS)
-    exam_size = exam_size - (exam_size % num_sets)
-    if exam_size < 4:
-        exam_size = 4
-    questions_per_set = exam_size // num_sets
+    # Load candidate Question objects
+    candidate_objects = session.execute(
+        select(Question).where(Question.id.in_(unused_ids))
+    ).scalars().all()
 
-    drawn = random.sample(all_ids, exam_size)
-    partitions = [
-        drawn[i * questions_per_set : (i + 1) * questions_per_set]
-        for i in range(num_sets)
+    # Convert to dicts with subtype inference
+    candidate_dicts = [
+        {
+            "id": q.id,
+            "q": q.question_text,
+            "opts": q.options,
+            "subtype": infer_question_subtype(q.question_text, q.options or [], selected.value),
+            "topic": q.topic or "General"
+        }
+        for q in candidate_objects
     ]
+
+    # Enforce KCET Blueprint Subtype Variety Breakdown (e.g. Physics: 35% Formula, 18% Multi-step, 47% Theory)
+    balanced_pool = apply_subject_subtype_breakdown(candidate_dicts, selected.value, target_per_set)
+    if len(balanced_pool) < target_per_set:
+        balanced_pool = candidate_dicts[:target_per_set]
+
+    # Interleave by subtype so adjacent questions alternate in structure
+    base_interleaved = interleave_by_subtype(balanced_pool)
+    base_qids = [item["id"] for item in base_interleaved]
+
+    # Standard KCET Model: All sets (Set A, B, C, D) contain the EXACT SAME pool of questions,
+    # but shuffled into different order sequences across sets so same question number contains different questions.
+    partitions = []
+    for s_i in range(num_sets):
+        set_qids = list(base_qids)
+        if s_i > 0:
+            random.shuffle(set_qids)
+            if set_qids == base_qids and len(set_qids) > 1:
+                set_qids.reverse()
+        partitions.append(set_qids)
 
     exam = Exam(
         subject=selected.value,
@@ -993,6 +1076,107 @@ def delete_institution_exam(exam_id: str)-> Any:
         return make_response(jsonify({"error": "delete_failed", "message": str(exc)}), 500)
 
     return jsonify({"success": True, "exam_id": str(e_uuid), "message": "Exam deleted successfully"})
+
+
+# ---------------------------------------------------------------------------
+# GET /content/exams/{exam_id}/questions  (view questions put in specific exam)
+# ---------------------------------------------------------------------------
+
+@router.route("/content/exams/<exam_id>/questions", methods=["GET"])
+def get_institution_exam_questions(exam_id: str) -> Any:
+    payload = require_institution_admin()
+    from flask import g, jsonify, make_response
+    session = getattr(g, "db", None)
+    inst_id = _institution_id(payload)
+
+    try:
+        e_uuid = uuid.UUID(exam_id)
+    except ValueError:
+        return make_response(jsonify({"error": "invalid_id", "message": "Invalid exam ID"}), 400)
+
+    exam = session.get(Exam, e_uuid)
+    if exam is None or (exam.institution_id and exam.institution_id != inst_id):
+        return make_response(jsonify({"error": "not_found", "message": "Exam not found"}), 404)
+
+    sets = session.execute(
+        select(ExamSet).where(ExamSet.exam_id == exam.id).order_by(ExamSet.set_label.asc())
+    ).scalars().all()
+
+    # Auto-heal / synchronize: Ensure Sets B, C, D contain the EXACT SAME pool of questions in shuffled order sequence
+    if sets and len(sets) > 1:
+        set_a = sets[0]
+        set_a_qids = session.execute(
+            select(ExamSetQuestion.question_id)
+            .where(ExamSetQuestion.exam_set_id == set_a.id)
+            .order_by(ExamSetQuestion.order_index.asc())
+        ).scalars().all()
+
+        if set_a_qids:
+            from sqlalchemy import delete
+            base_set = set(set_a_qids)
+            base_list = list(set_a_qids)
+            need_commit = False
+            for es in sets[1:]:
+                es_qids = session.execute(
+                    select(ExamSetQuestion.question_id)
+                    .where(ExamSetQuestion.exam_set_id == es.id)
+                    .order_by(ExamSetQuestion.order_index.asc())
+                ).scalars().all()
+
+                if set(es_qids) != base_set or list(es_qids) == base_list:
+                    session.execute(
+                        delete(ExamSetQuestion).where(ExamSetQuestion.exam_set_id == es.id)
+                    )
+                    shuffled_qids = list(base_list)
+                    random.shuffle(shuffled_qids)
+                    if shuffled_qids == base_list and len(shuffled_qids) > 1:
+                        shuffled_qids.reverse()
+                    session.add_all([
+                        ExamSetQuestion(exam_set_id=es.id, question_id=qid, order_index=idx)
+                        for idx, qid in enumerate(shuffled_qids)
+                    ])
+                    need_commit = True
+            if need_commit:
+                session.commit()
+
+    from ..rag.mcq_extractor import shuffle_options_for_set_label
+    sets_data = []
+    for es in sets:
+        q_rows = session.execute(
+            select(Question, ExamSetQuestion.order_index)
+            .join(ExamSetQuestion, Question.id == ExamSetQuestion.question_id)
+            .where(ExamSetQuestion.exam_set_id == es.id)
+            .order_by(ExamSetQuestion.order_index.asc())
+        ).all()
+
+        questions = []
+        for q, order in q_rows:
+            shuffled_opts, new_ans = shuffle_options_for_set_label(q.options or [], q.correct_option, es.set_label)
+            questions.append({
+                "id": str(q.id),
+                "order_index": order,
+                "question_text": q.question_text,
+                "options": shuffled_opts,
+                "correct_option": str(new_ans),
+                "topic": q.topic or "General",
+                "explanation": q.explanation or ""
+            })
+
+        sets_data.append({
+            "exam_set_id": str(es.id),
+            "set_label": es.set_label,
+            "question_count": len(questions),
+            "questions": questions
+        })
+
+    return jsonify({
+        "exam_id": str(exam.id),
+        "exam_name": exam.exam_name,
+        "subject": exam.subject,
+        "duration_minutes": exam.duration_minutes,
+        "total_marks": exam.total_marks,
+        "sets": sets_data
+    })
 
 
 # ---------------------------------------------------------------------------

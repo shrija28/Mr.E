@@ -596,6 +596,7 @@ const InstitutionUpload = () => {
           </div>
         </div>
 
+<<<<<<< HEAD:frontend-react/src/pages/auto/InstitutionUpload.jsx
         {/* How It Works Card */}
         <div className="section-card" style={{ marginTop: '24px' }}>
           <div className="section-card-header">
@@ -635,6 +636,8 @@ const InstitutionUpload = () => {
             </div>
           </div>
         </div>
+=======
+>>>>>>> ec47da2 (updated few features):frontend/src/pages/auto/InstitutionUpload.jsx
       </main>
     </>
   );

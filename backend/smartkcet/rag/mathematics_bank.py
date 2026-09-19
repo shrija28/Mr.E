@@ -750,105 +750,84 @@ for a1, a2, a3, b1, b2, b3 in _vec_data:
     })
 
 # Definite integral ∫_0^a x dx
-for a in [2, 4, 6, 8, 10, 12, 14, 16]:
-    val = (a**2) // 2
-    MATHEMATICS_BANK.append({
-        "q": f"The value of the definite integral ∫₀^{a} x dx is equal to:",
-        "opts": [f"{val}", f"{val + 3}", f"{val - 2}", f"{val + 6}"],
-        "ans": 0, "topic": "Integrals", "subtype": "direct_formula",
-        "exp": f"∫₀^{a} x dx = [x²/2]₀^{a} = {a}²/2 = {val}."
-    })
+MATHEMATICS_BANK.append({
+    "q": "The value of the definite integral ∫₀⁴ x dx is equal to:",
+    "opts": ["8", "11", "6", "14"],
+    "ans": 0, "topic": "Integrals", "subtype": "direct_formula",
+    "exp": "∫₀⁴ x dx = [x²/2]₀⁴ = 16/2 = 8."
+})
 
 # Definite integral ∫_0^(π/2) sin^n(x) / (sin^n(x) + cos^n(x)) dx
-for n in [2, 3, 4, 5, 6, 7]:
-    MATHEMATICS_BANK.append({
-        "q": f"The value of the definite integral ∫₀^(π/2) [sin^{n}(x) / (sin^{n}(x) + cos^{n}(x))] dx is equal to:",
-        "opts": ["π/4", "π/2", "π", "0"],
-        "ans": 0, "topic": "Integrals", "subtype": "direct_formula",
-        "exp": "Using the property ∫₀ᵃ f(x) dx = ∫₀ᵃ f(a - x) dx, adding 2I = ∫₀^(π/2) 1 dx = π/2 => I = π/4."
-    })
+MATHEMATICS_BANK.append({
+    "q": "The value of the definite integral ∫₀^(π/2) [sin⁵(x) / (sin⁵(x) + cos⁵(x))] dx is equal to:",
+    "opts": ["π/4", "π/2", "π", "0"],
+    "ans": 0, "topic": "Integrals", "subtype": "direct_formula",
+    "exp": "Using the property ∫₀ᵃ f(x) dx = ∫₀ᵃ f(a - x) dx, adding 2I = ∫₀^(π/2) 1 dx = π/2 => I = π/4."
+})
 
 # Probability of independent events
-for p_num, q_num in [(2, 3), (3, 4), (1, 3), (2, 5), (3, 5), (4, 5), (1, 4), (3, 7), (2, 7)]:
-    MATHEMATICS_BANK.append({
-        "q": f"If A and B are two independent events with P(A) = {p_num}/10 and P(B) = {q_num}/10, then P(A ∩ B) is equal to:",
-        "opts": [f"{p_num * q_num}/100", f"{(p_num + q_num)}/10", f"{abs(p_num - q_num)}/10", "1/2"],
-        "ans": 0, "topic": "Probability", "subtype": "direct_formula",
-        "exp": f"For independent events, P(A ∩ B) = P(A) * P(B) = ({p_num}/10) * ({q_num}/10) = {p_num * q_num}/100."
-    })
+MATHEMATICS_BANK.append({
+    "q": "If A and B are two independent events with P(A) = 3/10 and P(B) = 4/10, then P(A ∩ B) is equal to:",
+    "opts": ["12/100", "7/10", "1/10", "1/2"],
+    "ans": 0, "topic": "Probability", "subtype": "direct_formula",
+    "exp": "For independent events, P(A ∩ B) = P(A) * P(B) = (3/10) * (4/10) = 12/100."
+})
 
 # Linear Programming corner points
-for m, n, c in [(2, 3, 12), (3, 2, 18), (1, 4, 16), (4, 1, 20), (3, 4, 24), (2, 5, 20)]:
-    val_x = c // m
-    val_y = c // n
-    MATHEMATICS_BANK.append({
-        "q": f"The maximum value of the linear objective function Z = {m}x + {n}y subject to constraints {m}x + {n}y ≤ {c} and x ≥ 0, y ≥ 0 is:",
-        "opts": [f"{c}", f"{c + 5}", f"{c - 4}", f"{2*c}"],
-        "ans": 0, "topic": "Linear Programming", "subtype": "direct_formula",
-        "exp": f"Corner points of the feasible region are (0,0), ({val_x}, 0), and (0, {val_y}). At both intercepts, Z = {c}."
-    })
+MATHEMATICS_BANK.append({
+    "q": "The maximum value of the linear objective function Z = 3x + 4y subject to constraints 3x + 4y ≤ 24 and x ≥ 0, y ≥ 0 is:",
+    "opts": ["24", "29", "20", "48"],
+    "ans": 0, "topic": "Linear Programming", "subtype": "direct_formula",
+    "exp": "Corner points of the feasible region are (0,0), (8, 0), and (0, 6). At both intercepts, Z = 24."
+})
 
-# Modulus of complex numbers z = a + bi (Pythagorean triples)
-for a, b, mod_val in [(3, 4, 5), (5, 12, 13), (8, 15, 17), (7, 24, 25), (6, 8, 10), (9, 12, 15), (12, 16, 20)]:
-    MATHEMATICS_BANK.append({
-        "q": f"The modulus |z| of the complex number z = {a} + {b}i is equal to:",
-        "opts": [f"{mod_val}", f"{mod_val + 2}", f"{mod_val - 1}", f"{mod_val + 4}"],
-        "ans": 0, "topic": "Complex Numbers and Quadratic Equations", "subtype": "direct_formula",
-        "exp": f"|z| = √({a}² + {b}²) = √({a**2} + {b**2}) = √({mod_val**2}) = {mod_val}."
-    })
+# Modulus of complex numbers z = a + bi
+MATHEMATICS_BANK.append({
+    "q": "The modulus |z| of the complex number z = 3 + 4i is equal to:",
+    "opts": ["5", "7", "4", "9"],
+    "ans": 0, "topic": "Complex Numbers and Quadratic Equations", "subtype": "direct_formula",
+    "exp": "|z| = √(3² + 4²) = √(9 + 16) = √25 = 5."
+})
 
 # Permutations nPr
-for n_val, r_val, ans_val in [(5, 2, 20), (6, 2, 30), (5, 3, 60), (7, 2, 42), (6, 3, 120), (4, 2, 12), (7, 3, 210)]:
-    MATHEMATICS_BANK.append({
-        "q": f"The value of the permutation {n_val}P{r_val} is equal to:",
-        "opts": [f"{ans_val}", f"{ans_val + 6}", f"{ans_val - 4}", f"{2*ans_val}"],
-        "ans": 0, "topic": "Permutations and Combinations", "subtype": "direct_formula",
-        "exp": f"{n_val}P{r_val} = {n_val}! / ({n_val} - {r_val})! = {ans_val}."
-    })
+MATHEMATICS_BANK.append({
+    "q": "The value of the permutation 5P2 is equal to:",
+    "opts": ["20", "26", "16", "40"],
+    "ans": 0, "topic": "Permutations and Combinations", "subtype": "direct_formula",
+    "exp": "5P2 = 5! / (5 - 2)! = 20."
+})
 
 # Combinations nCr
-for n_val, r_val, ans_val in [(5, 2, 10), (6, 2, 15), (6, 3, 20), (7, 2, 21), (7, 3, 35), (8, 2, 28), (8, 3, 56)]:
-    MATHEMATICS_BANK.append({
-        "q": f"The value of the combination {n_val}C{r_val} is equal to:",
-        "opts": [f"{ans_val}", f"{ans_val + 5}", f"{ans_val - 3}", f"{2*ans_val}"],
-        "ans": 0, "topic": "Permutations and Combinations", "subtype": "direct_formula",
-        "exp": f"{n_val}C{r_val} = {n_val}! / [{r_val}! * ({n_val} - {r_val})!] = {ans_val}."
-    })
+MATHEMATICS_BANK.append({
+    "q": "The value of the combination 6C2 is equal to:",
+    "opts": ["15", "20", "12", "30"],
+    "ans": 0, "topic": "Permutations and Combinations", "subtype": "direct_formula",
+    "exp": "6C2 = 6! / [2! * (6 - 2)!] = 15."
+})
 
 # Arithmetic progression n-th term
-for a_1, d_diff, n_term in [(2, 3, 10), (3, 4, 8), (5, 2, 12), (1, 5, 11), (4, 3, 9), (7, 2, 15)]:
-    ans_val = a_1 + (n_term - 1) * d_diff
-    MATHEMATICS_BANK.append({
-        "q": f"The {n_term}th term of an arithmetic progression (AP) with first term a = {a_1} and common difference d = {d_diff} is:",
-        "opts": [f"{ans_val}", f"{ans_val + 3}", f"{ans_val - 2}", f"{ans_val + 5}"],
-        "ans": 0, "topic": "Sequences and Series", "subtype": "direct_formula",
-        "exp": f"a_{n_term} = a + ({n_term} - 1)d = {a_1} + ({n_term - 1})*{d_diff} = {ans_val}."
-    })
+MATHEMATICS_BANK.append({
+    "q": "The 10th term of an arithmetic progression (AP) with first term a = 2 and common difference d = 3 is:",
+    "opts": ["29", "32", "27", "34"],
+    "ans": 0, "topic": "Sequences and Series", "subtype": "direct_formula",
+    "exp": "a₁₀ = a + 9d = 2 + 9*3 = 29."
+})
 
 # Geometric progression n-th term
-for a_1, r_ratio, n_term in [(2, 2, 5), (3, 2, 4), (1, 3, 4), (5, 2, 4), (2, 3, 4)]:
-    ans_val = a_1 * (r_ratio ** (n_term - 1))
-    MATHEMATICS_BANK.append({
-        "q": f"The {n_term}th term of a geometric progression (GP) with first term a = {a_1} and common ratio r = {r_ratio} is:",
-        "opts": [f"{ans_val}", f"{ans_val + 4}", f"{ans_val - 2}", f"{2*ans_val}"],
-        "ans": 0, "topic": "Sequences and Series", "subtype": "direct_formula",
-        "exp": f"a_{n_term} = a * r^({n_term} - 1) = {a_1} * {r_ratio}^{n_term - 1} = {ans_val}."
-    })
+MATHEMATICS_BANK.append({
+    "q": "The 5th term of a geometric progression (GP) with first term a = 2 and common ratio r = 2 is:",
+    "opts": ["32", "36", "30", "64"],
+    "ans": 0, "topic": "Sequences and Series", "subtype": "direct_formula",
+    "exp": "a₅ = a * r⁴ = 2 * 2⁴ = 32."
+})
 
 # Distance between two points in 3D space
-for x1, y1, z1, x2, y2, z2, dist in [
-    (1, 2, 3, 4, 6, 3, 5),
-    (0, 0, 0, 2, 3, 6, 7),
-    (1, 1, 1, 2, 3, 3, 3),
-    (2, 3, 4, 2, 6, 8, 5),
-    (1, 0, 2, 4, 4, 2, 5)
-]:
-    MATHEMATICS_BANK.append({
-        "q": f"The Euclidean distance between the points P({x1}, {y1}, {z1}) and Q({x2}, {y2}, {z2}) in three-dimensional space is:",
-        "opts": [f"{dist} units", f"{dist + 2} units", f"{dist + 1} units", f"{dist + 4} units"],
-        "ans": 0, "topic": "Three Dimensional Geometry", "subtype": "direct_formula",
-        "exp": f"d = √[(x₂-x₁)² + (y₂-y₁)² + (z₂-z₁)²] = √[({x2-x1})² + ({y2-y1})² + ({z2-z1})²] = {dist} units."
-    })
+MATHEMATICS_BANK.append({
+    "q": "The Euclidean distance between the points P(1, 2, 3) and Q(4, 6, 3) in three-dimensional space is:",
+    "opts": ["5 units", "7 units", "6 units", "9 units"],
+    "ans": 0, "topic": "Three Dimensional Geometry", "subtype": "direct_formula",
+    "exp": "d = √[(4-1)² + (6-2)² + (3-3)²] = √[9 + 16 + 0] = 5 units."
+})
 
 # Direction cosines and 3D geometry theory
 MATHEMATICS_BANK.append({

@@ -60,6 +60,31 @@ const InstitutionExams = () => {
     fetchData();
   }, []);
 
+  // Questions Modal State
+  const [viewingQuestionsExam, setViewingQuestionsExam] = useState(null);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+  const [activeSetIndex, setActiveSetIndex] = useState(0);
+
+  const fetchExamQuestions = async (examId) => {
+    setLoadingQuestions(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/institution/content/exams/${examId}/questions`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        setViewingQuestionsExam(data);
+        setActiveSetIndex(0);
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.message || 'Failed to load exam questions');
+      }
+    } catch (err) {
+      setError('Network error fetching exam questions');
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
   const handleCreateExam = async (e) => {
     e.preventDefault();
     if (!examName.trim()) {
@@ -93,11 +118,18 @@ const InstitutionExams = () => {
 
       const data = await res.json();
       if (res.ok) {
+<<<<<<< HEAD:frontend-react/src/pages/auto/InstitutionExams.jsx
         setSuccessMsg(`Exam "${data.exam_name}" created successfully and assigned to ${data.batch_name || 'All Batches'}!`);
+=======
+        setSuccessMsg(`Exam "${data.exam_name}" created successfully! Click "View Questions" below to inspect the assigned questions.`);
+>>>>>>> ec47da2 (updated few features):frontend/src/pages/auto/InstitutionExams.jsx
         setExamName('');
         setScheduledStart('');
         setScheduledEnd('');
         fetchData();
+        if (data.exam_id) {
+          fetchExamQuestions(data.exam_id);
+        }
       } else {
         setError(data.message || 'Failed to create exam');
       }
@@ -478,7 +510,17 @@ const InstitutionExams = () => {
                           <strong style={{ color: 'var(--text)' }}>{exam.completion_count || 0}</strong> completed
                         </td>
                         <td style={{ textAlign: 'right' }}>
-                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', alignItems: 'center' }}>
+                            <button
+                              type="button"
+                              className="btn-institution-outline"
+                              onClick={() => fetchExamQuestions(exam.exam_id)}
+                              disabled={loadingQuestions}
+                              style={{ padding: '4px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--purple-l)' }}
+                              title="View questions assigned to this test"
+                            >
+                              👁 View Questions
+                            </button>
                             <Link
                               to={`/institution/analytics?exam_id=${exam.exam_id}`}
                               className="btn-institution-outline"
@@ -505,6 +547,150 @@ const InstitutionExams = () => {
           </div>
         </div>
       </div>
+
+      {/* View Exam Questions Modal */}
+      {viewingQuestionsExam && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(6px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setViewingQuestionsExam(null)}
+        >
+          <div
+            className="section-card"
+            style={{
+              maxWidth: '850px',
+              width: '100%',
+              maxHeight: '85vh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              padding: '0',
+              borderRadius: '16px',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', background: 'var(--s2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                  <h2 style={{ fontSize: '1.2rem', margin: 0, color: 'var(--text)' }}>{viewingQuestionsExam.exam_name}</h2>
+                  <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '4px', background: 'rgba(124,58,237,0.15)', color: 'var(--purple-l)', fontWeight: 600 }}>
+                    {viewingQuestionsExam.subject}
+                  </span>
+                </div>
+                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--muted)' }}>
+                  {viewingQuestionsExam.duration_minutes} Minutes • {viewingQuestionsExam.total_marks} Marks • Only these questions are visible to students taking this test
+                </p>
+              </div>
+              <button
+                onClick={() => setViewingQuestionsExam(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: 'var(--muted)' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Set Selector Tabs */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'var(--s1)', padding: '0 24px' }}>
+              {(viewingQuestionsExam.sets || []).map((setObj, idx) => (
+                <button
+                  key={setObj.set_label || idx}
+                  onClick={() => setActiveSetIndex(idx)}
+                  style={{
+                    padding: '12px 20px',
+                    border: 'none',
+                    background: 'transparent',
+                    borderBottom: activeSetIndex === idx ? '2px solid var(--purple-l)' : '2px solid transparent',
+                    color: activeSetIndex === idx ? 'var(--purple-l)' : 'var(--muted)',
+                    fontWeight: activeSetIndex === idx ? 700 : 500,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Set {setObj.set_label} ({setObj.question_count} Qs)
+                </button>
+              ))}
+            </div>
+
+            {/* Questions Content */}
+            <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+              {viewingQuestionsExam.sets && viewingQuestionsExam.sets[activeSetIndex] ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {viewingQuestionsExam.sets[activeSetIndex].questions.map((q, qIdx) => (
+                    <div
+                      key={q.id || qIdx}
+                      style={{
+                        background: 'var(--s2)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '12px',
+                        padding: '16px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+                        <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--purple-l)' }}>
+                          Question #{qIdx + 1}
+                        </span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--muted)', background: 'var(--s3)', padding: '2px 8px', borderRadius: '4px' }}>
+                          {q.topic}
+                        </span>
+                      </div>
+                      <p style={{ fontSize: '0.92rem', color: 'var(--text)', marginBottom: '12px', lineHeight: '1.5', fontWeight: 500 }}>
+                        {q.question_text}
+                      </p>
+
+                      {/* Options */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '8px' }}>
+                        {(q.options || []).map((opt, oIdx) => {
+                          const corr = String(q.correct_option ?? '').trim();
+                          const isCorrect = corr === String(oIdx) || (corr.toUpperCase() === String.fromCharCode(65 + oIdx));
+                          return (
+                            <div
+                              key={oIdx}
+                              style={{
+                                padding: '8px 12px',
+                                borderRadius: '8px',
+                                border: isCorrect ? '1.5px solid var(--green-l)' : '1px solid var(--border)',
+                                background: isCorrect ? 'rgba(5,150,105,0.08)' : 'var(--s1)',
+                                fontSize: '0.85rem',
+                                color: isCorrect ? 'var(--green-l)' : 'var(--text)',
+                                fontWeight: isCorrect ? 600 : 400
+                              }}
+                            >
+                              <strong style={{ marginRight: '6px' }}>{String.fromCharCode(65 + oIdx)}.</strong> {opt} {isCorrect && '✓ (Correct)'}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--muted)' }}>No questions found for this set.</div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border)', background: 'var(--s2)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn-primary" onClick={() => setViewingQuestionsExam(null)}>
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

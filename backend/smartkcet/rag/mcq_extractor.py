@@ -83,6 +83,430 @@ _PHYSICS_TERMS = {
 }
 
 
+def shuffle_options_for_set_label(opts: List[str], ans: Any, set_label: str) -> tuple[List[str], str]:
+    """Applies a deterministic set-specific permutation to options for Set A, B, C, D.
+    Ensures Q1..Q60 stems are identical across all sets while option letters A/B/C/D are scrambled per set.
+    """
+    if not isinstance(opts, list) or len(opts) != 4:
+        return opts, str(ans) if ans is not None else "0"
+
+    clean_opts = [
+        re.sub(r"^\s*(?:\([A-Da-d1-4]\)|[A-Da-d1-4]\s*[.):\-]|option\s+[A-Da-d1-4]\s*[:\-]?)\s*", "", str(opt), flags=re.IGNORECASE).strip()
+        for opt in opts
+    ]
+
+    ans_str = str(ans).strip() if ans is not None else "0"
+    letter_map = {"a": 0, "b": 1, "c": 2, "d": 3, "0": 0, "1": 1, "2": 2, "3": 3}
+
+    current_idx = None
+    if ans_str.lower() in letter_map:
+        current_idx = letter_map[ans_str.lower()]
+    elif ans_str.isdigit() and 0 <= int(ans_str) < 4:
+        current_idx = int(ans_str)
+    else:
+        for idx, opt in enumerate(clean_opts):
+            if str(opt).lower() == ans_str.lower():
+                current_idx = idx
+                break
+
+    if current_idx is None or current_idx < 0 or current_idx >= 4:
+        current_idx = 0
+
+    # Deterministic permutations for each set label
+    label_upper = str(set_label).strip().upper()
+    if label_upper == 'B':
+        perm = [1, 2, 3, 0]
+    elif label_upper == 'C':
+        perm = [3, 0, 1, 2]
+    elif label_upper == 'D':
+        perm = [2, 3, 0, 1]
+    else:
+        perm = [0, 1, 2, 3]
+
+    shuffled_opts = [clean_opts[i] for i in perm]
+    new_ans_idx = perm.index(current_idx)
+
+    return shuffled_opts, str(new_ans_idx)
+
+
+def shuffle_question_options(opts: List[str], ans: Any) -> tuple[List[str], str]:
+    """Alias for backwards compatibility using random option shuffling."""
+    return shuffle_options_for_set_label(opts, ans, "A")
+
+
+def normalize_question_fingerprint(q_text: str) -> str:
+    """Requirement 1: Strict question deduplication fingerprint.
+    Normalizes question stem by removing question numbers, punctuation, spaces, and converting to lowercase.
+    """
+    if not q_text or not isinstance(q_text, str):
+        return ""
+    text = q_text.lower().strip()
+    text = re.sub(r"^(?:q\.?\s*\d+|\d+[\.\)\-:]?\s*)", "", text)
+    text = re.sub(r"[^\w\s]", "", text)
+    return " ".join(text.split())
+
+
+def extract_concept_fingerprint(q_text: str) -> str:
+    """Requirement: Concept-level formula deduplication (DO NOT REPEAT REPETITIVE NUMERICAL VARIATIONS).
+    Maps any question stem to its canonical formula or concept archetype so that max 1 question
+    per concept archetype is selected for an exam.
+    """
+    if not q_text or not isinstance(q_text, str):
+        return ""
+    q = q_text.lower().strip()
+
+    # ── Physics Concepts ──
+    if "projectile" in q or "launched" in q:
+        if "maximum height" in q or "h_max" in q or "highest point" in q:
+            return "concept:phy_projectile_max_height"
+        if "range" in q or "horizontal distance" in q:
+            return "concept:phy_projectile_range"
+        if "time of flight" in q:
+            return "concept:phy_projectile_time_of_flight"
+        if "kinetic energy" in q:
+            return "concept:phy_projectile_ke_apex"
+        return "concept:phy_projectile_kinematics"
+
+    if "capacitor" in q or "capacitance" in q:
+        if "energy" in q or "electrostatic energy" in q or "stored" in q:
+            return "concept:phy_capacitor_energy"
+        if "series" in q:
+            return "concept:phy_capacitor_series"
+        if "parallel" in q:
+            return "concept:phy_capacitor_parallel"
+        if "dielectric" in q:
+            return "concept:phy_capacitor_dielectric"
+
+    if "resistor" in q or "resistance" in q or "resistors" in q:
+        if "parallel" in q:
+            return "concept:phy_resistors_parallel"
+        if "series" in q:
+            return "concept:phy_resistors_series"
+        if "stretched" in q or "length" in q:
+            return "concept:phy_wire_stretching_resistance"
+        if "wheatstone" in q or "bridge" in q:
+            return "concept:phy_wheatstone_bridge"
+
+    if "lens" in q or "mirror" in q or "focal length" in q:
+        if "power" in q or "diopter" in q or "dioptres" in q:
+            return "concept:phy_lens_power"
+        if "combination" in q or "contact" in q:
+            return "concept:phy_lens_combination"
+        if "magnification" in q:
+            return "concept:phy_lens_magnification"
+
+    if "refractive index" in q or "speed of light" in q:
+        return "concept:phy_refraction_speed"
+
+    if "de broglie" in q or "photoelectric" in q or "work function" in q:
+        if "work function" in q or "threshold" in q:
+            return "concept:phy_photoelectric_work_function"
+        if "de broglie" in q:
+            return "concept:phy_de_broglie_wavelength"
+
+    if "transformer" in q:
+        return "concept:phy_transformer_turns_ratio"
+
+    if "bohr" in q or "orbit" in q:
+        if "radius" in q:
+            return "concept:phy_bohr_orbit_radius"
+        if "energy level" in q or "ionization" in q:
+            return "concept:phy_bohr_energy_level"
+
+    if "half-life" in q or "radioactive" in q or "decay" in q:
+        return "concept:phy_radioactive_decay"
+
+    if "carnot" in q or "efficiency" in q:
+        return "concept:phy_carnot_engine"
+
+    if "spring" in q or "force constant" in q:
+        return "concept:phy_spring_potential_energy"
+
+    if "shm" in q or "simple harmonic" in q:
+        if "maximum velocity" in q or "v_max" in q:
+            return "concept:phy_shm_max_velocity"
+        if "time period" in q or "frequency" in q:
+            return "concept:phy_shm_time_period"
+
+    if "escape velocity" in q:
+        return "concept:phy_escape_velocity"
+
+    if "acceleration due to gravity" in q or "value of g" in q:
+        return "concept:phy_gravity_variation"
+
+    if "young's double slit" in q or "fringe width" in q:
+        return "concept:phy_ydse_fringe_width"
+
+    # ── Chemistry Concepts ──
+    if "mass percentage" in q or "percentage by mass" in q:
+        return "concept:chem_mass_percentage"
+
+    if "oxidation state" in q or "oxidation number" in q:
+        return "concept:chem_oxidation_state"
+
+    if "first-order" in q or "rate constant" in q or "half-life" in q:
+        return "concept:chem_kinetics_first_order"
+
+    if "standard reduction potential" in q or "standard cell potential" in q or "e°_cell" in q:
+        return "concept:chem_electro_cell_emf"
+
+    if "hybridization" in q or "geometry" in q or "vsepr" in q:
+        return "concept:chem_bonding_hybridization"
+
+    if "aldol" in q or "cannizzaro" in q or "reimer-tiemann" in q or "kolbe" in q or "clemmensen" in q:
+        return "concept:chem_organic_named_reaction"
+
+    if "sn1" in q or "sn2" in q:
+        return "concept:chem_haloalkane_substitution"
+
+    if "ligand" in q or "coordination number" in q or "crystal field" in q:
+        return "concept:chem_coordination_compounds"
+
+    # ── Mathematics Concepts ──
+    if "inverse function" in q or "f⁻¹" in q or "f^-1" in q:
+        return "concept:math_inverse_function"
+
+    if "principal value" in q or "sin⁻¹" in q or "cos⁻¹" in q or "tan⁻¹" in q or "sin^-1" in q or "cos^-1" in q:
+        return "concept:math_inverse_trig_value"
+
+    if "matrix" in q or "matrices" in q:
+        if "symmetric" in q or "skew-symmetric" in q:
+            return "concept:math_matrix_symmetry"
+        if "order" in q or "elements" in q:
+            return "concept:math_matrix_order"
+        if "inverse" in q or "adjoint" in q:
+            return "concept:math_matrix_adjoint_inverse"
+
+    if "determinant" in q or "|adj(a)|" in q or "|ka|" in q or "|2a|" in q or "|3a|" in q:
+        return "concept:math_determinant_properties"
+
+    if "continuous at" in q or "continuity" in q:
+        return "concept:math_continuity"
+
+    if "derivative of" in q or "dy/dx" in q or "d/dx" in q:
+        if "x^" in q or "polynomial" in q:
+            return "concept:math_derivative_power_rule"
+        if "sin" in q or "cos" in q or "log" in q:
+            return "concept:math_derivative_chain_rule"
+        return "concept:math_derivative_calculation"
+
+    if "integral of" in q or "∫" in q or "dx" in q:
+        return "concept:math_integral_calculation"
+
+    if "vector" in q or "dot product" in q or "cross product" in q:
+        if "dot product" in q or "scalar dot" in q:
+            return "concept:math_vector_dot_product"
+        if "cross product" in q:
+            return "concept:math_vector_cross_product"
+        if "perpendicular" in q:
+            return "concept:math_vector_perpendicular"
+        if "magnitude" in q:
+            return "concept:math_vector_magnitude"
+        if "projection" in q:
+            return "concept:math_vector_projection"
+        return "concept:math_vector_operations"
+
+    if "probability" in q or "bayes" in q:
+        return "concept:math_probability"
+
+    # Fallback: strip punctuation and replace ALL numbers/digits with # to unify numerical variations
+    clean_norm = re.sub(r"\d+(\.\d+)?", "#", q)
+    clean_norm = re.sub(r"[^\w\s#]", "", clean_norm)
+    return "concept:num_pattern:" + " ".join(clean_norm.split())
+
+
+def interleave_by_subtype(questions: List[dict]) -> List[dict]:
+    """Requirement 2: Strict question type variety (DO NOT REPEAT THE SAME TYPES OF QUESTION).
+    Interleaves questions so that adjacent questions alternate among question subtypes:
+    direct_formula, multi_step, theory_definition, physical_numerical, fact_reaction.
+    """
+    if not questions:
+        return []
+
+    from collections import defaultdict, deque
+    grouped = defaultdict(deque)
+    for q in questions:
+        st = q.get("subtype") or "theory_definition"
+        grouped[st].append(q)
+
+    subtypes = list(grouped.keys())
+    interleaved = []
+    while any(grouped.values()):
+        for st in list(subtypes):
+            if grouped[st]:
+                interleaved.append(grouped[st].popleft())
+
+    return interleaved
+
+
+# Official KCET 2026 Chapter Weightage Specifications (out of 60 questions per subject)
+KCET_PHYSICS_WEIGHTS = [
+    # 1st PUC (~30% / 18 Qs)
+    ("Physical World, Units & Measurements", ["unit", "dimension", "error", "measurement", "physical world"], 1),
+    ("Kinematics (Straight Line & Plane)", ["straight line", "plane", "kinematics", "projectile", "velocity", "acceleration", "displacement"], 3),
+    ("Laws of Motion & Friction", ["laws of motion", "friction", "newton", "momentum", "impulse", "tension"], 2),
+    ("Work, Energy, Power & Collisions", ["work", "energy", "power", "collision", "spring", "potential energy"], 2),
+    ("Gravitation", ["gravitation", "gravitational", "kepler", "escape velocity", "orbital", "g at height"], 3),
+    ("Mechanics of Solids & Fluids", ["solid", "fluid", "young's modulus", "viscosity", "surface tension", "bernoulli", "pascal", "stokes"], 2),
+    ("Thermodynamics & Kinetic Theory", ["thermodynamics", "kinetic theory", "carnot", "isothermal", "adiabatic", "specific heat", "mean free path"], 3),
+    ("Oscillations & Waves", ["oscillation", "simple harmonic", "shm", "wave", "doppler", "pendulum", "frequency", "standing wave"], 2),
+    # 2nd PUC (~70% / 42 Qs)
+    ("Electrostatics (Charges, Fields, Potential)", ["charge", "electric field", "coulomb", "gauss", "potential", "capacitor", "capacitance", "dielectric"], 7),
+    ("Current Electricity", ["current electricity", "ohm", "resistance", "resistivity", "potentiometer", "wheatstone", "kirchhoff", "drift velocity"], 5),
+    ("Magnetic Effects of Current & Magnetism", ["magnetic", "biot", "ampere", "cyclotron", "torque on loop", "galvanometer", "ferromagnetism"], 5),
+    ("Electromagnetic Induction & AC", ["induction", "faraday", "lenz", "alternating current", "ac", "transformer", "inductance", "impedance", "resonance"], 5),
+    ("Ray Optics & Wave Optics", ["ray optics", "wave optics", "lens", "mirror", "refraction", "prism", "young's double", "interference", "diffraction", "polarization"], 7),
+    ("Modern Physics (Dual Nature, Atoms, Nuclei)", ["dual nature", "photoelectric", "de broglie", "atom", "bohr", "nucleus", "radioactivity", "half-life", "binding energy"], 6),
+    ("Semiconductors & Electronics", ["semiconductor", "p-n junction", "diode", "transistor", "logic gate", "zener", "rectifier", "led"], 4),
+    ("Electromagnetic Waves & Communication", ["electromagnetic wave", "em wave", "displacement current", "communication", "antenna", "modulation"], 3),
+]
+
+KCET_CHEMISTRY_WEIGHTS = [
+    # 1st PUC (~33% / 20 Qs)
+    ("Some Basic Concepts of Chemistry", ["basic concept", "mole", "molarity", "molality", "stoichiometry", "empirical formula"], 2),
+    ("Structure of Atom", ["structure of atom", "bohr", "quantum number", "heisenberg", "de broglie", "photoelectric", "orbital"], 2),
+    ("Classification of Elements & Periodicity", ["periodicity", "periodic table", "ionization enthalpy", "electronegativity", "atomic radius"], 2),
+    ("Chemical Bonding & Molecular Structure", ["bonding", "hybridization", "vsepr", "molecular orbital", "dipole moment", "hydrogen bond"], 2),
+    ("States of Matter: Gases and Liquids", ["states of matter", "boyle", "charles", "ideal gas", "van der waals", "surface tension", "viscosity"], 1),
+    ("Thermodynamics (Chemistry)", ["thermodynamics", "enthalpy", "entropy", "gibbs", "hess's law", "heat of combustion"], 2),
+    ("Equilibrium", ["equilibrium", "le chatelier", "kc", "kp", "ph", "buffer", "solubility product", "ksp"], 2),
+    ("Redox Reactions", ["redox", "oxidation number", "balancing", "reducing agent", "oxidizing agent"], 1),
+    ("Hydrogen", ["hydrogen", "heavy water", "hydrogen peroxide", "h2o2", "hydride"], 1),
+    ("s-Block Elements", ["s-block", "alkali", "alkaline earth", "sodium hydroxide", "calcium carbonate", "plaster of paris"], 1),
+    ("Some p-Block Elements (1st PUC)", ["p-block", "boron", "diborane", "carbon", "allotrope", "silicone", "silicates"], 1),
+    ("Organic Chemistry - Basic Principles", ["basic principles", "iupac", "isomerism", "carbocation", "inductive", "resonance", "hyperconjugation"], 1),
+    ("Hydrocarbons", ["hydrocarbons", "alkane", "alkene", "alkyne", "markovnikov", "ozonolysis", "benzene", "friedel-crafts"], 1),
+    ("Environmental Chemistry", ["environmental chemistry", "smog", "acid rain", "greenhouse", "bod", "cod"], 1),
+    # 2nd PUC (~67% / 40 Qs)
+    ("Solid State", ["solid state", "unit cell", "schottky", "frenkel", "packing efficiency", "bragg", "coordination number"], 3),
+    ("Solutions", ["solutions", "raoult", "henry", "colligative", "osmotic", "van 't hoff", "elevation of boiling", "freezing point"], 3),
+    ("Electrochemistry", ["electrochemistry", "nernst", "kolrausch", "faraday", "molar conductivity", "fuel cell", "corrosion"], 3),
+    ("Chemical Kinetics", ["chemical kinetics", "order of reaction", "rate constant", "arrhenius", "half-life", "activation energy"], 3),
+    ("Surface Chemistry", ["surface chemistry", "adsorption", "physisorption", "chemisorption", "colloid", "tyndall", "hardy-schulze", "emulsion"], 2),
+    ("General Principles of Isolation", ["isolation", "metallurgy", "froth flotation", "calcination", "roasting", "refining", "elllingham"], 1),
+    ("p-Block Elements (2nd PUC)", ["p-block", "nitrogen", "ammonia", "nitric acid", "phosphorus", "sulfuric acid", "ozone", "halogen", "interhalogen"], 4),
+    ("d & f Block Elements", ["d and f block", "lanthanide", "actinide", "transition metal", "oxidation state", "kmno4", "k2cr2o7"], 3),
+    ("Coordination Compounds", ["coordination compound", "iupac name", "isomerism", "werner", "valence bond", "crystal field", "spectrochemical"], 3),
+    ("Haloalkanes & Haloarenes", ["haloalkane", "haloarene", "sn1", "sn2", "wurtz", "fittig", "chloroform", "freon"], 3),
+    ("Alcohols, Phenols & Ethers", ["alcohol", "phenol", "ether", "lucas", "kolbe", "reimer-tiemann", "williamson", "dehydration"], 3),
+    ("Aldehydes, Ketones & Carboxylic Acids", ["aldehyde", "ketone", "carboxylic acid", "aldol", "cannizzaro", "tollens", "fehling", "clemmensen", "hvz"], 4),
+    ("Amines", ["amines", "diazotization", "sandmeyer", "hinsberg", "hoffmann bromamide", "carbylamine"], 2),
+    ("Biomolecules", ["biomolecules", "carbohydrate", "glucose", "protein", "amino acid", "dna", "rna", "vitamin", "enzyme"], 1),
+    ("Polymers", ["polymers", "nylon", "bakelite", "teflon", "neoprene", "buna-n", "dacron", "vulcanization"], 1),
+    ("Chemistry in Everyday Life", ["everyday life", "antiseptic", "analgesic", "antipyretic", "aspartame", "dettol", "detergent", "soap"], 1),
+]
+
+KCET_MATHEMATICS_WEIGHTS = [
+    # 1st PUC (~30% / 18 Qs)
+    ("Sets, Relations & Functions (1st PUC)", ["set", "subset", "venn", "domain", "range", "relation", "sets"], 3),
+    ("Trigonometric Functions", ["trigonometric", "sin", "cos", "tan", "radian", "general solution", "trigonometry"], 3),
+    ("Complex Numbers & Quadratic Equations", ["complex number", "iota", "modulus", "argument", "quadratic equation", "discriminant", "complex numbers"], 2),
+    ("Permutations, Combinations & Inequalities", ["permutation", "combination", "factorial", "linear inequalities", "permutations and combinations"], 3),
+    ("Binomial Theorem & Sequences/Series", ["binomial", "ap", "gp", "arithmetic progression", "geometric progression", "series", "sequences and series", "binomial theorem"], 2),
+    ("Straight Lines & Conic Sections", ["straight line", "slope", "intercept", "parabola", "ellipse", "hyperbola", "circle", "conic sections", "conic"], 3),
+    ("Limits & Derivatives (1st PUC)", ["limit", "derivative", "l'hopital", "first principle", "limits and derivatives"], 2),
+    # 2nd PUC (~70% / 42 Qs)
+    ("Relations & Functions & Inverse Trig", ["inverse trig", "one-one", "onto", "bijective", "principal value", "relations and functions", "inverse trigonometric functions"], 4),
+    ("Matrices & Determinants", ["matrix", "matrices", "determinant", "determinants", "adjoint", "inverse of matrix", "cramer"], 5),
+    ("Continuity, Differentiability & AOD", ["continuity", "differentiable", "chain rule", "tangent", "normal", "maxima", "minima", "increasing", "continuity and differentiability", "application of derivatives"], 8),
+    ("Integrals & Application of Integrals", ["integral", "integrals", "integration", "substitution", "by parts", "definite integral", "area under curve", "application of integrals"], 8),
+    ("Differential Equations", ["differential equation", "differential equations", "order", "degree", "variable separable", "integrating factor", "homogeneous"], 4),
+    ("Vectors & 3D Geometry", ["vector", "vector algebra", "dot product", "cross product", "scalar triple", "direction cosines", "plane", "shortest distance", "three dimensional geometry", "3d"], 8),
+    ("Linear Programming & Probability", ["linear programming", "feasible region", "probability", "bayes", "conditional probability", "binomial distribution"], 5),
+]
+
+
+def apply_kcet_chapter_distribution(questions: List[dict], subject: str, target_count: int = 60) -> List[dict]:
+    """Applies official KCET 2026 Chapter-Wise Weightage Engine across 1st PUC and 2nd PUC chapters.
+    Enforces exact chapter quota allocations and concept deduplication.
+    """
+    if not questions:
+        return []
+
+    sub_lower = subject.lower()
+    weights_spec = []
+    if "physic" in sub_lower:
+        weights_spec = KCET_PHYSICS_WEIGHTS
+    elif "chem" in sub_lower:
+        weights_spec = KCET_CHEMISTRY_WEIGHTS
+    elif "math" in sub_lower:
+        weights_spec = KCET_MATHEMATICS_WEIGHTS
+
+    if not weights_spec:
+        # Fallback for Biology or general subjects (40% 1st PUC / 60% 2nd PUC)
+        puc1_kw = ("living world", "plant physiology", "human physiology", "cell", "biomolecule")
+        puc1_qs = [q for q in questions if any(kw in (q.get("topic") or "").lower() for kw in puc1_kw)]
+        puc2_qs = [q for q in questions if q not in puc1_qs]
+        puc1_target = int(target_count * 0.40)
+        puc2_target = target_count - puc1_target
+        res = puc1_qs[:puc1_target] + puc2_qs[:puc2_target]
+        if len(res) < target_count:
+            rem = [q for q in questions if q not in res]
+            res.extend(rem[:target_count - len(res)])
+        return interleave_by_subtype(res[:target_count])
+
+    # Concept deduplication: track normalized question fingerprints AND concept fingerprints
+    selected = []
+    seen_fingerprints = set()
+    seen_concepts = set()
+    used_questions = set()
+
+    for category_name, keywords, target_qty in weights_spec:
+        # Scale quota proportionately if target_count != 60
+        scaled_qty = max(1, round(target_qty * (target_count / 60.0)))
+        added_for_cat = 0
+        for q in questions:
+            if added_for_cat >= scaled_qty:
+                break
+            q_id = id(q)
+            if q_id in used_questions:
+                continue
+            q_text = q.get("q", "")
+            fp = normalize_question_fingerprint(q_text)
+            concept_fp = extract_concept_fingerprint(q_text)
+            top = (q.get("topic") or "").lower()
+            q_full = (q_text + " " + top).lower()
+
+            if fp and fp not in seen_fingerprints and concept_fp not in seen_concepts and any(kw in q_full for kw in keywords):
+                selected.append(q)
+                seen_fingerprints.add(fp)
+                seen_concepts.add(concept_fp)
+                used_questions.add(q_id)
+                added_for_cat += 1
+
+    # Top up remaining if pool size < target_count
+    if len(selected) < target_count:
+        for q in questions:
+            if len(selected) >= target_count:
+                break
+            q_id = id(q)
+            q_text = q.get("q", "")
+            fp = normalize_question_fingerprint(q_text)
+            concept_fp = extract_concept_fingerprint(q_text)
+            if q_id not in used_questions and fp and fp not in seen_fingerprints and concept_fp not in seen_concepts:
+                selected.append(q)
+                seen_fingerprints.add(fp)
+                seen_concepts.add(concept_fp)
+                used_questions.add(q_id)
+
+    if len(selected) < target_count:
+        needed = target_count - len(selected)
+        topup = _generate_subject_variations(subject, needed, {q.get("q", "") for q in selected if q.get("q")})
+        for q in topup:
+            if len(selected) >= target_count:
+                break
+            q_text = q.get("q", "")
+            fp = normalize_question_fingerprint(q_text)
+            concept_fp = extract_concept_fingerprint(q_text)
+            if fp and fp not in seen_fingerprints and concept_fp not in seen_concepts:
+                selected.append(q)
+                seen_fingerprints.add(fp)
+                seen_concepts.add(concept_fp)
+
+    return interleave_by_subtype(selected[:target_count])
+
+
+>>>>>>> ec47da2 (updated few features)
 def is_valid_question(q_text: str, options: List[str], subject: str = "General")-> bool:
     """Return True if question text and options represent a valid, complete, clean question."""
     if not q_text or not isinstance(q_text, str):
@@ -965,12 +1389,14 @@ def _generate_subject_variations(
     subtype_filter: Optional[str] = None,
     allowed_topics: Optional[Iterable[str]] = None,
 ) -> List[dict]:
-    """Generates authentic, high-quality parameterized KCET syllabus MCQs for any shortfall,
-    strictly partitioned by blueprint subtype, pairing each generator with dedicated parameters.
+    """Generates authentic, high-quality KCET syllabus MCQs for any shortfall,
+    strictly partitioned by blueprint subtype and concept-level formula deduplication.
     """
     topic_lower = topic.lower()
     generated: List[dict] = []
     allowed_list = list(allowed_topics) if allowed_topics else None
+    used_fingerprints = {normalize_question_fingerprint(t) for t in used_texts if t}
+    used_concepts = {extract_concept_fingerprint(t) for t in used_texts if t}
 
     def _add_q(q_dict: dict) -> bool:
         q_text = q_dict.get("q", "").strip()
@@ -978,9 +1404,15 @@ def _generate_subject_variations(
             return False
         if allowed_list and not is_topic_matching(q_dict.get("topic", ""), allowed_list):
             return False
+        fp = normalize_question_fingerprint(q_text)
+        concept_fp = extract_concept_fingerprint(q_text)
+        if not fp or fp in used_fingerprints or concept_fp in used_concepts:
+            return False
         if is_valid_question(q_text, q_dict.get("opts", []), subject=topic):
             generated.append(q_dict)
             used_texts.add(q_text)
+            used_fingerprints.add(fp)
+            used_concepts.add(concept_fp)
             return len(generated) >= needed
         return False
 
@@ -1219,13 +1651,14 @@ def _generate_subject_variations(
             # 5. Combination of two thin lenses
             lens_combos = [
                 (20, 30), (15, 30), (10, 40), (25, 50), (30, 60), (10, 20), (20, 50),
-                (15, 60), (25, 25), (40, 40), (50, 50), (10, 50), (20, 20), (12, 24)
+                (15, 60), (25, 35), (40, 60), (50, 75), (10, 50), (20, 40), (12, 24)
             ]
             for f1, f2 in lens_combos:
                 p_net = round(100.0 / f1 + 100.0 / f2, 1)
+                diff = max(1.0, float(abs(f1 - f2)))
                 q = {
                     "q": f"Two thin convex lenses of focal lengths {f1} cm and {f2} cm are placed in coaxial contact. The power of the combined lens system is:",
-                    "opts": [f"{p_net} D", f"{round(100.0 / abs(f1 - f2), 1)} D", f"{round((f1 + f2) / 100.0, 2)} D", f"{round(100.0 / (f1 * f2), 2)} D"],
+                    "opts": [f"{p_net} D", f"{round(100.0 / diff, 1)} D", f"{round((f1 + f2) / 100.0, 2)} D", f"{round(100.0 / (f1 * f2), 2)} D"],
                     "ans": 0,
                     "topic": "Ray Optics",
                     "subtype": "multi_step",
@@ -1843,6 +2276,20 @@ def _generate_subject_variations(
             }
             if _add_q(q): return generated
 
+    # ── 3. Mathematics Variations ───────────────────────────────────────────
+    elif "math" in topic_lower:
+        from .mathematics_bank import MATHEMATICS_BANK
+        for q_item in MATHEMATICS_BANK:
+            q = {
+                "q": q_item["q"],
+                "opts": list(q_item["opts"]),
+                "ans": q_item["ans"],
+                "topic": q_item.get("topic", "Mathematics"),
+                "subtype": q_item.get("subtype", "direct_formula"),
+                "exp": q_item.get("exp", "")
+            }
+            if _add_q(q): return generated
+
     # ── 4. Biology Templates ─────────────────────────────────────────────────
     else:
         bio_pool = [bq for bq in BIOLOGY_BANK if (not allowed_list or is_topic_matching(bq.get("topic", ""), allowed_list))]
@@ -1978,7 +2425,8 @@ def generate_fallback_mcqs(
     elif "math" in topic_lower:
         bank = [q for q in MATHEMATICS_BANK if q["q"] not in used_texts and is_valid_question(q["q"], q["opts"], subject="Mathematics")]
         random.shuffle(bank)
-        selected = bank[:min(max_questions, len(bank))]
+        pool_size = max(max_questions * 3, len(bank))
+        selected = bank[:pool_size]
         for q in selected:
             results.append({
                 "q": q["q"], "opts": list(q["opts"]), "ans": q["ans"],
@@ -2011,8 +2459,8 @@ def generate_fallback_mcqs(
 
     # Randomize order while preserving balanced representation
     random.shuffle(results)
-    logger.info("Provided %d authentic blueprint-balanced questions for %s", len(results[:max_questions]), topic)
-    return results[:max_questions]
+    logger.info("Provided %d authentic blueprint-balanced questions for %s", len(results), topic)
+    return results
 
 
 def extract_or_generate_mcqs(

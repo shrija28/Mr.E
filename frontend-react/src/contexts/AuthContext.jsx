@@ -20,6 +20,13 @@ export const AuthProvider = ({ children }) => {
           if (storedUser) {
              setUser(JSON.parse(storedUser));
           }
+<<<<<<< HEAD:frontend-react/src/contexts/AuthContext.jsx
+=======
+        } else if (res.status === 401) {
+          setUser(null);
+          localStorage.removeItem('user');
+          localStorage.removeItem('token');
+>>>>>>> ec47da2 (updated few features):frontend/src/contexts/AuthContext.jsx
         }
       } catch (error) {
         console.error('Auth error', error);
@@ -40,7 +47,12 @@ export const AuthProvider = ({ children }) => {
     setUser(userData);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      console.warn('Logout endpoint call failed:', e);
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);

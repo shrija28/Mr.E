@@ -1,13 +1,18 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../contexts/AuthContext';
 
 const Navbar = ({ role, links }) => {
   const navigate = useNavigate();
+  const { logout } = useContext(AuthContext);
 
-  const handleLogout = () => {
-    // In a real app we'd call the logout function from AuthContext
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const handleLogout = async () => {
+    if (logout) {
+      await logout();
+    } else {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
     navigate('/login');
   };
 

@@ -182,6 +182,31 @@ def list_published_exams()-> Any:
             for es in exam_sets
         ]
 
+        # Deterministically assign set based on student ID (e.g. KCET0001 -> Set A, KCET0002 -> Set B, etc.)
+        student_id_str = ""
+        if user:
+            student_id_str = user.kcet_student_id or str(user.id)
+        else:
+            student_id_str = _student.get("kcet_student_id") or _student.get("sub") or ""
+
+        import re as _re
+        digits = _re.findall(r'\d+', student_id_str)
+        assigned_idx = 0
+        if sets_payload:
+            if digits:
+                try:
+                    val = int(digits[-1])
+                    assigned_idx = (val - 1) % len(sets_payload)
+                except (ValueError, IndexError):
+                    assigned_idx = 0
+            else:
+                num_hash = 0
+                for char in str(student_id_str):
+                    num_hash = (num_hash * 31 + ord(char)) & 0xFFFFFFFF
+                assigned_idx = num_hash % len(sets_payload)
+
+        assigned_set = sets_payload[assigned_idx] if sets_payload else {}
+
         bucket = buckets.setdefault(exam.subject, [])
         bucket.append(
             {
@@ -190,7 +215,15 @@ def list_published_exams()-> Any:
                 "created_at": (
                     created_at.isoformat() if created_at is not None else None
                 ),
-                "set_count": int(set_count or 0),
+                "set_count": len(sets_payload) or int(set_count or 0),
+                "question_count": questions_per_set,
+                "duration_minutes": exam.duration_minutes or 60,
+                "total_marks": exam.total_marks or (questions_per_set * 1 if questions_per_set else 60),
+                "scheduled_start": exam.scheduled_start.isoformat() if exam.scheduled_start else None,
+                "scheduled_end": exam.scheduled_end.isoformat() if exam.scheduled_end else None,
+                "institution_id": str(exam.institution_id) if exam.institution_id else None,
+                "assigned_set_id": assigned_set.get("exam_set_id"),
+                "assigned_set_label": assigned_set.get("set_label"),
                 "sets": sets_payload,
             }
         )
@@ -285,6 +318,37 @@ def get_exam_set_questions(exam_set_id: str)-> Any:
         if exam.institution_id is not None:
             return make_response(jsonify({"error": "not_found", "message": "Exam is not available"}), 404)
 
+    # Ensure set questions are synchronized with Set A's question pool in shuffled order sequence
+    sets = session.execute(
+        select(ExamSet).where(ExamSet.exam_id == exam.id).order_by(ExamSet.set_label.asc())
+    ).scalars().all()
+    if sets and len(sets) > 1 and exam_set.id != sets[0].id:
+        set_a_qids = session.execute(
+            select(ExamSetQuestion.question_id)
+            .where(ExamSetQuestion.exam_set_id == sets[0].id)
+            .order_by(ExamSetQuestion.order_index.asc())
+        ).scalars().all()
+        cur_qids = session.execute(
+            select(ExamSetQuestion.question_id)
+            .where(ExamSetQuestion.exam_set_id == set_id)
+            .order_by(ExamSetQuestion.order_index.asc())
+        ).scalars().all()
+        base_set = set(set_a_qids)
+        base_list = list(set_a_qids)
+        if set_a_qids and (set(cur_qids) != base_set or list(cur_qids) == base_list):
+            from sqlalchemy import delete
+            import random
+            session.execute(delete(ExamSetQuestion).where(ExamSetQuestion.exam_set_id == set_id))
+            shuffled_qids = list(base_list)
+            random.shuffle(shuffled_qids)
+            if shuffled_qids == base_list and len(shuffled_qids) > 1:
+                shuffled_qids.reverse()
+            session.add_all([
+                ExamSetQuestion(exam_set_id=set_id, question_id=qid, order_index=idx)
+                for idx, qid in enumerate(shuffled_qids)
+            ])
+            session.commit()
+
     # Load questions ordered by position
     stmt = (
         select(Question, ExamSetQuestion.order_index)
@@ -293,104 +357,18 @@ def get_exam_set_questions(exam_set_id: str)-> Any:
         .order_by(ExamSetQuestion.order_index.asc())
     )
     rows = session.execute(stmt).all()
-
-    from ..rag.topic_matcher import is_topic_matching
-    from ..rag.blueprint import allocate_blueprint_questions, calculate_chapter_quotas
-    from ..rag.mcq_extractor import infer_question_subtype, extract_or_generate_mcqs, is_valid_question
-
-    # Option A: Full Official KCET Syllabus Blueprint (covers all official chapters)
-    chapter_quotas = calculate_chapter_quotas(exam.subject, uploaded_topics=None, total_questions=60)
-
-    # Check whether the current set questions already conform to:
-    # 1. Exactly 60 questions
-    # 2. Covers multiple chapters matching the full blueprint quotas
-    needs_blueprint_realignment = False
-    if len(rows) != 60:
-        needs_blueprint_realignment = True
-    else:
-        # Check topic spread: if fewer than 10 distinct chapters represented in full paper, realign
-        distinct_topics = set(question.topic for question, _order in rows)
-        if len(distinct_topics) < 10:
-            needs_blueprint_realignment = True
-
-    if needs_blueprint_realignment:
-        # Fetch clean, authentic questions for this subject across the full KCET syllabus
-        from ..admin.exams import _get_clean_unique_questions
-        clean_questions = _get_clean_unique_questions(session, exam.subject)
-
-        # Guarantee at least 60 questions by topping up if necessary
-        if len(clean_questions) < 60:
-            needed = 60 - len(clean_questions)
-            used_texts = set(q.question_text for q in clean_questions if q.question_text)
-            topup_mcqs = extract_or_generate_mcqs(
-                "",
-                topic=exam.subject,
-                min_questions=needed + 10,
-                used_questions=used_texts,
-                allowed_topics=None,
-            )
-            for mcq in topup_mcqs:
-                q_text = mcq.get("q", "").strip()
-                if not q_text or q_text in used_texts:
-                    continue
-                opts = mcq.get("opts", [])
-                if not is_valid_question(q_text, opts, subject=exam.subject):
-                    continue
-                row = Question(
-                    subject=exam.subject,
-                    question_text=q_text,
-                    options=opts,
-                    correct_option=str(mcq.get("ans", 0)),
-                    topic=mcq.get("topic", exam.subject),
-                    generation_batch_id=uuid.uuid4(),
-                    institution_id=exam.institution_id,
-                    source_type="textbook",
-                    explanation=mcq.get("exp", ""),
-                )
-                session.add(row)
-                clean_questions.append(row)
-                used_texts.add(q_text)
-                if len(clean_questions) >= 60:
-                    break
-            try:
-                session.flush()
-            except Exception:
-                session.rollback()
-
-        # Apportion exactly 60 questions adhering strictly to KCET 2026 full syllabus blueprint
-        sampled_rows = allocate_blueprint_questions(
-            available_questions=clean_questions,
-            subject=exam.subject,
-            uploaded_topics=None,
-            total_questions=60,
-        )
-
-        # Atomically update the ExamSetQuestion links for this set
-        session.query(ExamSetQuestion).filter(ExamSetQuestion.exam_set_id == set_id).delete()
-        link_rows = [
-            ExamSetQuestion(
-                exam_set_id=set_id,
-                question_id=q.id,
-                order_index=oi,
-            )
-            for oi, q in enumerate(sampled_rows)
-        ]
-        session.add_all(link_rows)
-        try:
-            session.commit()
-            rows = session.execute(stmt).all()
-        except Exception:
-            session.rollback()
+    from ..rag.mcq_extractor import infer_question_subtype, shuffle_options_for_set_label
 
     questions = []
     for question, _order in rows:
         st = infer_question_subtype(question.question_text, question.options or [], exam.subject)
+        shuffled_opts, new_ans = shuffle_options_for_set_label(question.options or [], question.correct_option, exam_set.set_label)
         questions.append({
             "q": question.question_text,
             "type": "MCQ",
-            "opts": question.options,
+            "opts": shuffled_opts,
             "topic": question.topic or "General",
-            "ans": question.correct_option,
+            "ans": str(new_ans),
             "subtype": st,
             "exp": question.explanation or "",
             "marks": 1,

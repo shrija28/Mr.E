@@ -162,7 +162,7 @@ class PlatformAdminService:
         
         return plan
 
-    def get_subscription_plan(self, plan_id: UUID)-> Optional[SubscriptionPlan]:
+    def get_subscription_plan(self, plan_id: UUID | str)-> Optional[SubscriptionPlan]:
         """Get a subscription plan by ID.
         
         Args:
@@ -171,6 +171,11 @@ class PlatformAdminService:
         Returns:
             Subscription plan or None if not found
         """
+        if isinstance(plan_id, str):
+            try:
+                plan_id = UUID(plan_id)
+            except Exception:
+                pass
         return self.db.query(SubscriptionPlan).filter(
             SubscriptionPlan.id == plan_id
         ).first()
@@ -293,7 +298,7 @@ class PlatformAdminService:
     # Institution Management
     # -------------------------------------------------------------------------
 
-    def activate_institution(self, institution_id: UUID)-> Institution:
+    def activate_institution(self, institution_id: UUID | str)-> Institution:
         """Activate an institution.
         
         Args:
@@ -305,6 +310,12 @@ class PlatformAdminService:
         Raises:
             ValueError: If institution not found
         """
+        if isinstance(institution_id, str):
+            try:
+                institution_id = UUID(institution_id)
+            except Exception:
+                pass
+
         institution = self.db.query(Institution).filter(
             Institution.id == institution_id
         ).first()
@@ -331,7 +342,7 @@ class PlatformAdminService:
         
         return institution
 
-    def suspend_institution(self, institution_id: UUID)-> Institution:
+    def suspend_institution(self, institution_id: UUID | str)-> Institution:
         """Suspend an institution.
         
         Args:
@@ -343,6 +354,12 @@ class PlatformAdminService:
         Raises:
             ValueError: If institution not found
         """
+        if isinstance(institution_id, str):
+            try:
+                institution_id = UUID(institution_id)
+            except Exception:
+                pass
+
         institution = self.db.query(Institution).filter(
             Institution.id == institution_id
         ).first()
@@ -369,7 +386,7 @@ class PlatformAdminService:
         
         return institution
 
-    def remove_institution(self, institution_id: UUID)-> None:
+    def remove_institution(self, institution_id: UUID | str)-> None:
         """Remove an institution.
         
         This will cascade delete all related data (subscriptions, invitations, etc.)
@@ -380,6 +397,12 @@ class PlatformAdminService:
         Raises:
             ValueError: If institution not found
         """
+        if isinstance(institution_id, str):
+            try:
+                institution_id = UUID(institution_id)
+            except Exception:
+                pass
+
         institution = self.db.query(Institution).filter(
             Institution.id == institution_id
         ).first()

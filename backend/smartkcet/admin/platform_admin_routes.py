@@ -152,11 +152,17 @@ def list_subscription_plans(plan_type: Optional[str] = None, is_active: Optional
     """
     from ..db.subscription_models import SubscriptionPlan
     from decimal import Decimal
+    from flask import request
+    
+    pt = request.args.get("plan_type") or plan_type
+    ia = request.args.get("is_active")
+    if ia is not None:
+        is_active = ia.lower() in ("true", "1")
     
     query = db.query(SubscriptionPlan)
     
-    if plan_type is not None:
-        query = query.filter(SubscriptionPlan.plan_type == plan_type)
+    if pt is not None and pt != "":
+        query = query.filter(SubscriptionPlan.plan_type == pt)
     
     if is_active is not None:
         query = query.filter(SubscriptionPlan.is_active == is_active)
@@ -502,8 +508,9 @@ def list_institutions(subscription_status: Optional[str] = None)-> InstitutionLi
     
     query = db.query(Institution)
     
-    if subscription_status is not None:
-        query = query.filter(Institution.subscription_status == subscription_status)
+    status = request.args.get("subscription_status") or subscription_status
+    if status is not None and status != "":
+        query = query.filter(Institution.subscription_status == status)
     
     institutions = query.all()
     
@@ -567,44 +574,32 @@ def list_institutions(subscription_status: Optional[str] = None)-> InstitutionLi
 
 
 @router.route("/students", methods=["GET"])
-def list_students(student_type: Optional[str] = None, # 'direct' or 'institution' or None for all
+def list_students(student_type: Optional[str] = None,
     institution_id: Optional[UUID] = None):    
-    from flask import g
+    from flask import g, request
     db = getattr(g, "db", None)
-    session = db
-    
-    from flask import g
-    db = getattr(g, "db", None)
-    session = db
-    """List all students with optional filters.
-    
-    Requires Platform Admin authentication.
-    
-    Query params:
-    - student_type: 'direct' for direct subscribers, 'institution' for institution-linked
-    - institution_id: filter by specific institution
-    """
+
+    st = request.args.get("student_type") or student_type
+    inst_id = request.args.get("institution_id") or institution_id
+
     from ..db.models import User
     from ..db.subscription_models import Subscription, Institution
     
     query = db.query(User).filter(User.role == 'student')
     
-    # Filter by student type
-    if student_type == 'direct':
+    if st == 'direct':
         query = query.filter(User.student_subtype.in_(['direct_subscriber', 'dual']))
-    elif student_type == 'institution':
+    elif st == 'institution':
         query = query.filter(User.student_subtype.in_(['institution_linked', 'dual']))
-        if institution_id:
-            query = query.filter(User.institution_id == institution_id)
-    elif institution_id:
-        query = query.filter(User.institution_id == institution_id)
+        if inst_id:
+            query = query.filter(User.institution_id == inst_id)
+    elif inst_id:
+        query = query.filter(User.institution_id == inst_id)
     
     students = query.all()
     
-    # Build response with subscription info
     students_data = []
     for user in students:
-        # Get subscription info
         subscription = (
             db.query(Subscription)
             .filter(
@@ -614,7 +609,6 @@ def list_students(student_type: Optional[str] = None, # 'direct' or 'institution
             .first()
         )
         
-        # Get institution name if linked
         institution_name = None
         if user.institution_id:
             institution = db.query(Institution).filter(Institution.id == user.institution_id).first()
@@ -637,6 +631,148 @@ def list_students(student_type: Optional[str] = None, # 'direct' or 'institution
         "count": len(students_data),
         "students": students_data,
     }
+
+
+@router.route("/students/<user_id>", methods=["GET"])
+def get_student_by_id(user_id):
+    from flask import g, jsonify
+    from uuid import UUID
+    from ..db.models import User
+    from ..db.subscription_models import Subscription, SubscriptionPlan, Institution
+
+    db = getattr(g, "db", None)
+    try:
+        u_uuid = UUID(str(user_id)) if not isinstance(user_id, UUID) else user_id
+    except Exception:
+        return jsonify({"detail": "Invalid student user ID"}), 400
+
+    user = db.query(User).filter(User.id == u_uuid, User.role == "student").first()
+    if not user:
+        return jsonify({"detail": "Student not found"}), 404
+
+    subscription = (
+        db.query(Subscription)
+        .filter(
+            Subscription.user_id == user.id,
+            Subscription.status.in_(["trial", "active", "overdue", "grace_period"])
+        )
+        .first()
+    )
+
+    plan_name = None
+    if subscription and subscription.plan_id:
+        plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == subscription.plan_id).first()
+        if plan:
+            plan_name = plan.name
+
+    institution_name = None
+    if user.institution_id:
+        inst = db.query(Institution).filter(Institution.id == user.institution_id).first()
+        if inst:
+            institution_name = inst.name
+
+    return jsonify({
+        "id": str(user.id),
+        "kcet_student_id": user.kcet_student_id,
+        "name": user.display_name,
+        "email": user.email,
+        "student_subtype": user.student_subtype or "direct_subscriber",
+        "institution_id": str(user.institution_id) if user.institution_id else None,
+        "institution_name": institution_name,
+        "subscription_status": subscription.status if subscription else "no_subscription",
+        "plan_name": plan_name,
+        "plan_id": str(subscription.plan_id) if subscription and subscription.plan_id else None,
+        "next_renewal_date": subscription.next_renewal_date.isoformat() if subscription and subscription.next_renewal_date else None,
+        "price": float(subscription.price) if subscription and subscription.price else None,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
+    }), 200
+
+
+@router.route("/students", methods=["POST"])
+def create_student():
+    """Create a new student with an authentic password for real platform use."""
+    from flask import g, request, jsonify
+    from uuid import UUID, uuid4
+    from datetime import datetime, timezone, timedelta
+    from ..db.models import User
+    from ..db.subscription_models import Subscription, SubscriptionPlan
+    from ..auth.passwords import hash_password
+    from ..auth.identity import next_kcet_id
+    from ..middleware.rbac import require_admin
+
+    require_admin()
+    db = getattr(g, "db", None)
+
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+    password = (data.get("password") or "").strip()
+    custom_kcet_id = (data.get("kcet_student_id") or "").strip()
+    plan_id = data.get("plan_id")
+
+    if not name:
+        return jsonify({"detail": "Student name is required"}), 400
+    if not email or "@" not in email:
+        return jsonify({"detail": "Valid email address is required"}), 400
+    if not password or len(password) < 6:
+        return jsonify({"detail": "Password must be at least 6 characters"}), 400
+
+    existing = db.query(User).filter(User.email == email).first()
+    if existing:
+        return jsonify({"detail": f"An account with email '{email}' already exists"}), 400
+
+    if custom_kcet_id:
+        student_id = custom_kcet_id
+    else:
+        student_id = next_kcet_id(db)
+
+    pwd_hash = hash_password(password)
+
+    new_user = User(
+        id=uuid4(),
+        email=email,
+        password_hash=pwd_hash,
+        display_name=name,
+        role="student",
+        student_subtype="direct_subscriber",
+        kcet_student_id=student_id,
+        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+    )
+    db.add(new_user)
+    db.flush()
+
+    if plan_id:
+        try:
+            p_uuid = UUID(str(plan_id))
+            plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == p_uuid).first()
+            if plan:
+                sub = Subscription(
+                    id=uuid4(),
+                    user_id=new_user.id,
+                    plan_id=plan.id,
+                    status="active",
+                    billing_period=plan.billing_period,
+                    price=plan.price,
+                    current_period_start=datetime.now(timezone.utc).replace(tzinfo=None),
+                    next_renewal_date=datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(days=30),
+                )
+                db.add(sub)
+        except Exception as e:
+            logger.warning(f"Could not attach initial plan {plan_id}: {e}")
+
+    db.commit()
+
+    return jsonify({
+        "success": True,
+        "message": "Student account created successfully with active credentials",
+        "student": {
+            "id": str(new_user.id),
+            "email": new_user.email,
+            "name": new_user.display_name,
+            "kcet_student_id": new_user.kcet_student_id,
+            "role": new_user.role,
+        }
+    }), 201
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -928,146 +1064,106 @@ class StudentSubscriptionManageRequest(BaseModel):
 
 
 @router.route("/students/<user_id>/subscription/manage", methods=["POST"])
-def manage_student_subscription(user_id: UUID):    
-    from flask import g
-    db = getattr(g, "db", None)
-    session = db
-    
-    from flask import g
-    db = getattr(g, "db", None)
-    session = db
-    """Update or remove/cancel a student's subscription.
-    
-    Setting status to 'cancelled' sets the account's subscription status to INACTIVE.
-    Requires Platform Admin authentication.
-    """
+def manage_student_subscription(user_id):
+    from flask import g, request, jsonify
+    from uuid import UUID
     from ..db.models import User
-    from ..db.subscription_models import Subscription, SubscriptionPlan, SubscriptionEvent
-    from datetime import timedelta
+    from ..db.subscription_models import Subscription, SubscriptionPlan
+    from ..middleware.rbac import require_admin
+    from datetime import datetime, timedelta
 
-    user = db.query(User).filter(User.id == user_id, User.role == 'student').first()
-    if not user:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Student {user_id} not found",
-        )
+    require_admin()
+    db = getattr(g, "db", None)
 
     try:
-        now = datetime.utcnow()
-        active_subs = db.query(Subscription).filter(
-            Subscription.user_id == user.id,
-            Subscription.status.in_(["trial", "active", "overdue", "grace_period"])
-        ).all()
+        u_uuid = UUID(str(user_id)) if not isinstance(user_id, UUID) else user_id
+    except Exception:
+        return jsonify({"detail": "Invalid student user ID"}), 400
 
-        if data.action in ("remove", "cancel") or not data.plan_id:
-            # Set all active subscriptions to cancelled (INACTIVE)
-            if not active_subs:
-                return {
-                    "success": True,
-                    "message": "Student already has no active subscription",
-                    "user_id": str(user.id),
-                    "subscription_status": "cancelled",
-                }
+    user = db.query(User).filter(User.id == u_uuid, User.role == 'student').first()
+    if not user:
+        return jsonify({"detail": "Student not found"}), 404
 
-            for sub in active_subs:
-                prev_status = sub.status
-                sub.status = "cancelled"
-                sub.cancellation_date = now
-                sub.updated_at = now
+    data = request.get_json() or {}
+    action = data.get("action")
+    plan_id = data.get("plan_id")
+    duration_months = int(data.get("duration_months") or 1)
+    renew_from = data.get("renew_from")
 
-                event = SubscriptionEvent(
-                    subscription_id=sub.id,
-                    event_type="cancelled",
-                    previous_status=prev_status,
-                    new_status="cancelled",
-                    event_metadata={"admin_action": "remove_subscription", "timestamp": now.isoformat()}
-                )
-                db.add(event)
+    now = datetime.utcnow()
+    active_subs = db.query(Subscription).filter(
+        Subscription.user_id == user.id,
+        Subscription.status.in_(["trial", "active", "overdue", "grace_period"])
+    ).all()
 
-            db.commit()
-            return {
+    if action in ("remove", "cancel") or not plan_id:
+        if not active_subs:
+            return jsonify({
                 "success": True,
-                "message": "Subscription removed successfully. Student status set to INACTIVE.",
+                "message": "Student already has no active subscription",
                 "user_id": str(user.id),
                 "subscription_status": "cancelled",
-            }
+            }), 200
 
-        # Action: update to a new plan
-        plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == data.plan_id).first()
-        if not plan:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Plan {data.plan_id} not found",
-            )
-
-        months = data.duration_months or 1
-        start_from = now
-        if data.renew_from:
-            try:
-                start_from = datetime.fromisoformat(data.renew_from)
-            except Exception:
-                start_from = now
-
-        next_renewal = start_from + timedelta(days=30 * months)
-
-        if active_subs:
-            sub = active_subs[0]
-            prev_status = sub.status
-            sub.plan_id = plan.id
-            sub.status = "active"
-            sub.current_period_start = start_from
-            sub.next_renewal_date = next_renewal
+        for sub in active_subs:
+            sub.status = "cancelled"
+            sub.cancellation_date = now
             sub.updated_at = now
 
-            event = SubscriptionEvent(
-                subscription_id=sub.id,
-                event_type="upgraded",
-                previous_status=prev_status,
-                new_status="active",
-                event_metadata={"admin_action": "update_subscription", "plan_name": plan.name, "timestamp": now.isoformat()}
-            )
-            db.add(event)
-        else:
-            sub = Subscription(
-                user_id=user.id,
-                plan_id=plan.id,
-                status="active",
-                start_date=start_from,
-                current_period_start=start_from,
-                next_renewal_date=next_renewal,
-                created_at=now,
-                updated_at=now,
-            )
-            db.add(sub)
-            db.flush()
-
-            event = SubscriptionEvent(
-                subscription_id=sub.id,
-                event_type="activated",
-                previous_status="none",
-                new_status="active",
-                event_metadata={"admin_action": "create_subscription", "plan_name": plan.name, "timestamp": now.isoformat()}
-            )
-            db.add(event)
-
         db.commit()
-        return {
+        return jsonify({
             "success": True,
-            "message": f"Subscription updated to {plan.name} until {next_renewal.strftime('%d %b %Y')}",
+            "message": "Subscription removed successfully. Student status set to INACTIVE.",
             "user_id": str(user.id),
-            "subscription_id": str(sub.id),
-            "plan_name": plan.name,
-            "subscription_status": "active",
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error managing student subscription: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error managing student subscription: {str(e)}",
+            "subscription_status": "cancelled",
+        }), 200
+
+    try:
+        p_uuid = UUID(str(plan_id)) if not isinstance(plan_id, UUID) else plan_id
+    except Exception:
+        return jsonify({"detail": "Invalid plan ID"}), 400
+
+    plan = db.query(SubscriptionPlan).filter(SubscriptionPlan.id == p_uuid).first()
+    if not plan:
+        return jsonify({"detail": "Plan not found"}), 404
+
+    start_from = now
+    if renew_from:
+        try:
+            start_from = datetime.fromisoformat(renew_from)
+        except Exception:
+            start_from = now
+
+    next_renewal = start_from + timedelta(days=30 * duration_months)
+
+    if active_subs:
+        sub = active_subs[0]
+        sub.plan_id = plan.id
+        sub.status = "active"
+        sub.current_period_start = start_from
+        sub.next_renewal_date = next_renewal
+        sub.updated_at = now
+    else:
+        from uuid import uuid4
+        sub = Subscription(
+            id=uuid4(),
+            user_id=user.id,
+            plan_id=plan.id,
+            status="active",
+            billing_period=plan.billing_period,
+            price=plan.price,
+            current_period_start=start_from,
+            next_renewal_date=next_renewal,
         )
+        db.add(sub)
+
+    db.commit()
+    return jsonify({
+        "success": True,
+        "message": f"Subscription updated to {plan.name} successfully",
+        "plan_name": plan.name,
+        "next_renewal_date": next_renewal.isoformat(),
+    }), 200
 
 
 
@@ -1075,85 +1171,45 @@ def manage_student_subscription(user_id: UUID):
 # Password Reset for Direct Subscribers (Admin-initiated)
 # ─────────────────────────────────────────────────────────────────────────────
 
-class PasswordResetRequest(BaseModel):
-    """Request to reset a student's password."""
-    password: str = Field(
-        ..., 
-        min_length=8, 
-        max_length=72,
-        description="New password (8-72 characters)"
-    )
-
-
 @router.route("/students/<user_id>/reset-password", methods=["POST"])
-def reset_student_password(user_id: UUID):    
-    from flask import g
-    db = getattr(g, "db", None)
-    session = db
-    
-    from flask import g
-    db = getattr(g, "db", None)
-    session = db
-    """Reset a direct subscriber student's password.
-    
-    Allows platform admins to set a new password for students who forgot theirs.
-    
-    Requires Platform Admin authentication.
-    
-    Args:
-        user_id: UUID of the student user
-        data: New password
-        db: Database session
-        
-    Returns:
-        Success response with confirmation
-    """
+def reset_student_password(user_id):
+    from flask import g, request, jsonify
+    from uuid import UUID
     from ..db.models import User
     from ..auth.passwords import hash_password
-    
+    from ..middleware.rbac import require_admin
+    from datetime import datetime
+
+    require_admin()
+    db = getattr(g, "db", None)
+
     try:
-        # Find the user
-        user = db.query(User).filter(
-            User.id == user_id,
-            User.role == 'student',
-            User.student_subtype.in_(['direct_subscriber', 'dual'])
-        ).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=404,
-                detail="Student not found or is not a direct subscriber"
-            )
-        
-        # Validate password
-        if len(data.password) < 8:
-            raise HTTPException(
-                status_code=400,
-                detail="Password must be at least 8 characters"
-            )
-        
-        # Hash and update password
-        user.password_hash = hash_password(data.password)
-        user.updated_at = datetime.utcnow()
-        
-        db.add(user)
-        db.commit()
-        
-        logger.info(f"Admin reset password for student {user.email} ({user.id})")
-        
-        return {
-            "success": True,
-            "message": "Password reset successfully",
-            "user_id": str(user.id),
-            "email": user.email,
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        logger.error(f"Error resetting password: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail="Error resetting password"
-        )
+        u_uuid = UUID(str(user_id)) if not isinstance(user_id, UUID) else user_id
+    except Exception:
+        return jsonify({"detail": "Invalid student user ID"}), 400
+
+    user = db.query(User).filter(
+        User.id == u_uuid,
+        User.role == 'student'
+    ).first()
+
+    if not user:
+        return jsonify({"detail": "Student not found"}), 404
+
+    data = request.get_json() or {}
+    new_password = (data.get("password") or data.get("new_password") or "").strip()
+    if not new_password or len(new_password) < 6:
+        return jsonify({"detail": "Password must be at least 6 characters"}), 400
+
+    user.password_hash = hash_password(new_password)
+    user.updated_at = datetime.utcnow()
+    db.commit()
+
+    logger.info(f"Admin reset password for student {user.email} ({user.id})")
+
+    return jsonify({
+        "success": True,
+        "message": "Password reset successfully",
+        "user_id": str(user.id),
+        "email": user.email,
+    }), 200

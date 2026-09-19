@@ -20,13 +20,6 @@ export const AuthProvider = ({ children }) => {
           if (storedUser) {
              setUser(JSON.parse(storedUser));
           }
-<<<<<<< HEAD:frontend-react/src/contexts/AuthContext.jsx
-=======
-        } else if (res.status === 401) {
-          setUser(null);
-          localStorage.removeItem('user');
-          localStorage.removeItem('token');
->>>>>>> ec47da2 (updated few features):frontend/src/contexts/AuthContext.jsx
         }
       } catch (error) {
         console.error('Auth error', error);

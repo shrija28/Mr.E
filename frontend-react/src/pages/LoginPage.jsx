@@ -8,8 +8,6 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-<<<<<<< HEAD:frontend-react/src/pages/LoginPage.jsx
-=======
   const [info, setInfo] = useState(() => {
     if (location.state?.subscriptionSuccess) {
       return `Subscription active for ${location.state.planName || 'Plan'}! Sign in to enter your dashboard.`;
@@ -22,7 +20,6 @@ const LoginPage = () => {
     }
     return '';
   });
->>>>>>> ec47da2 (updated few features):frontend/src/pages/LoginPage.jsx
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
